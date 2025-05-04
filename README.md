@@ -4,6 +4,44 @@
 
 Welcome to our new work: Perturbation Modeling with Diffusion Models Benchmark, the paper has been uploaded to the arxiv.
 
+
+## File Structure
+After downloading the data, the directory structure should look like this:
+```
+/PertBench/
+├── /diffusion_baselines/
+│  ├── /checkpoints/
+│  ├── /configs/
+│  │  └── ddpm_default.yaml
+│  ├── /datasets/
+│  │  ├── /CIFAR10/
+│  │  ├── /scrna_data/
+│  │  │  ├── NK_IFN_exp.csv
+│  │  │  ├── NK_IFN_meta.csv
+│  │  │  └── scrna.h5ad
+│  │  ├── cifar10.py
+│  │  └── scrna.py
+│  ├── /logs/
+│  ├── /models/
+│  │  ├── base.py
+│  │  ├── ddpm_model.py
+│  │  ├── ddpm.py
+│  │  ├── gaussian_diffusion.py
+│  │  └── latent_diffusion.py
+│  ├── /samples/
+│  ├── /schedulers/
+│  │  └── warmup.py
+│  ├── /scripts/
+│  │  ├── csv_to_h5ad.py
+│  │  └── train_ddpm.py
+│  ├── /trainers/
+│  │  ├── bae_trainer.py
+│  │  ├── ddpm_trainer.py
+│  │  └── scrna_trainer.py
+├── /scDiff/
+├── /scDiffusion/
+...
+```
 ## ⚙️ Configure the environment and prepare the data
 ### 📥 Download the data
 ### 🛠️ Configure the environment
