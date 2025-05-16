@@ -45,6 +45,11 @@ After downloading the data, the directory structure should look like this:
 ## ⚙️ Configure the environment and prepare the data
 ### 📥 Download the data
 ### 🛠️ Configure the environment
+```
+conda create -n pertbench python=3.10 -y && conda activate pertbench
+pip install omegaconf numpy anndata tqdm scanpy
+pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121
+```
 #### CellOT
 - The original paper：
 - Repo：
