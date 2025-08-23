@@ -1,0 +1,39 @@
+model:
+  scvi:
+    # path to scvi-tools pretrained model directory
+    scvi_model_dir: "checkpoints/scvi_model"
+    adata_inference_path: checkpoints/scvi_model/adata_scvi_for_inference.h5ad
+
+  diffusion:
+    timesteps:       1000 
+    beta_1:          1e-4
+    beta_T:          0.02
+    hidden_dim:      512  
+
+  ae:
+    input_dim:       2000
+    latent_dim:      256
+    hidden_dim:      1024
+
+data:
+  path:        ./dataset/scrna_data/scrna_positive.h5ad
+  batch_size:  32
+  label_key:   Condition
+  num_workers: 4
+
+train:
+  batch_size:       512
+  device:           cuda
+  epoch:            500
+  lr:               2e-4
+  weight_decay:     1e-4
+  grad_clip:        1.0
+  warmup_multiplier: 10
+  save_weight_dir:  ./checkpoints/scvi_ddpm_mlp
+  num_workers:      16
+  recon_weight:     1.0
+
+sample:
+  batch_size:    32
+  sampled_dir:   ./samples/scvi_ddpm_mlp
+  sampled_h5ad:  synthetic_scvi_ddpm_mlp.h5ad
