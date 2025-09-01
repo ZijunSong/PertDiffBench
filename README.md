@@ -2,39 +2,6 @@
     <h1> 🌊 PertBench: Perturbation Modeling with Diffusion Models Benchmark </h1>
 </div>
 
-
-## File Structure
-
-After downloading the data, the directory structure should look like this:
-
-```
-/PertBench/
-├── /checkpoints/
-├── /configs/
-│  ├── /baselines/
-│  │  └── baseline_ddpm_default.yaml
-│  ├── /scdiff/
-├── /data/
-│  ├── /fig1/
-│  ├── /fig2/
-├── /logs/
-├── /samples/
-│  ├── /fig1/
-│  ├── /fig2/
-├── /scripts/
-│  ├── /baseline/
-│  ├── /fig1/
-│  ├── /fig2/
-│  ├── /tools/
-├── /src/
-│  ├── /diffusion_baselines/
-│  ├── /scDiff/
-│  ├── /scDiffusion/
-├── /utils/
-│  └── metrics.py
-...
-```
-
 ## ⚙️ Configure the environment and prepare the data
 
 ### 🛠️ Configure the environment
@@ -59,13 +26,7 @@ pip install mpi4py
 
 In the data of Task 1 in Figure 1, the CD4T cell type has the largest number of cells (5,564), and is therefore chosen as the representative.
 
-First, run
-
-```
-python scripts/tools/get_the_hvg_data_for_fig1.py
-```
-
-to generate the hvg data. Then run
+First, run `python scripts/tools/get_the_hvg_data_for_fig1.py` to generate the hvg data. Then run
 
 ```
 nohup bash scripts/highly_variable_gene_gradient/ddpm_hvg.sh > ddpm_hvg.log 2>&1
@@ -84,13 +45,9 @@ to obtain the evaluation results, respectively.
 
 **0  Get the data**
 
-由于总体而言，高变基因数最低（1000）的数据训练所得的模型性能最好，Fig1 task1和Fig1 task3的实验均使用原始数据取高变基因为1000的处理后数据进行实验。首先运行
+Since, overall, the models trained on the data with the lowest number of highly variable genes (1000) achieved the best performance, the experiments of Task 1 and Task 3 in Figure 1 are conducted using the processed data with 1000 HVGs extracted from the original data.  
 
-```
-python scripts/tools/get_the_hvg_data_for_fig3.py
-```
-
-以获取Fig1 task3实验所用数据。然后该数据与高变基因梯度实验中所得的数据组织好，例如
+First, run `python scripts/tools/get_the_hvg_data_for_fig3.py` to generate the data used in the Task 3 experiment of Figure 1. Then, organize this data together with the data obtained from the highly variable gene gradient experiments, for example:
 
 ```
 /PertBench/
