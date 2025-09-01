@@ -1,332 +1,824 @@
 <div align= "center">
-    <h1> 🌊 Perturbation Modeling with Diffusion Models Benchmark </h1>
+    <h1> 🌊 PertBench: Perturbation Modeling with Diffusion Models Benchmark </h1>
 </div>
-
-Welcome to our new work: Perturbation Modeling with Diffusion Models Benchmark, the paper has been uploaded to the arxiv.
 
 
 ## File Structure
+
 After downloading the data, the directory structure should look like this:
+
 ```
 /PertBench/
-├── /diffusion_baselines/
-│  ├── /checkpoints/
-│  ├── /configs/
-│  │  └── ddpm_default.yaml
-│  ├── /datasets/
-│  │  ├── /CIFAR10/
-│  │  ├── /scrna_data/
-│  │  │  ├── NK_IFN_exp.csv
-│  │  │  ├── NK_IFN_meta.csv
-│  │  │  └── scrna.h5ad
-│  │  ├── cifar10.py
-│  │  └── scrna.py
-│  ├── /logs/
-│  ├── /models/
-│  │  ├── base.py
-│  │  ├── ddpm_model.py
-│  │  ├── ddpm.py
-│  │  ├── gaussian_diffusion.py
-│  │  └── latent_diffusion.py
-│  ├── /samples/
-│  ├── /schedulers/
-│  │  └── warmup.py
-│  ├── /scripts/
-│  │  ├── csv_to_h5ad.py
-│  │  └── train_ddpm.py
-│  ├── /trainers/
-│  │  ├── bae_trainer.py
-│  │  ├── ddpm_trainer.py
-│  │  └── scrna_trainer.py
-├── /scDiff/
-├── /scDiffusion/
+├── /checkpoints/
+├── /configs/
+│  ├── /baselines/
+│  │  └── baseline_ddpm_default.yaml
+│  ├── /scdiff/
+├── /data/
+│  ├── /fig1/
+│  ├── /fig2/
+├── /logs/
+├── /samples/
+│  ├── /fig1/
+│  ├── /fig2/
+├── /scripts/
+│  ├── /baseline/
+│  ├── /fig1/
+│  ├── /fig2/
+│  ├── /tools/
+├── /src/
+│  ├── /diffusion_baselines/
+│  ├── /scDiff/
+│  ├── /scDiffusion/
+├── /utils/
+│  └── metrics.py
 ...
 ```
+
 ## ⚙️ Configure the environment and prepare the data
-### 📥 Download the data
+
 ### 🛠️ Configure the environment
+
 ```
 conda create -n pertbench python=3.10 -y && conda activate pertbench
-pip install omegaconf numpy anndata tqdm scanpy
-pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121
-```
-#### CellOT
-- The original paper：
-- Repo：
-You can run the following code to easily configure the environment
-```shell
-cd CellOt
-conda create -n cellot python=3.9.5 && conda activate cellot
-
-conda update -n base -c defaults conda
-pip install --upgrade pip
-pip install -r requirements.txt
-python setup.py develop
-```
-To train the CellOT model, you should run
-```shell
-python ./scripts/train.py \
-  --outdir ./results/PRJNA/drug-cisplatin/model-cellot \
-  --config ./configs/tasks/PRJNA.yaml \
-  --config ./configs/models/cellot.yaml \
-  --config.data.target cisplatin
-```
-Once trained, the model can be evaluated via:
-```shell
-python ./scripts/evaluate.py \
-  --outdir ./results/4i/drug-cisplatin/model-cellot \
-  --setting iid \
-  --where data_space
-```
-#### scDiffusion
-- The original paper：scDiffusion: conditional generation of high-quality single-cell data using diffusion model
-- Repo：https://github.com/EperLuo/scDiffusion
-1. Configure the environment
-```shell
-cd scDiffusion
-conda create -n scdiffusion python=3.10 -y && conda activate scdiffusion
-pip install torch==1.13.0+cu116 -f https://download.pytorch.org/whl/torch_stable.html 
-pip install -r requirements.txt
-conda install mpi4py==3.1.4
-pip install blobfile
-```
-The data used for training the model is formatted in h5ad. You can download the dataset that used in the original paper in https://figshare.com/s/49b29cb24b27ec8b6d72. If you want to add your own data, you need to add your data import code `cell_datasets_YOURDATA.py` to the `guided_diffusion` folder.
-2. Train
-To train the Autoencoder, please run:
-```shell
-cd VAE 
-python VAE_train.py \
-  --data_dir '/share/PurpNight/scDiffusion/guided_diffusion/data/scdiffusion_benchmark3_part_1.h5ad' \
-  --num_genes 3702 \
-  --save_dir '../output/checkpoint/VAE/benchmark' \
---max_steps 200000
-```
-Set the parameters *data_dir* and *save_dir* to your local path, and set the *num_genes* parameter to match the gene number of your dataset. Set the *state_dict* to the path where you store your downloaded scimilarity checkpoint. You can also train the autoencoder from scratch, this might need larger interation steps (larger than 1.5e5 steps would be good).
-
-To train the diffusion backbone, please run:
-```
-python cell_train.py \
-  --data_dir '/share/PurpNight/scDiffusion/guided_diffusion/data/scdiffusion_benchmark3_part_1.h5ad' \
-  --vae_path 'output/checkpoint/VAE/benchmark/model_seed=0_step=199999.pt' \
-  --model_name 'scDiffusionBenchmark' \
-  --save_dir 'output/checkpoint/backbone' \
-  --lr_anneal_steps 600000
-```
-First, set the parameters *vae_path* to the path of your trained Autoencoder. Next, set the *data_dir*, *model_name*(the folder to save the ckpt), and *save_dir*(the path to place the *model_name* folder). We trained the backbone for 6e5 steps.
-
-To train the classifier, please run 
-```
-python classifier_train.py \
-  --data_dir '/share/PurpNight/scDiffusion/guided_diffusion/data/scdiffusion_benchmark3_part_1.h5ad' \
-  --model_path "output/checkpoint/classifier/benchmark_classifier" \
-  --iterations 200000 \
-  --vae_path 'output/checkpoint/VAE/benchmark/model_seed=0_step=199999.pt' \
-  --num_class=13
-```
-Set the parameters *vae_path* to the path of your trained Autoencoder. Set the *num_class* parameter to match the number of classes in your dataset. Then, set the *model_path* to the path you would like to save the ckpt and execute the file. We trained the classifier for 2e5 steps.
-
-3. Generate new samples
-
-Unconditional generation:
-```
-python cell_sample.py \
-  --model_path 'output/checkpoint/backbone/scDiffusionBenchmark/model600000.pt' \
-  --sample_dir 'output/simulated_samples/benchmark'\
-  --num_samples 3000 \
-  --batch_size 1000
-```
-set the *model_path* to match the trained backbone model's path and set the *sample_dir* to your local path. The *num_samples* is the number of cell to generate, and the *batch_size* is the number of cell generate in one diffusion reverse process.
-
-Running the file will generate new latent embeddings for the scRNA-seq data and save them in a .npz file. You can decode these latent embeddings and retrieve the complete gene expression data using `exp_script/script_diffusion_umap.ipynb` or `exp_script/script_static_eval.ipynb`.
-
-Conditional generation:
-
-Run `classifier_sample.py`: set the *model_path* and *classifier_path* to match the trained backbone model and the trained classifier, respectively. Also, set the *sample_dir* to your local path. The condition can be set in "main" (the param *cell_type* in the main() function refer to the cell_type you want to generate.). Running the file will generate new latent embeddings under the given conditions.
-
-For example: `python classifier_sample.py --model_path 'output/checkpoint/backbone/my_diffusion/model600000.pt' --classifier_path 'output/checkpoint/classifier/my_classifier/model200000.pt' --sample_dir 'output/simulated_samples/muris' --num_samples 3000 --batch_size 1000`
-
-You can decode these embeddings the same way as in unconditional generation.
-
-For multi-conditional generation and gradiante interpolation, refer to the comments in the main() function and create_argparser() function (see the comments with *** mark).
-
-**Experiments reproduce:**
-
-The scripts in the exp_script/ directory can be used to reproduce the results presented in the paper. You can refer the process in any of these scripts to rebuild the gene expression from latent space. The `exp_script/down_stream_analysis_muris.ipynb` can reproduce the marker genes result. The `exp_script/script_diffusion_umap_multi-condi.ipynb` can reproduce the result of two-conditonal generation. The `exp_script/script_diffusion_umap_trajectory.ipynb` can reproduce the result of Gradient Interpolation. The `exp_script/script_diffusion_umap.ipynb` can reproduce the UMAP shown in the paper. The `exp_script/script_static_eval.ipynb` can reproduce the statistical metrics mentioned in the paper.
-
-#### scFoundation
-- The original paper：Large-scale foundation model on single-cell transcriptomics
-- Repo：https://github.com/biomap-research/scFoundation
-
-1. Configure the environment
-
-```
-git clone https://github.com/biomap-research/scFoundation.git
-cd scFoundation
-
-conda create -n scfoundation python=3.10 -y
-conda activate scfoundation
-
-pip install argparse numpy pandas scipy einops scanpy local_attention
-pip install torch==2.1.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
-```
-
-2. 转换基因符号（🧐如果使用的是演示数据，跳过此步骤）
-
-如果使用自己的基因表达数据，需要将基因符号转换为与模型要求的基因列表一致。可以使用`get_embedding.py`中的`main_gene_selection`函数来完成这一任务。
-
-```
-import pandas as pd
-from get_embedding import main_gene_selection
-
-# 加载基因列表
-gene_list_df = pd.read_csv('../OS_scRNA_gene_index.19264.tsv', header=0, delimiter='\t')
-gene_list = list(gene_list_df['gene_name'])
-
-# 假设 X_df 是你的单细胞数据（行是细胞，列是基因）
-X_df, to_fill_columns, var = main_gene_selection(X_df, gene_list)
-
-# 保存数据
-X_df.to_csv('your_data.csv', index=False)  # 或者保存为 .npy 格式
-```
-
-3. 推理
-
-通过链接 https://hopebio2020-my.sharepoint.com/:f:/g/personal/dongsheng_biomap_com/Eh22AX78_AVDv6k6v4TZDikBXt33gaWXaz27U9b1SldgbA 下载模型权重文件，并将其放入 `models` 文件夹。
-
-通过链接 https://doi.org/10.6084/m9.figshare.24049200 下载原始的基因表达数据示例，解压后命名为 `examples`。
-
-## scELMo
-
-1. 配置环境
-
-```
-git clone https://github.com/HelloWorldLTY/scELMo.git
-cd scELMo
-
-conda create -n scelmo python=3.8 -y
-conda activate scelmo
-
-pip install openai
-pip install scib scib_metrics==0.3.3 mygene scanpy==1.9.3 scikit-learn
-
-apt-get install -y python-setuptools python-pip #may not need it for HPC base
-git clone https://github.com/nmslib/hnswlib.git
-cd hnswlib
-pip install .
-```
-
-pip install numpy==1.24.4
-
-pip install jax==0.3.25
-
-## scGen
-
-1. 配置环境
-
-```
-git clone https://github.com/theislab/scgen.git
-cd scgen
-
-conda create -n scgen python=3.9 -y
-conda activate scgen
-
-#conda deactivate
-#conda remove -n scgen --all -y
-
-#pip install torch --index-url https://download.pytorch.org/whl/cu121 
-#pip install -e .[dev,docs]
-
-git clone https://github.com/theislab/scgen-reproducibility.git
-cd scgen-reproducibility/code
-pip install wget
-python DataDownloader.py # 下载数据
-```
-
-2. 训练scGen
-
-```
-pip install keras==2.3.1
-pip install tensorflow==1.15
-pip install typing-extensions # Re
-pip install get-version==2.2
-pip install anndata
-pip install scanpy
-pip install protobuf==3.20
-pip install adjustText
-
-python ModelTrainer.py all
-python ModelTrainer.py PCA
-python ModelTrainer.py VecArithm
-python ModelTrainer.py CVAE
-python ModelTrainer.py scGen # 运行python ./train_scGen.py
-python ModelTrainer.py STGAN # 运行python ./st_gan.py train
-```
-
-3. 复现图 2
-
-```
-pip install numpy
-pip install pandas
-pip install anndata
-pip install scanpy
-pip install scgen
-pip install requests
 pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121 
-pip --version
-pip install pip==24.0
-pip --version
-pip install scvi-tools==0.17
-pip install scipy
-
-export PYTHONPATH=/share/PurpNight/scgen/scgen-reproducibility
-python Fig2.py
+pip install omegaconf numpy anndata tqdm scanpy gdown einops torch_geometric adjustText wandb 
+pip install git+https://github.com/LouiseDck/scgen
+sudo apt update
+sudo apt install openmpi-bin libopenmpi-dev
+pip install mpi4py
 ```
 
-## scGPT
+### 📥 Download the data and the pre-train model
 
-### 1. Configure the environment
 
-```
-git clone https://github.com/bowang-lab/scGPT.git && cd scGPT
-conda create -n scgpt python=3.9 -y && conda activate scgpt
 
-conda deactivate && conda remove -n scgpt --all -y
+## 📈 Evaluation
 
-pip install torch==2.0.1+cu117 -f https://download.pytorch.org/whl/torch_stable.html
-pip install scgpt
-pip install wandb
-pip install numpy==1.25.2
-pip install anndata==0.10.8
-pip install ipython
-```
+### Highly variable gene gradient
 
-### 2. Download the pretrained model
+In the data of Task 1 in Figure 1, the CD4T cell type has the largest number of cells (5,564), and is therefore chosen as the representative.
 
-The original author recommends using the `whole-human` model by default in most applications, so only the [link](https://drive.google.com/drive/folders/1oWh_-ZRdhtoGQ2Fw24HP41FgLoomVo-y) to the `whole-human` model is provided here. If you need other models, please refer to the original code repository. You should put the 3 files under the `examples/save/scGPT_bc/` folder.
-
-### 3. Fine-tune
+First, run
 
 ```
-cd examples
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-python finetune_integration.py
+python scripts/tools/get_the_hvg_data_for_fig1.py
 ```
 
-You may meet several errors, for example: 
+to generate the hvg data. Then run
 
 ```
-File "/opt/mamba/envs/scgpt/lib/python3.9/site-packages/scvi/data/_built_in_data/_pbmc.py", line 81, in _load_pbmc_dataset    barcodes_metadata = pbmc_metadata["barcodes"].index.values.ravel().astype(np.str)
+nohup bash scripts/highly_variable_gene_gradient/ddpm_hvg.sh > ddpm_hvg.log 2>&1
+nohup bash scripts/highly_variable_gene_gradient/ddpm_mlp_hvg.sh > ddpm_mlp_hvg.log 2>&1
+nohup bash scripts/highly_variable_gene_gradient/scdiff_hvg.sh > scdiff_hvg.log 2>&1
+nohup bash scripts/highly_variable_gene_gradient/scgen_hvg.sh > scgen_hvg.log 2>&1
+nohup bash scripts/highly_variable_gene_gradient/squidiff_hvg.sh > squidiff_hvg.log 2>&1
+nohup bash scripts/highly_variable_gene_gradient/scdiffusion_hvg.sh > scdiffusion_hvg.log 2>&1
 ```
 
-You can find the original file and change this part of the code:
+to obtain the evaluation results, respectively.
+
+### Fig 1
+
+#### Task 1
+
+**0  Get the data**
+
+由于总体而言，高变基因数最低（1000）的数据训练所得的模型性能最好，Fig1 task1和Fig1 task3的实验均使用原始数据取高变基因为1000的处理后数据进行实验。首先运行
 
 ```
-vim /opt/mamba/envs/scgpt/lib/python3.9/site-packages/scvi/data/_built_in_data/_pbmc.py
+python scripts/tools/get_the_hvg_data_for_fig3.py
 ```
 
-On line 81 of the file, replace `np.str` with `str`. On line 89 of the file, replace `np.bool` with `bool`.
-### 📥 Download the data
-You can download the xxx dataset to the data path by
-```shell
-pip install gdown
+以获取Fig1 task3实验所用数据。然后该数据与高变基因梯度实验中所得的数据组织好，例如
+
 ```
+/PertBench/
+├── /data/
+│  ├── /hvg_fig1/
+│  │  └── B_train_HVG_1000.h5ad
+│  ├── /hvg_fig3/
+│  │  └── mix2_test_HVG_1000.h5ad
+```
+
+**1  Squidiff**
+
+测试不同高变基因梯度的评估结果
+
+```bash
+nohup bash scripts/fig1/fig1_task1_squidff_hvg.sh > fig1_task1_squidff_hvg.log 2>&1
+```
+
+选定最佳高变基因数（1000）进行 task1 的全部测评
+
+```bash
+nohup bash scripts/fig1/fig1_task1_squidff.sh > fig1_task1_squidff.log 2>&1
+```
+
+
+
+```
+nohup bash scripts/add_gaus/squidiff.sh > add_gaus_squidiff.log 2>&1
+```
+
+
+
+**2  scDiff**
+
+测试不同高变基因梯度的评估结果
+
+````bash
+nohup bash scripts/fig1/fig1_task1_scdiff_hvg.sh > fig1_task1_scdiff_hvg.log 2>&1
+````
+
+选定最佳高变基因数（default）进行 task1 的全部测评
+
+```bash
+nohup bash scripts/fig1/fig1_task1_scdiff.sh > fig1_task1_scdiff.log 2>&1
+```
+
+
+
+```
+nohup bash scripts/add_gaus/scdiff.sh > add_gaus_scdiff.log 2>&1
+```
+
+
+
+**3  scDiffusion**
+
+```bash
+nohup bash scripts/fig1/fig1_task1_scdiffusion_hvg.sh > fig1_task1_scdiffusion_hvg.log 2>&1
+```
+
+6000
+
+```bash
+nohup bash scripts/fig1/fig1_task1_scdiffusion.sh > fig1_task1_scdiffusion.log 2>&1
+```
+
+
+
+```
+nohup bash scripts/add_gaus/scdiffusion.sh > add_gaus_scdiffusion.log 2>&1
+```
+
+
+
+**4  scGen**
+
+测试不同高变基因梯度的评估结果。运行
+
+```bash
+nohup bash scripts/fig1/fig1_task1_scgen_hvg.sh > fig1_task1_scgen_hvg.log 2>&1
+```
+
+选定最佳高变基因数（default）进行 task1 的全部测评。运行
+
+```bash
+nohup bash scripts/fig1/fig1_task1_scgen.sh > fig1_task1_scgen.log 2>&1
+```
+
+
+
+```
+nohup bash scripts/add_gaus/scgen.sh > add_gaus_scgen.log 2>&1
+```
+
+
+
+**5  DDPM**
+
+测试不同高变基因梯度的评估结果
+
+```bash
+nohup bash scripts/fig1/fig1_task1_ddpm_hvg.sh > fig1_task1_ddpm_hvg.log 2>&1
+```
+
+选定最佳高变基因数（1000）进行 task1 的全部测评
+
+```bash
+nohup bash scripts/fig1/fig1_task1_ddpm.sh > fig1_task1_ddpm.log 2>&1
+```
+
+
+
+
+
+```
+nohup bash scripts/add_gaus/ddpm.sh > add_gaus_ddpm.log 2>&1
+```
+
+
+
+**6  DDPM+MLP**
+
+测试不同高变基因梯度的评估结果
+
+```bash
+nohup bash scripts/fig1/fig1_task1_ddpm_mlp_hvg.sh > fig1_task1_ddpm_mlp_hvg.log 2>&1
+```
+
+使用4000
+
+```bash
+nohup bash scripts/fig1/fig1_task1_ddpm_mlp.sh > fig1_task1_ddpm_mlp.log 2>&1
+```
+
+
+
+```
+nohup bash scripts/add_gaus/ddpm_mlp.sh > add_gaus_ddpm_mlp.log 2>&1
+```
+
+
+
+#### Task 2
+
+**0 Get the data**
+
+```
+python scripts/tools/fig1_task2.py
+```
+
+**1  Squidiff**
+
+获取测评结果。运行
+
+```bash
+nohup bash scripts/fig1/fig1_task2_squidff.sh > fig1_task2_squidff.log 2>&1
+```
+
+**2  scDiff**
+
+获取测评结果
+
+```bash
+nohup bash scripts/fig1/fig1_task2_scdiff.sh > fig1_task2_scdiff.log 2>&1
+```
+
+**3  scDiffusion**
+
+```bash
+nohup bash scripts/fig1/fig1_task2_scdiffusion.sh > fig1_task2_scdiffusion.log 2>&1
+```
+
+**4  scGen**
+
+获取测评结果。运行
+
+```bash
+nohup bash scripts/fig1/fig1_task2_scgen.sh > fig1_task2_scgen.log 2>&1
+```
+
+**5  DDPM**
+
+获取评测结果。运行
+
+```bash
+nohup bash scripts/fig1/fig1_task2_ddpm.sh > fig1_task2_ddpm.log 2>&1
+```
+
+**6  DDPM+MLP**
+
+```bash
+nohup bash scripts/fig1/fig1_task2_ddpm_mlp.sh > fig1_task2_ddpm_mlp.log 2>&1
+```
+
+#### Task 3
+
+**0 Get the data**
+
+```
+# 获取原始数据集
+python scripts/tools/fig1_task3.py
+# 获取高变基因数据集
+python scripts/tools/fig1_task3_hvg.py
+```
+
+**1  Squidiff**
+
+依据 task1 中选取的最佳高变基因数（1000）进行测评
+
+```bash
+nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1
+```
+
+**2  scDiff**
+
+依据 task1 中选取的最佳高变基因数（default）进行测评
+
+```bash
+nohup bash scripts/fig1/fig1_task3_scdiff.sh > fig1_task3_scdiff.log 2>&1
+```
+
+**3  scDiffusion**
+
+```bash
+nohup bash scripts/fig1/fig1_task3_scdiffusion.sh > fig1_task3_scdiffusion.log 2>&1
+```
+
+**4  scGen**
+
+```bash
+nohup bash scripts/fig1/fig1_task3_scgen.sh > fig1_task3_scgen.log 2>&1
+```
+
+**5  DDPM**
+
+依据 task1 中选取的最佳高变基因数（1000）进行测评
+
+```bash
+nohup bash scripts/fig1/fig1_task3_ddpm.sh > fig1_task3_ddpm.log 2>&1
+```
+
+**6  DDPM+MLP**
+
+依据 task1 中选取的最佳高变基因数（4000）进行测评
+
+```bash
+nohup bash scripts/fig1/fig1_task3_ddpm_mlp.sh > fig1_task3_ddpm_mlp.log 2>&1
+```
+
+#### Task 4 
+
+**0  Get the data**
+
+1. 将 exp.csv 和 meta.csv 合并为 .h5ad 数据。运行
+
+   ```bash
+   bash scripts/tools/fig1_task4_merge.sh
+   ```
+
+   得到 `task4_ACTA2_control.h5ad`，`task4_ACTA2_coculture.h5ad`，`task4_ACTA2_IFN.h5ad`，`task4_B2M_control.h5ad`，`task4_B2M_coculture.h5ad`和`task4_B2M_IFN.h5ad`数据文件。
+
+2. 划分方式 1：输入control预测coculture（训练集:测试集=8:2），输入control预测IFN（训练集:测试集=8:2）。运行
+
+   ```bash
+   bash scripts/tools/fig1_task4_split_1.sh
+   ```
+
+   得到`task4_B2M_control_coculture_train.h5ad`，`task4_B2M_control_coculture_test.h5ad`等共八个数据文件。注意，由于control和coculture（其他数据集也一样）的基因序列并不相同，直接合并会出现 nan 值，这里采用了取并集然后将 nan 变为 0 的通用做法。
+
+3. 划分方式2：训练时control预测IFN，测试时control预测coculture。运行
+
+   ```bash
+   python scripts/tools/create_global_gene_list.py
+   ```
+
+   统一基因空间，基因数目为5737。然后运行
+
+   ```bash
+   bash scripts/tools/fig1_task4_split_2.sh
+   ```
+
+   得到`task4_ACTA2_control_to_coculture.h5ad`，`task4_ACTA2_control_to_ifn.h5ad`，`task4_B2M_control_to_coculture.h5ad`和`task4_B2M_control_to_ifn.h5ad`四个数据文件。
+
+**1  Squidiff**
+
+1. 在第一种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_1_squidiff.sh > fig1_task4_1_squidiff.log 2>&1
+   ```
+
+2. 在第二种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_2_squidiff.sh > fig1_task4_2_squidiff.log 2>&1
+   ```
+
+**2  scDiff**
+
+1. 在第一种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_1_scdiff.sh > fig1_task4_1_scdiff.log 2>&1
+   ```
+
+2. 在第二种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_2_scdiff.sh > fig1_task4_2_scdiff.log 2>&1
+   ```
+
+**3  scDiffusion**
+
+1. 在第一种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_1_scdiffusion.sh > fig1_task4_1_scdiffusion.log 2>&1
+   ```
+
+2. 在第二种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_2_scdiffusion.sh > fig1_task4_2_scdiffusion.log 2>&1
+   ```
+
+**4  scGen**
+
+1. 在第一种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_1_scgen.sh > fig1_task4_1_scgen.log 2>&1
+   ```
+
+2. 在第二种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_2_scgen.sh > fig1_task4_2_scgen.log 2>&1
+   ```
+
+**5  DDPM**
+
+1. 在第一种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_1_ddpm.sh > fig1_task4_1_ddpm.log 2>&1
+   ```
+
+2. 在第二种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_2_ddpm.sh > fig1_task4_2_ddpm.log 2>&1
+   ```
+
+**6  DDPM+MLP**
+
+1. 在第一种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_1_ddpm_mlp.sh > fig1_task4_1_ddpm_mlp.log 2>&1
+   ```
+
+2. 在第二种划分方式下，获取测评结果，运行
+
+   ```bash
+   nohup bash scripts/fig1/fig1_task4_2_ddpm_mlp.sh > fig1_task4_2_ddpm_mlp.log 2>&1
+   ```
+
+### Fig 2
+
+#### Task 1
+
+**0  获取数据**
+
+将 exp.csv 和 meta.csv 合并为 .h5ad 数据，并合并为训练集和测试集。运行
+
+```bash
+bash scripts/tools/fig2_task1_merge.sh
+```
+
+得到`seed123_control_test.h5ad`、`seed123_control_train.h5ad`等数据集。
+
+**1  Squidiff**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task1_squidiff.sh > fig2_task1_squidiff.log 2>&1
+```
+
+**2  scDiff**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task1_scdiff.sh > fig2_task1_scdiff.log 2>&1
+```
+
+**3  scDiffusion**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task1_scdiffusion.sh > fig2_task1_scdiffusion.log 2>&1
+```
+
+**3  scGen**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task1_scgen.sh > fig2_task1_scgen.log 2>&1
+```
+
+**5  DDPM**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task1_ddpm.sh > fig2_task1_ddpm.log 2>&1
+```
+
+**6 DDPM+MLP**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task1_ddpm_mlp.sh > fig2_task1_ddpm_mlp.log 2>&1
+```
+
+#### Task 2
+
+**1  Squidiff**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task2_squidiff.sh > fig2_task2_squidiff.log 2>&1
+```
+
+**2  scDiff**
+
+受原代码限制，不进行该实验。
+
+**3  scDiffusion**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task2_scdiffusion.sh > fig2_task2_scdiffusion.log 2>&1
+```
+
+**4  scGen**
+
+受原代码限制，不进行该实验。
+
+**5  DDPM**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task2_ddpm.sh > fig2_task2_ddpm.log 2>&1
+```
+
+**6 DDPM+MLP**
+
+获取测评结果，运行
+
+```bash
+nohup bash scripts/fig2/fig2_task2_ddpm_mlp.sh > fig2_task2_ddpm_mlp.log 2>&1
+```
+
+#### Task 3
+
+**0  Get the data**
+
+将 exp.csv 和 meta.csv 合并为 .h5ad 数据。运行
+
+```bash
+bash scripts/tools/fig2_task3.sh
+```
+
+You will get `mouse_control_ifn.h5ad`等四个数据。
+
+**1  Squidiff**
+
+获取测评结果。运行
+
+```bash
+nohup bash scripts/fig2/fig2_task3_squidiff.sh > fig2_task3_squidiff.log 2>&1
+```
+
+**2  scDiff**
+
+获取测评结果。运行
+
+```bash
+nohup bash scripts/fig2/fig2_task3_scdiff.sh > fig2_task3_scdiff.log 2>&1
+```
+
+**3  scDiffusion**
+
+获取测评结果。运行
+
+```bash
+nohup bash scripts/fig2/fig2_task3_scdiffusion.sh > fig2_task3_scdiffusion.log 2>&1
+```
+
+**4  scGen**
+
+获取测评结果。运行
+
+```bash
+nohup bash scripts/fig2/fig2_task3_scgen.sh > fig2_task3_scgen.log 2>&1
+```
+
+**5  DDPM**
+
+获取测评结果。运行
+
+```bash
+nohup bash scripts/fig2/fig2_task3_ddpm.sh > fig2_task3_ddpm.log 2>&1
+```
+
+**2  DDPM+MLP**
+
+获取测评结果。运行
+
+```bash
+nohup bash scripts/fig2/fig2_task3_ddpm_mlp.sh > fig2_task3_ddpm_mlp.log 2>&1
+```
+
+
+
+```
+我有json数据形如```[{
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Who was the father of the father of psychoanalysis?"
+            },
+            {
+                "from": "gpt",
+                "value": "<think>thought content xxx ... ...</think>normal content xxx ... ...<tool_call>\n{\"name\": \"tool_1\", \"arguments\": {\"query\": \"argument content 1\"}}\n</tool_call><tool_call>\n{\"name\": \"tool_2\", \"arguments\": {\"query\": \"argument content 2\"}}\n</tool_call>"
+            },
+            {
+                "from": "human",
+                "value": "<tool_response>response content ... ... </tool_response>"
+            },
+            {
+                "from": "gpt",
+                "value": "same ... ..."
+            },
+            {
+                "from": "human",
+                "value": "<tool_response>same ... ...</tool_response>"
+            },
+            {
+                "from": "gpt",
+                "value": "same ... ... <answer>final answer</answer>"
+            }
+        ],
+        "tools": "[{\"type\": \"function\", \"function\": {\"name\": \"execute_code\", \"description\": \"Execute Python code in the specified conda environment\", \"parameters\": {\"type\": \"object\", \"properties\": {\"code\": {\"type\": \"string\", \"description\": \"Python code to execute\"}, \"filename\": {\"type\": \"string\", \"description\": \"Optional: Name of the file to save the code (default: generated UUID)\"}}, \"required\": [\"code\"]}}}, ... ...]",
+        "system": "... ..."
+    },``` 我需要你把这种数据拆分转换为两种数据，一种形如```{
+  "_id": {
+    "$oid": "689810fde3df02e840971b23"
+  },
+  "_class_id": "Record.MCPRecord",
+  "final_answer": "Amir-Abbas Hoveyda",
+  "right_answer": "Morarji Desai",
+  "score": null,
+  "split": "train",
+  "status": "completed",
+  "task": {
+    "$ref": "Task",
+    "$id": {
+      "$oid": "689810d40e8073b07770979c"
+    }
+  },
+  "trained_count": 0,
+  "traj": [
+    {
+      "$ref": "DispatchedSamplingTask",
+      "$id": {
+        "$oid": "689810fde3df02e840971b24"
+      }
+    },
+    {
+      "$ref": "DispatchedSamplingTask",
+      "$id": {
+        "$oid": "6898110ee3df02e840971b25"
+      }
+    }
+  ],
+  "traj_id": 0
+}```，即轨迹大纲。另一种如DispatchedSamplingTask 689810fde3df02e840971b24对应的到目前assistant + tool的具体trace形如```{
+  "_id": {
+    "$oid": "689810fde3df02e840971b24"
+  },
+  "_class_id": "DispatchedSamplingTask",
+  "creat_time": {
+    "$date": "2025-08-10T03:24:45.489Z"
+  },
+  "finish_time": {
+    "$date": "2025-08-10T03:25:02.753Z"
+  },
+  "is_minio_managed": false,
+  "priority": 0,
+  "req_type": "chatcompletions",
+  "request": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are ... ..."
+      },
+      {
+        "role": "user",
+        "content": "Your task is to ... ... "
+      }
+      {"role": "assistant", ......}
+      {"role": "tool", ......}
+    ],
+    "model": "train-model",
+    "tools": [ # all the tools
+      {
+        "type": "function",
+        "function": {
+          "name": "execute_code",
+          "description": "Execute Python code ......",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Python code to execute"
+              },
+              "filename": {
+                "type": "string",
+                "description": "Optional: Name of the file to save the code (default: generated UUID)"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          }
+        }
+      },
+      ... ...
+    ]
+  },
+  "response": {
+    "id": "c7637349bebc42249e0d653cf8bf890e",
+    "choices": [
+      {
+        "finish_reason": "tool_calls",
+        "index": 0,
+        "logprobs": {
+          "content": [
+            {
+              "token": "<think>",
+              "bytes": [
+                60,
+                116,
+                104,
+                105,
+                110,
+                107,
+                62
+              ],
+              "logprob": 0,
+              "top_logprobs": []
+            },
+            ... ...
+          ],
+          "refusal": null
+        },
+        "message": {
+          "content": "",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": [
+            {
+              "id": "call_f6d96a4e00614091ba626c40",
+              "function": {
+                "arguments": "{\"plan_steps\": [\"1. Identify the first place mentioned by name in the Book of Esther (NIV). [completed]\", \"2. Determine the Prime Minister of that place in April 1977. [completed]\"], \"next_step_goal\": \"Provide the final answer\", \"chosen_servers\": []}",
+                "name": "manage_context"
+              },
+              "type": "function",
+              "index": null
+            }
+          ],
+          "reasoning_content": "Okay, <think> content </think>"
+        },
+        "matched_stop": null
+      }
+    ],
+    "created": 1754796302,
+    "model": "train-model",
+    "object": "chat.completion",
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 603,
+      "prompt_tokens": 7703,
+      "total_tokens": 8306,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  },
+  "sampled_from": {
+    "$ref": "InferenceService",
+    "$id": {
+      "$oid": "689810c3e3df02e840971b20"
+    }
+  },
+  "score": null,
+  "status": "completed",
+  "task": {
+    "$ref": "Task",
+    "$id": {
+      "$oid": "689810d40e8073b07770979c"
+    }
+  },
+  "traj_id": 0,
+  "type": "task"
+}```
+```
+
