@@ -1,6 +1,9 @@
 <div align= "center">
-    <h1> 🌊 PertBench: Perturbation Modeling with Diffusion Models Benchmark </h1>
+    <h1> 🌊 PertDiffBench </h1>
 </div>
+
+## News
+- Oct 2025 — Our paper “Benchmarking Diffusion Models for Predicting Perturbed Cellular Responses” has been accepted to the NeurIPS 2025 Workshop on Biosecurity Safeguards for Generative AI🎉🎉🎉!
 
 ## ⚙️ Configure the environment and prepare the data
 
@@ -18,7 +21,9 @@ pip install mpi4py
 
 ### 📥 Download the data and the pre-train model
 
+## 📊 Data
 
+Data are still being organized...
 
 ## 📈 Evaluation
 
@@ -37,13 +42,13 @@ nohup bash scripts/highly_variable_gene_gradient/squidiff_hvg.sh > squidiff_hvg.
 nohup bash scripts/highly_variable_gene_gradient/scdiffusion_hvg.sh > scdiffusion_hvg.log 2>&1
 ```
 
-to obtain the evaluation results, respectively.
+to obtain the evaluation results, respectively. The script will output the results from three experimental runs and their averaged results in the log, while also generating a CSV file for easy table completion.
 
 ### Fig 1
 
 #### Task 1
 
-**0  Get the data**
+**Get the data**
 
 Since, overall, the models trained on the data with the lowest number of highly variable genes (1000) achieved the best performance, the experiments of Task 1 and Task 3 in Figure 1 are conducted using the processed data with 1000 HVGs extracted from the original data.  
 
@@ -58,248 +63,58 @@ First, run `python scripts/tools/get_the_hvg_data_for_fig3.py` to generate the d
 │  │  └── mix2_test_HVG_1000.h5ad
 ```
 
-**1  Squidiff**
-
-测试不同高变基因梯度的评估结果
-
-```bash
-nohup bash scripts/fig1/fig1_task1_squidff_hvg.sh > fig1_task1_squidff_hvg.log 2>&1
-```
-
-选定最佳高变基因数（1000）进行 task1 的全部测评
-
-```bash
-nohup bash scripts/fig1/fig1_task1_squidff.sh > fig1_task1_squidff.log 2>&1
-```
-
-
-
-```
-nohup bash scripts/add_gaus/squidiff.sh > add_gaus_squidiff.log 2>&1
-```
-
-
-
-**2  scDiff**
-
-测试不同高变基因梯度的评估结果
-
-````bash
-nohup bash scripts/fig1/fig1_task1_scdiff_hvg.sh > fig1_task1_scdiff_hvg.log 2>&1
-````
-
-选定最佳高变基因数（default）进行 task1 的全部测评
-
-```bash
-nohup bash scripts/fig1/fig1_task1_scdiff.sh > fig1_task1_scdiff.log 2>&1
-```
-
-
-
-```
-nohup bash scripts/add_gaus/scdiff.sh > add_gaus_scdiff.log 2>&1
-```
-
-
-
-**3  scDiffusion**
-
-```bash
-nohup bash scripts/fig1/fig1_task1_scdiffusion_hvg.sh > fig1_task1_scdiffusion_hvg.log 2>&1
-```
-
-6000
-
-```bash
-nohup bash scripts/fig1/fig1_task1_scdiffusion.sh > fig1_task1_scdiffusion.log 2>&1
-```
-
-
-
-```
-nohup bash scripts/add_gaus/scdiffusion.sh > add_gaus_scdiffusion.log 2>&1
-```
-
-
-
-**4  scGen**
-
-测试不同高变基因梯度的评估结果。运行
-
-```bash
-nohup bash scripts/fig1/fig1_task1_scgen_hvg.sh > fig1_task1_scgen_hvg.log 2>&1
-```
-
-选定最佳高变基因数（default）进行 task1 的全部测评。运行
-
-```bash
-nohup bash scripts/fig1/fig1_task1_scgen.sh > fig1_task1_scgen.log 2>&1
-```
-
-
-
-```
-nohup bash scripts/add_gaus/scgen.sh > add_gaus_scgen.log 2>&1
-```
-
-
-
-**5  DDPM**
-
-测试不同高变基因梯度的评估结果
-
-```bash
-nohup bash scripts/fig1/fig1_task1_ddpm_hvg.sh > fig1_task1_ddpm_hvg.log 2>&1
-```
-
-选定最佳高变基因数（1000）进行 task1 的全部测评
-
-```bash
-nohup bash scripts/fig1/fig1_task1_ddpm.sh > fig1_task1_ddpm.log 2>&1
-```
-
-
-
-
-
-```
-nohup bash scripts/add_gaus/ddpm.sh > add_gaus_ddpm.log 2>&1
-```
-
-
-
-**6  DDPM+MLP**
-
-测试不同高变基因梯度的评估结果
-
-```bash
-nohup bash scripts/fig1/fig1_task1_ddpm_mlp_hvg.sh > fig1_task1_ddpm_mlp_hvg.log 2>&1
-```
-
-使用4000
-
-```bash
-nohup bash scripts/fig1/fig1_task1_ddpm_mlp.sh > fig1_task1_ddpm_mlp.log 2>&1
-```
-
-
-
-```
-nohup bash scripts/add_gaus/ddpm_mlp.sh > add_gaus_ddpm_mlp.log 2>&1
-```
-
-
-
-#### Task 2
-
-**0 Get the data**
-
-```
-python scripts/tools/fig1_task2.py
-```
-
-**1  Squidiff**
-
-获取测评结果。运行
-
-```bash
-nohup bash scripts/fig1/fig1_task2_squidff.sh > fig1_task2_squidff.log 2>&1
-```
-
-**2  scDiff**
-
-获取测评结果
-
-```bash
-nohup bash scripts/fig1/fig1_task2_scdiff.sh > fig1_task2_scdiff.log 2>&1
-```
-
-**3  scDiffusion**
-
-```bash
-nohup bash scripts/fig1/fig1_task2_scdiffusion.sh > fig1_task2_scdiffusion.log 2>&1
-```
-
-**4  scGen**
-
-获取测评结果。运行
-
-```bash
-nohup bash scripts/fig1/fig1_task2_scgen.sh > fig1_task2_scgen.log 2>&1
-```
-
-**5  DDPM**
-
-获取评测结果。运行
-
-```bash
-nohup bash scripts/fig1/fig1_task2_ddpm.sh > fig1_task2_ddpm.log 2>&1
-```
-
-**6  DDPM+MLP**
+**Run the evaluation**
 
 ```bash
 nohup bash scripts/fig1/fig1_task2_ddpm_mlp.sh > fig1_task2_ddpm_mlp.log 2>&1
+nohup bash scripts/fig1/fig1_task2_ddpm.sh > fig1_task2_ddpm.log 2>&1
+nohup bash scripts/fig1/fig1_task2_scgen.sh > fig1_task2_scgen.log 2>&1
+nohup bash scripts/fig1/fig1_task2_scdiff.sh > fig1_task2_scdiff.log 2>&1
+nohup bash scripts/fig1/fig1_task2_scdiffusion.sh > fig1_task2_scdiffusion.log 2>&1
+nohup bash scripts/fig1/fig1_task2_squidff.sh > fig1_task2_squidff.log 2>&1
+```
+
+#### Task 2
+
+**Run the evaluation**
+
+```bash
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task2_ddpm_mlp.sh > fig1_task2_ddpm_mlp.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task2_ddpm.sh > fig1_task2_ddpm.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task2_scgen.sh > fig1_task2_scgen.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task2_scdiff.sh > fig1_task2_scdiff.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task2_scdiffusion.sh > fig1_task2_scdiffusion.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task2_squidff.sh > fig1_task2_squidff.log 2>&1
 ```
 
 #### Task 3
 
-**0 Get the data**
+**Run the evaluation**
 
 ```
-# 获取原始数据集
-python scripts/tools/fig1_task3.py
-# 获取高变基因数据集
-python scripts/tools/fig1_task3_hvg.py
-```
-
-**1  Squidiff**
-
-依据 task1 中选取的最佳高变基因数（1000）进行测评
-
-```bash
-nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1
-```
-
-**2  scDiff**
-
-依据 task1 中选取的最佳高变基因数（default）进行测评
-
-```bash
-nohup bash scripts/fig1/fig1_task3_scdiff.sh > fig1_task3_scdiff.log 2>&1
-```
-
-**3  scDiffusion**
-
-```bash
-nohup bash scripts/fig1/fig1_task3_scdiffusion.sh > fig1_task3_scdiffusion.log 2>&1
-```
-
-**4  scGen**
-
-```bash
-nohup bash scripts/fig1/fig1_task3_scgen.sh > fig1_task3_scgen.log 2>&1
-```
-
-**5  DDPM**
-
-依据 task1 中选取的最佳高变基因数（1000）进行测评
-
-```bash
-nohup bash scripts/fig1/fig1_task3_ddpm.sh > fig1_task3_ddpm.log 2>&1
-```
-
-**6  DDPM+MLP**
-
-依据 task1 中选取的最佳高变基因数（4000）进行测评
-
-```bash
+conda activate pertbench && export PYTHONPATH=./
 nohup bash scripts/fig1/fig1_task3_ddpm_mlp.sh > fig1_task3_ddpm_mlp.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task3_ddpm.sh > fig1_task3_ddpm.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task3_scgen.sh > fig1_task3_scgen.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task3_scdiff.sh > fig1_task3_scdiff.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task3_scdiffusion.sh > fig1_task3_scdiffusion.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1
 ```
 
 #### Task 4 
 
-**0  Get the data**
+**Get the data**
 
 1. 将 exp.csv 和 meta.csv 合并为 .h5ad 数据。运行
 
