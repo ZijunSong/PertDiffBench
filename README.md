@@ -2,7 +2,7 @@
     <h1> 🌊 PertDiffBench </h1>
 </div>
 
-## News
+## 📰 News
 - Oct 2025 — Our paper “Benchmarking Diffusion Models for Predicting Perturbed Cellular Responses” has been accepted to the NeurIPS 2025 Workshop on Biosecurity Safeguards for Generative AI🎉🎉🎉!
 
 ## ⚙️ Configure the environment and prepare the data
