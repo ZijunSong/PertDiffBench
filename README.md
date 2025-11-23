@@ -402,7 +402,18 @@ conda activate pertbench && export PYTHONPATH=./
 cd scripts/tools
 python cd4t_gaus.py
 ```
-你会得到高斯噪声扰动后的数据在 `data/add_gaussian_noise_output` 路径下。
+你会得到高斯噪声扰动后的数据在 `data/add_gaussian_noise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
+
+然后运行
+```
+cd ../..
+nohup bash scripts/gaussian_perturbed_data/ddpm_mlp.sh > gausnoise_ddpm_mlp.log 2>&1
+nohup bash scripts/gaussian_perturbed_data/ddpm.sh > gausnoise_ddpm.log 2>&1
+nohup bash scripts/gaussian_perturbed_data/scdiff.sh > gausnoise_scdiff.log 2>&1
+nohup bash scripts/gaussian_perturbed_data/scdiffusion.sh > gausnoise_scdiffusion.log 2>&1
+nohup bash scripts/gaussian_perturbed_data/scgen.sh > gausnoise_scgen.log 2>&1
+nohup bash scripts/gaussian_perturbed_data/squidiff.sh > gausnoise_squidiff.log 2>&1
+```
 
 ### 生物噪声（对数正态分布）
 运行
