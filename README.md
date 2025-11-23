@@ -394,203 +394,32 @@ nohup bash scripts/fig2/fig2_task3_ddpm.sh > fig2_task3_ddpm.log 2>&1
 nohup bash scripts/fig2/fig2_task3_ddpm_mlp.sh > fig2_task3_ddpm_mlp.log 2>&1
 ```
 
-
-
+## 噪声扰动数据
+### 高斯噪声扰动
+运行
 ```
-我有json数据形如```[{
-        "conversations": [
-            {
-                "from": "human",
-                "value": "Who was the father of the father of psychoanalysis?"
-            },
-            {
-                "from": "gpt",
-                "value": "<think>thought content xxx ... ...</think>normal content xxx ... ...<tool_call>\n{\"name\": \"tool_1\", \"arguments\": {\"query\": \"argument content 1\"}}\n</tool_call><tool_call>\n{\"name\": \"tool_2\", \"arguments\": {\"query\": \"argument content 2\"}}\n</tool_call>"
-            },
-            {
-                "from": "human",
-                "value": "<tool_response>response content ... ... </tool_response>"
-            },
-            {
-                "from": "gpt",
-                "value": "same ... ..."
-            },
-            {
-                "from": "human",
-                "value": "<tool_response>same ... ...</tool_response>"
-            },
-            {
-                "from": "gpt",
-                "value": "same ... ... <answer>final answer</answer>"
-            }
-        ],
-        "tools": "[{\"type\": \"function\", \"function\": {\"name\": \"execute_code\", \"description\": \"Execute Python code in the specified conda environment\", \"parameters\": {\"type\": \"object\", \"properties\": {\"code\": {\"type\": \"string\", \"description\": \"Python code to execute\"}, \"filename\": {\"type\": \"string\", \"description\": \"Optional: Name of the file to save the code (default: generated UUID)\"}}, \"required\": [\"code\"]}}}, ... ...]",
-        "system": "... ..."
-    },``` 我需要你把这种数据拆分转换为两种数据，一种形如```{
-  "_id": {
-    "$oid": "689810fde3df02e840971b23"
-  },
-  "_class_id": "Record.MCPRecord",
-  "final_answer": "Amir-Abbas Hoveyda",
-  "right_answer": "Morarji Desai",
-  "score": null,
-  "split": "train",
-  "status": "completed",
-  "task": {
-    "$ref": "Task",
-    "$id": {
-      "$oid": "689810d40e8073b07770979c"
-    }
-  },
-  "trained_count": 0,
-  "traj": [
-    {
-      "$ref": "DispatchedSamplingTask",
-      "$id": {
-        "$oid": "689810fde3df02e840971b24"
-      }
-    },
-    {
-      "$ref": "DispatchedSamplingTask",
-      "$id": {
-        "$oid": "6898110ee3df02e840971b25"
-      }
-    }
-  ],
-  "traj_id": 0
-}```，即轨迹大纲。另一种如DispatchedSamplingTask 689810fde3df02e840971b24对应的到目前assistant + tool的具体trace形如```{
-  "_id": {
-    "$oid": "689810fde3df02e840971b24"
-  },
-  "_class_id": "DispatchedSamplingTask",
-  "creat_time": {
-    "$date": "2025-08-10T03:24:45.489Z"
-  },
-  "finish_time": {
-    "$date": "2025-08-10T03:25:02.753Z"
-  },
-  "is_minio_managed": false,
-  "priority": 0,
-  "req_type": "chatcompletions",
-  "request": {
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are ... ..."
-      },
-      {
-        "role": "user",
-        "content": "Your task is to ... ... "
-      }
-      {"role": "assistant", ......}
-      {"role": "tool", ......}
-    ],
-    "model": "train-model",
-    "tools": [ # all the tools
-      {
-        "type": "function",
-        "function": {
-          "name": "execute_code",
-          "description": "Execute Python code ......",
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "description": "Python code to execute"
-              },
-              "filename": {
-                "type": "string",
-                "description": "Optional: Name of the file to save the code (default: generated UUID)"
-              }
-            },
-            "required": [
-              "code"
-            ]
-          }
-        }
-      },
-      ... ...
-    ]
-  },
-  "response": {
-    "id": "c7637349bebc42249e0d653cf8bf890e",
-    "choices": [
-      {
-        "finish_reason": "tool_calls",
-        "index": 0,
-        "logprobs": {
-          "content": [
-            {
-              "token": "<think>",
-              "bytes": [
-                60,
-                116,
-                104,
-                105,
-                110,
-                107,
-                62
-              ],
-              "logprob": 0,
-              "top_logprobs": []
-            },
-            ... ...
-          ],
-          "refusal": null
-        },
-        "message": {
-          "content": "",
-          "refusal": null,
-          "role": "assistant",
-          "annotations": null,
-          "audio": null,
-          "function_call": null,
-          "tool_calls": [
-            {
-              "id": "call_f6d96a4e00614091ba626c40",
-              "function": {
-                "arguments": "{\"plan_steps\": [\"1. Identify the first place mentioned by name in the Book of Esther (NIV). [completed]\", \"2. Determine the Prime Minister of that place in April 1977. [completed]\"], \"next_step_goal\": \"Provide the final answer\", \"chosen_servers\": []}",
-                "name": "manage_context"
-              },
-              "type": "function",
-              "index": null
-            }
-          ],
-          "reasoning_content": "Okay, <think> content </think>"
-        },
-        "matched_stop": null
-      }
-    ],
-    "created": 1754796302,
-    "model": "train-model",
-    "object": "chat.completion",
-    "service_tier": null,
-    "system_fingerprint": null,
-    "usage": {
-      "completion_tokens": 603,
-      "prompt_tokens": 7703,
-      "total_tokens": 8306,
-      "completion_tokens_details": null,
-      "prompt_tokens_details": null
-    }
-  },
-  "sampled_from": {
-    "$ref": "InferenceService",
-    "$id": {
-      "$oid": "689810c3e3df02e840971b20"
-    }
-  },
-  "score": null,
-  "status": "completed",
-  "task": {
-    "$ref": "Task",
-    "$id": {
-      "$oid": "689810d40e8073b07770979c"
-    }
-  },
-  "traj_id": 0,
-  "type": "task"
-}```
+conda activate pertbench && export PYTHONPATH=./
+cd scripts/tools
+python cd4t_gaus.py
 ```
+你会得到高斯噪声扰动后的数据在 `data/add_gaussian_noise_output` 路径下。
 
+### 生物噪声（对数正态分布）
+运行
+```
+conda activate pertbench && export PYTHONPATH=./
+cd scripts/tools
+python cd4t_log_norm.py
+```
+你会得到高斯噪声扰动后的数据在 `data/add_gaussian_noise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
+
+然后运行
+```
+cd ../..
+nohup bash scripts/lognormal_bionoise_perturbed_data/ddpm_mlp.sh > bionoise_ddpm_mlp.log 2>&1
+nohup bash scripts/lognormal_bionoise_perturbed_data/ddpm.sh > bionoise_ddpm.log 2>&1
+nohup bash scripts/lognormal_bionoise_perturbed_data/scdiff.sh > bionoise_scdiff.log 2>&1
+nohup bash scripts/lognormal_bionoise_perturbed_data/scdiffusion.sh > bionoise_scdiffusion.log 2>&1
+nohup bash scripts/lognormal_bionoise_perturbed_data/scgen.sh > bionoise_scgen.log 2>&1
+nohup bash scripts/lognormal_bionoise_perturbed_data/squidiff.sh > bionoise_squidiff.log 2>&1
+```
