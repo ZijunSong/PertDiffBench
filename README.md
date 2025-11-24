@@ -454,3 +454,10 @@ nohup bash scripts/poisson_technoise_perturbed_data/scdiffusion.sh > technoise_s
 nohup bash scripts/poisson_technoise_perturbed_data/scgen.sh > technoise_scgen.log 2>&1
 nohup bash scripts/poisson_technoise_perturbed_data/squidiff.sh > technoise_squidiff.log 2>&1
 ```
+
+## 编码器实验
+### scVI
+```
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/encoder_exp/scvi_ddpm.sh > encoder_scvi_ddpm.log 2>&1
+```
