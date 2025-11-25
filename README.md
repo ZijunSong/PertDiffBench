@@ -460,4 +460,6 @@ nohup bash scripts/poisson_technoise_perturbed_data/squidiff.sh > technoise_squi
 ```
 conda activate pertbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scvi_ddpm.sh > encoder_scvi_ddpm.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/encoder_exp/scimilarity_ddpm.sh > encoder_scimilarity_ddpm.log 2>&1
 ```
