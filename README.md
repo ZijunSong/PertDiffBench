@@ -462,4 +462,8 @@ conda activate pertbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scvi_ddpm.sh > encoder_scvi_ddpm.log 2>&1
 conda activate pertbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scimilarity_ddpm.sh > encoder_scimilarity_ddpm.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/encoder_exp/scvi_ddpm.sh > encoder_scvi_ddpm.log 2>&1
+conda activate pertbench && export PYTHONPATH=./
+nohup bash scripts/encoder_exp/scfoundation_ddpm.sh > encoder_scfoundation_ddpm.log 2>&1
 ```
