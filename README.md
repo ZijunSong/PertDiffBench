@@ -466,6 +466,8 @@ conda activate pertbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scvi_ddpm.sh > encoder_scvi_ddpm.log 2>&1
 conda activate pertbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scfoundation_ddpm.sh > encoder_scfoundation_ddpm.log 2>&1
-conda activate pertbench && export PYTHONPATH=./
+conda activate scgpt && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scgpt_ddpm.sh > encoder_scgpt_ddpm.log 2>&1
+conda activate geneformer && export PYTHONPATH=./
+nohup bash scripts/encoder_exp/geneformer_ddpm.sh > encoder_geneformer_ddpm.log 2>&1
 ```
