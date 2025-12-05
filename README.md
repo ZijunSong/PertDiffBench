@@ -399,61 +399,84 @@ nohup bash scripts/fig2/fig2_task3_ddpm_mlp.sh > fig2_task3_ddpm_mlp.log 2>&1
 运行
 ```
 conda activate pertbench && export PYTHONPATH=./
-cd scripts/tools
+cd scripts/tools/noise_perturbation_exp
 python cd4t_gaus.py
 ```
 你会得到高斯噪声扰动后的数据在 `data/add_gaussian_noise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
 
 然后运行
 ```
-cd ../..
-nohup bash scripts/gaussian_perturbed_data/ddpm_mlp.sh > gausnoise_ddpm_mlp.log 2>&1
-nohup bash scripts/gaussian_perturbed_data/ddpm.sh > gausnoise_ddpm.log 2>&1
-nohup bash scripts/gaussian_perturbed_data/scdiff.sh > gausnoise_scdiff.log 2>&1
-nohup bash scripts/gaussian_perturbed_data/scdiffusion.sh > gausnoise_scdiffusion.log 2>&1
-nohup bash scripts/gaussian_perturbed_data/scgen.sh > gausnoise_scgen.log 2>&1
-nohup bash scripts/gaussian_perturbed_data/squidiff.sh > gausnoise_squidiff.log 2>&1
+cd ../../..
+nohup bash scripts/noise_exp/gaussian_perturbed_data/ddpm_mlp.sh > gausnoise_ddpm_mlp.log 2>&1
+nohup bash scripts/noise_exp/gaussian_perturbed_data/ddpm.sh > gausnoise_ddpm.log 2>&1
+nohup bash scripts/noise_exp/gaussian_perturbed_data/scdiff.sh > gausnoise_scdiff.log 2>&1
+nohup bash scripts/noise_exp/gaussian_perturbed_data/scdiffusion.sh > gausnoise_scdiffusion.log 2>&1
+nohup bash scripts/noise_exp/gaussian_perturbed_data/scgen.sh > gausnoise_scgen.log 2>&1
+nohup bash scripts/noise_exp/gaussian_perturbed_data/squidiff.sh > gausnoise_squidiff.log 2>&1
 ```
 
 ### 生物噪声（对数正态分布）
 运行
 ```
 conda activate pertbench && export PYTHONPATH=./
-cd scripts/tools
+cd scripts/tools/noise_perturbation_exp
 python cd4t_log_norm.py
 ```
 你会得到生物噪声扰动后的数据在 `data/add_lognormal_bionoise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
 
 然后运行
 ```
-cd ../..
-nohup bash scripts/lognormal_bionoise_perturbed_data/ddpm_mlp.sh > bionoise_ddpm_mlp.log 2>&1
-nohup bash scripts/lognormal_bionoise_perturbed_data/ddpm.sh > bionoise_ddpm.log 2>&1
-nohup bash scripts/lognormal_bionoise_perturbed_data/scdiff.sh > bionoise_scdiff.log 2>&1
-nohup bash scripts/lognormal_bionoise_perturbed_data/scdiffusion.sh > bionoise_scdiffusion.log 2>&1
-nohup bash scripts/lognormal_bionoise_perturbed_data/scgen.sh > bionoise_scgen.log 2>&1
-nohup bash scripts/lognormal_bionoise_perturbed_data/squidiff.sh > bionoise_squidiff.log 2>&1
+cd ../../..
+nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/ddpm_mlp.sh > lognormal_ddpm_mlp.log 2>&1
+nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/ddpm.sh > lognormal_ddpm.log 2>&1
+nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/scdiff.sh > lognormal_scdiff.log 2>&1
+nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/scdiffusion.sh > lognormal_scdiffusion.log 2>&1
+nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/scgen.sh > lognormal_scgen.log 2>&1
+nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/squidiff.sh > lognormal_squidiff.log 2>&1
 ```
 
-### 技术噪声（泊松分布）
+### 技术噪声
+#### 泊松分布
+
 运行
 ```
 conda activate pertbench && export PYTHONPATH=./
-cd scripts/tools
+cd scripts/tools/noise_perturbation_exp
 python cd4t_poisson.py
 ```
 你会得到技术噪声扰动后的数据在 `data/add_poisson_technoise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
 
 然后运行
 ```
-cd ../..
-nohup bash scripts/poisson_technoise_perturbed_data/ddpm_mlp.sh > technoise_ddpm_mlp.log 2>&1
-nohup bash scripts/poisson_technoise_perturbed_data/ddpm.sh > technoise_ddpm.log 2>&1
-nohup bash scripts/poisson_technoise_perturbed_data/scdiff.sh > technoise_scdiff.log 2>&1
-nohup bash scripts/poisson_technoise_perturbed_data/scdiffusion.sh > technoise_scdiffusion.log 2>&1
-nohup bash scripts/poisson_technoise_perturbed_data/scgen.sh > technoise_scgen.log 2>&1
-nohup bash scripts/poisson_technoise_perturbed_data/squidiff.sh > technoise_squidiff.log 2>&1
+cd ../../..
+nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/ddpm_mlp.sh > poisson_ddpm_mlp.log 2>&1
+nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/ddpm.sh > poisson_ddpm.log 2>&1
+nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/scdiff.sh > poisson_scdiff.log 2>&1
+nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/scdiffusion.sh > poisson_scdiffusion.log 2>&1
+nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/scgen.sh > poisson_scgen.log 2>&1
+nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/squidiff.sh > poisson_squidiff.log 2>&1
 ```
+
+#### 零膨胀模型
+运行
+```
+conda activate pertbench && export PYTHONPATH=./
+cd scripts/tools/noise_perturbation_exp
+python cd4t_zero_inflation.py
+```
+你会得到技术噪声扰动后的数据在 `data/add_zero_inflation_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
+
+然后运行
+```
+cd ../../..
+nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/ddpm_mlp.sh > zero_inflation_ddpm_mlp.log 2>&1
+nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/ddpm.sh > zero_inflation_ddpm.log 2>&1
+nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/scdiff.sh > zero_inflation_scdiff.log 2>&1
+nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/scdiffusion.sh > zero_inflation_scdiffusion.log 2>&1
+nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/scgen.sh > zero_inflation_scgen.log 2>&1
+nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/squidiff.sh > zero_inflation_squidiff.log 2>&1
+```
+
 
 ## 编码器实验
 ### scVI
@@ -470,4 +493,6 @@ conda activate scgpt && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scgpt_ddpm.sh > encoder_scgpt_ddpm.log 2>&1
 conda activate geneformer && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/geneformer_ddpm.sh > encoder_geneformer_ddpm.log 2>&1
+conda activate cellfm && export PYTHONPATH=./
+nohup bash scripts/encoder_exp/cellfm/cellfm_ddpm.sh > encoder_cellfm_ddpm.log 2>&1
 ```
