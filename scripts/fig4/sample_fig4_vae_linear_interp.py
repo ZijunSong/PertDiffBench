@@ -2,8 +2,7 @@
 """
 Fig4: 使用 VAE (encoder → 2h/8h latent 线性插值 → decoder) 生成 4h/6h 细胞。
 供 DDPM 与 DDPM+MLP baseline 使用：不跑 diffusion，仅用 encoder/decoder 做线性插值。
-Checkpoint 需为 MLPDDPMMLP（含 encoder/decoder），通常来自 DDPM+MLP 训练；
-DDPM 单独训练时无 AE，可传入同 run 的 DDPM+MLP 的 ckpt 作为 --ckpt。
+--ckpt 可为：(1) DDPM+MLP 的 model_epoch_1000.pth（完整模型）；(2) DDPM 专用的 ae_epoch_1000.pth（仅 encoder/decoder，以 strict=False 加载）。
 """
 import os
 import sys
@@ -38,7 +37,11 @@ def main():
     device = torch.device(cfg.train.device)
     model = MLPDDPMMLP(cfg).to(device)
     ckpt = torch.load(args.ckpt, map_location=device)
-    model.load_state_dict(ckpt["model_state_dict"])
+    state = ckpt.get("model_state_dict", ckpt)
+    # 支持仅含 encoder/decoder 的 checkpoint（如 DDPM 专用 AE），用 strict=False
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    if missing:
+        print(f"[Info] Loaded AE-only ckpt: {len(missing)} keys not in model (diffusion part).")
     model.eval()
 
     adata = sc.read_h5ad(args.train_h5ad)

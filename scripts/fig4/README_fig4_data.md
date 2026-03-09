@@ -71,6 +71,7 @@
 
 | 方法 | 4h/6h 生成方式 |
 |------|----------------|
-| **DDPM、DDPM+MLP** | VAE encoder → 2h/8h embedding 线性插值 → VAE decoder（不跑 0h 条件 diffusion）。脚本：`sample_fig4_vae_linear_interp.py`，AE 来自 DDPM+MLP 的 encoder/decoder；DDPM 无 AE，需先跑 DDPM+MLP 取得同 run 的 ckpt。 |
+| **DDPM** | 为 fig4 单独训练一个 VAE（仅 encoder+decoder，与 DDPM+MLP 同结构），脚本：`train_fig4_ae_for_ddpm.py`；再用该 VAE 做 2h/8h 线性插值生成 4h/6h，脚本：`sample_fig4_vae_linear_interp.py`。 |
+| **DDPM+MLP** | 使用本模型自带的 encoder/decoder 做 2h/8h 线性插值 → 4h/6h（不跑 diffusion），脚本：`sample_fig4_vae_linear_interp.py`，ckpt 为 DDPM+MLP 的 `model_epoch_1000.pth`。 |
 | **Squidiff** | 在 Squidiff latent 空间对 2h/8h 做线性插值得到 4h/6h latent，再经 diffusion 解码为表达。脚本：`sample_fig4_squidiff_interp.py`。 |
 | **scDiffusion** | 使用 classifier 的 **梯度插值**（2h–8h 方向）生成 4h/6h，不改为线性插值。 |

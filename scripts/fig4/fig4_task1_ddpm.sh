@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fig4 时间条件生成 — DDPM（训练后用 VAE 线性插值生成 4h/6h；AE 来自 DDPM+MLP，需先跑 fig4_task1_ddpm_mlp.sh）
+# Fig4 时间条件生成 — DDPM（训练 DDPM + 单独为 DDPM 训练 VAE，用该 VAE 做 2h/8h 线性插值生成 4h/6h）
 
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
@@ -17,9 +17,9 @@ TRAIN_H5="data/fig4/fig4_train.h5ad"
 TEST_H5="data/fig4/fig4_test.h5ad"
 
 ckpt_base="checkpoints/ddpm/fig4_${NUM_GENES}"
-# DDPM 无 encoder/decoder，4h/6h 生成使用 DDPM+MLP 的 AE 做线性插值（与 train_mlp_ddpm_mlp 保存名一致）
-DDPM_MLP_CKPT_BASE="checkpoints/ddpm_mlp/fig4_${NUM_GENES}"
-DDPM_MLP_CKPT_NAME="model_epoch_1000.pth"
+# DDPM 专用 VAE（仅 encoder+decoder），与 DDPM+MLP 独立
+FIG4_AE_DDPM_BASE="checkpoints/fig4_ae_ddpm/fig4_${NUM_GENES}"
+FIG4_AE_DDPM_NAME="ae_epoch_1000.pth"
 sample_base="samples/fig4/scrna_ddpm_scrna_${NUM_GENES}"
 csv_path="${sample_base}/metrics_${METHOD_NAME}_fig4_hvg_${NUM_GENES}.csv"
 log_file="${LOGDIR}/fig4_task1/ddpm_fig4_hvg_${NUM_GENES}.log"
@@ -36,22 +36,30 @@ mkdir -p "${ckpt_base}" "${sample_base}" "${LOGDIR}/fig4_task1"
     mkdir -p "${save_dir_run}" "${sample_dir_run}"
     ckpt_path="${save_dir_run}/${CKPT_NAME}"
 
-    echo "--- Training [run ${run_idx}] ---"
+    echo "--- Training DDPM-only VAE [run ${run_idx}] ---"
+    ae_save_dir="${FIG4_AE_DDPM_BASE}/run${run_idx}"
+    mkdir -p "${ae_save_dir}"
+    python scripts/fig4/train_fig4_ae_for_ddpm.py \
+      --config "configs/baselines/mlp_ddpm_mlp.yaml" \
+      --data-path "${TRAIN_H5}" --save-dir "${ae_save_dir}" \
+      --gene-nums "${NUM_GENES}" || true
+
+    echo "--- Training DDPM [run ${run_idx}] ---"
     python scripts/baseline_exp/train_scrna_ddpm_scrna.py \
       --config "${CONFIG_FILE}" \
       --data-path "${TRAIN_H5}" \
       --save-weight-dir "${save_dir_run}" \
       --gene-nums "${NUM_GENES}" || true
 
-    echo "--- Sampling 4h/6h (VAE linear interp, AE from DDPM+MLP) [run ${run_idx}] ---"
-    ae_ckpt="${DDPM_MLP_CKPT_BASE}/run${run_idx}/${DDPM_MLP_CKPT_NAME}"
-    if [ ! -f "${ae_ckpt}" ]; then
-      echo "Warning: DDPM+MLP AE checkpoint not found at ${ae_ckpt}. Run fig4_task1_ddpm_mlp.sh first (same NUM_RUNS). Skipping sampling for run ${run_idx}."
-    else
+    echo "--- Sampling 4h/6h (VAE linear interp, DDPM 专用 AE) [run ${run_idx}] ---"
+    ae_ckpt="${FIG4_AE_DDPM_BASE}/run${run_idx}/${FIG4_AE_DDPM_NAME}"
+    if [ -f "${ae_ckpt}" ]; then
       python scripts/fig4/sample_fig4_vae_linear_interp.py \
         --config "configs/baselines/mlp_ddpm_mlp.yaml" --ckpt "${ae_ckpt}" \
         --train-h5ad "${TRAIN_H5}" --out-h5ad "${sample_dir_run}/synthetic_fig4.h5ad" \
         --n-samples "${N_SAMPLES}" --gene-nums "${NUM_GENES}" || true
+    else
+      echo "Warning: DDPM AE checkpoint not found at ${ae_ckpt}. Skipping sampling for run ${run_idx}."
     fi
 
     echo "--- Eval [run ${run_idx}] ---"

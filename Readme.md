@@ -375,7 +375,14 @@ nohup bash scripts/fig4/fig4_task1_ddpm.sh > fig4_task1_ddpm.log 2>&1 &
 nohup bash scripts/fig4/fig4_task1_ddpm_mlp.sh > fig4_task1_ddpm_mlp.log 2>&1 &
 ```
 
-各脚本会对 fig4 数据做多轮训练与时间条件评估，并将汇总结果写入 `samples/fig4/<method>/metrics_*_fig4*.csv`。scDiff 与 Squidiff 当前仅跑训练，时间条件采样需在对应 baseline 中扩展后自行接 `scripts/fig4/eval_fig4_time_conditioned.py` 评估。
+各脚本会对 fig4 数据做多轮训练与时间条件评估，并将汇总结果写入 `samples/fig4/<method>/metrics_*_fig4*.csv`。合并所有 baseline 的 CSV：`python scripts/fig4/aggregate_fig4_metrics.py`，输出为 `samples/fig4/fig4_metrics_merged.csv`。scDiff 当前未接入 fig4 时间条件评估。
+
+**Fig4 各 baseline 设定说明**
+
+- **scDiffusion**：训练集训练 VAE + diffusion + classifier（`treatment_time` 为条件）。测试集 4h/6h 由 classifier **梯度插值**（2h–8h 方向）生成后评估。
+- **DDPM**：训练集用 fig4_train 训练原始表达空间的 DDPM；并为 fig4 **单独训练一个 VAE**（仅 encoder+decoder，与 DDPM+MLP 同结构，脚本 `train_fig4_ae_for_ddpm.py`）。测试集：用该 VAE 做 2h/8h latent 线性插值 → decoder 得到 4h/6h，再与真实 4h/6h 评估。
+- **DDPM+MLP**：训练集训练 encoder + 潜空间扩散 + decoder。测试集仅用本模型 encoder/decoder 做 2h/8h 线性插值生成 4h/6h，不跑 diffusion。
+- **Squidiff**：训练集训练 Squidiff；测试集在 Squidiff latent 空间对 2h/8h 线性插值得到 4h/6h latent，再经 diffusion 解码为表达后评估。
 
 ## 噪声扰动数据
 ### 高斯噪声扰动

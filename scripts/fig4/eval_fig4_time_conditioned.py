@@ -40,8 +40,9 @@ def main():
     parser.add_argument("--train-h5ad", default=None, help="Train h5ad for control (0h) for delta metrics; optional")
     parser.add_argument("--time-key", default="treatment_time", help="obs column for time labels")
     parser.add_argument("--n-samples", type=int, default=None, help="Subsample to this many cells per time (default: use all)")
-    parser.add_argument("--csv", type=str, default=None, help="Append one row of metrics to this CSV")
+    parser.add_argument("--csv", type=str, default=None, help="Append row(s) of metrics to this CSV")
     parser.add_argument("--method-name", type=str, default="", help="Method name for CSV row")
+    parser.add_argument("--per-time", action="store_true", help="If set with --csv, write one row per treatment_time (4h, 6h) instead of one averaged row")
     args = parser.parse_args()
 
     adata_test = sc.read_h5ad(args.test_h5ad)
@@ -110,6 +111,7 @@ def main():
         des = compute_des(true_de, pred_de, pred_fc)
 
         results.append({
+            "time": t,
             "mae": mae, "r2": r2, "edistance": edist, "mmd": mmd,
             "pearson_all": p_all, "pearson_delta_all": pd_all,
             "pearson_delta_de20": pd_de20, "pearson_delta_de50": pd_de50, "pearson_delta_de100": pd_de100,
@@ -165,19 +167,37 @@ def main():
     print("=" * 60)
 
     if args.csv:
-        row = {
-            "Method": args.method_name or "fig4",
-            "PDS": pds_val, "MAE": mae_avg, "DES": des_avg,
-            "E-Distance": edist_avg, "MMD": mmd_avg, "R2": r2_avg,
-            "Pearson (all genes)": p_all_avg, "Pearson Delta (all genes)": pd_all_avg,
-            "Pearson Delta (top 20 DE genes)": pd_de20_avg,
-            "Pearson Delta (top 50 DE genes)": pd_de50_avg,
-            "Pearson Delta (top 100 DE genes)": pd_de100_avg,
-        }
-        df = pd.DataFrame([row])
+        if getattr(args, "per_time", False) and results:
+            # One row per treatment_time (4h, 6h)
+            rows = []
+            for r in results:
+                rows.append({
+                    "Method": args.method_name or "fig4",
+                    "treatment_time": r["time"],
+                    "PDS": pds_val,
+                    "MAE": r["mae"], "DES": r["des"],
+                    "E-Distance": r["edistance"], "MMD": r["mmd"], "R2": r["r2"],
+                    "Pearson (all genes)": r["pearson_all"],
+                    "Pearson Delta (all genes)": r["pearson_delta_all"],
+                    "Pearson Delta (top 20 DE genes)": r["pearson_delta_de20"],
+                    "Pearson Delta (top 50 DE genes)": r["pearson_delta_de50"],
+                    "Pearson Delta (top 100 DE genes)": r["pearson_delta_de100"],
+                })
+            df = pd.DataFrame(rows)
+        else:
+            row = {
+                "Method": args.method_name or "fig4",
+                "PDS": pds_val, "MAE": mae_avg, "DES": des_avg,
+                "E-Distance": edist_avg, "MMD": mmd_avg, "R2": r2_avg,
+                "Pearson (all genes)": p_all_avg, "Pearson Delta (all genes)": pd_all_avg,
+                "Pearson Delta (top 20 DE genes)": pd_de20_avg,
+                "Pearson Delta (top 50 DE genes)": pd_de50_avg,
+                "Pearson Delta (top 100 DE genes)": pd_de100_avg,
+            }
+            df = pd.DataFrame([row])
         write_header = not os.path.isfile(args.csv)
         df.to_csv(args.csv, mode="a", header=write_header, index=False)
-        print(f"Appended row to {args.csv}")
+        print(f"Appended {len(df)} row(s) to {args.csv}")
 
 
 if __name__ == "__main__":

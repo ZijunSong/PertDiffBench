@@ -20,6 +20,12 @@ env/
 fig4_*.log
 .DS_Store
 
+# 数据文件：一律不上传（GitHub 单文件限 100MB）
+*.h5ad
+**/results/
+**/preprocessing/*.h5ad
+**/encoder_exp/**/*.h5ad
+
 # src 下各模型仓库的大文件/预训练权重（避免推送数 GB 导致超时）
 *.safetensors
 *.tar.gz
