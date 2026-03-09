@@ -1,6 +1,7 @@
 # 不上传大体积/生成数据目录
 checkpoints/
 data/
+data_ori/
 logs/
 output/
 samples/

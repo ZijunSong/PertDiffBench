@@ -25,13 +25,21 @@ pip install mpi4py
 
 Data are still being organized...
 
+Raw CSV/TXT files used to derive all processed `.h5ad` datasets are organized under:
+
+- `data_ori/fig1/`
+- `data_ori/fig2/`
+- `data_ori/fig4/`
+
+The `data/` directory mainly stores processed `.h5ad` files and intermediate results used for experiments.
+
 ## 📈 Evaluation
 
 ### Highly variable gene gradient
 
 In the data of Task 1 in Figure 1, the CD4T cell type has the largest number of cells (5,564), and is therefore chosen as the representative.
 
-First, run `python scripts/tools/get_the_hvg_data_for_fig1.py` to generate the hvg data. Then run
+First, run `python preprocess_data/get_the_hvg_data_for_fig1.py` to generate the hvg data. Then run
 
 ```
 nohup bash scripts/highly_variable_gene_gradient/ddpm_hvg.sh > ddpm_hvg.log 2>&1 &
@@ -52,7 +60,7 @@ to obtain the evaluation results, respectively. The script will output the resul
 
 Since, overall, the models trained on the data with the lowest number of highly variable genes (1000) achieved the best performance, the experiments of Task 1 and Task 3 in Figure 1 are conducted using the processed data with 1000 HVGs extracted from the original data.  
 
-First, run `python scripts/tools/get_the_hvg_data_for_fig3.py` to generate the data used in the Task 3 experiment of Figure 1. Then, organize this data together with the data obtained from the highly variable gene gradient experiments, for example:
+First, run `python preprocess_data/get_the_hvg_data_for_fig3.py` to generate the data used in the Task 3 experiment of Figure 1. Then, organize this data together with the data obtained from the highly variable gene gradient experiments, for example:
 
 ```
 /PertBench/
@@ -109,7 +117,7 @@ nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1 &
    Run the following script:
 
    ```bash
-   bash scripts/tools/fig1_task4_merge.sh
+   bash preprocess_data/fig1_task4_merge.sh
    ```
 
    This will generate the following `.h5ad` files: `task4_ACTA2_control.h5ad`, `task4_ACTA2_coculture.h5ad`, `task4_ACTA2_IFN.h5ad`, `task4_B2M_control.h5ad`, `task4_B2M_coculture.h5ad`, `task4_B2M_IFN.h5ad`.
@@ -122,7 +130,7 @@ nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1 &
    Run:
 
    ```bash
-   bash scripts/tools/fig1_task4_split_1.sh
+   bash preprocess_data/fig1_task4_split_1.sh
    ```
 
    This will generate eight `.h5ad` files, including: `task4_B2M_control_coculture_train.h5ad`, `task4_B2M_control_coculture_test.h5ad` (and corresponding files for other gene groups).
@@ -138,7 +146,7 @@ nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1 &
    First, unify the gene space:
 
    ```bash
-   python scripts/tools/create_global_gene_list.py
+   python preprocess_data/create_global_gene_list.py
    ```
 
    This produces a unified gene list containing **5,737 genes**.
@@ -146,7 +154,7 @@ nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1 &
    Then run:
 
    ```bash
-   bash scripts/tools/fig1_task4_split_2.sh
+   bash preprocess_data/fig1_task4_split_2.sh
    ```
 
    This will generate four `.h5ad` files: `task4_ACTA2_control_to_coculture.h5ad`, `task4_ACTA2_control_to_ifn.h5ad`, `task4_B2M_control_to_coculture.h5ad`, `task4_B2M_control_to_ifn.h5ad`.
@@ -183,7 +191,7 @@ Merge `exp.csv` and `meta.csv` into `.h5ad` format and generate the correspondin
 Run:
 
 ```bash
-bash scripts/tools/fig2_task1_merge.sh
+bash preprocess_data/fig2_task1_merge.sh
 ```
 
 This will produce datasets such as: `seed123_control_train.h5ad`, `seed123_control_test.h5ad` (and other datasets generated with the same random seed).
@@ -315,7 +323,7 @@ nohup bash scripts/fig2/fig2_task2_extend/fig2_task2_extend_scgen.sh > fig2_task
 将 exp.csv 和 meta.csv 合并为 .h5ad 数据。运行
 
 ```bash
-bash scripts/tools/fig2_task3.sh
+bash preprocess_data/fig2_task3.sh
 ```
 
 You will get `mouse_control_ifn.h5ad`等四个数据。
@@ -389,7 +397,7 @@ nohup bash scripts/fig4/fig4_task1_ddpm_mlp.sh > fig4_task1_ddpm_mlp.log 2>&1 &
 运行
 ```
 conda activate pertbench && export PYTHONPATH=./
-cd scripts/tools/noise_perturbation_exp
+cd preprocess_data/noise_perturbation_exp
 python cd4t_gaus.py
 ```
 你会得到高斯噪声扰动后的数据在 `data/add_gaussian_noise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
@@ -409,7 +417,7 @@ nohup bash scripts/noise_exp/gaussian_perturbed_data/squidiff.sh > gausnoise_squ
 运行
 ```
 conda activate pertbench && export PYTHONPATH=./
-cd scripts/tools/noise_perturbation_exp
+cd preprocess_data/noise_perturbation_exp
 python cd4t_log_norm.py
 ```
 你会得到生物噪声扰动后的数据在 `data/add_lognormal_bionoise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
@@ -431,7 +439,7 @@ nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/squidiff.sh > log
 运行
 ```
 conda activate pertbench && export PYTHONPATH=./
-cd scripts/tools/noise_perturbation_exp
+cd preprocess_data/noise_perturbation_exp
 python cd4t_poisson.py
 ```
 你会得到技术噪声扰动后的数据在 `data/add_poisson_technoise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
@@ -451,7 +459,7 @@ nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/squidiff.sh > pois
 运行
 ```
 conda activate pertbench && export PYTHONPATH=./
-cd scripts/tools/noise_perturbation_exp
+cd preprocess_data/noise_perturbation_exp
 python cd4t_zero_inflation.py
 ```
 你会得到技术噪声扰动后的数据在 `data/add_zero_inflation_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
