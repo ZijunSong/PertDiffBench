@@ -38,5 +38,6 @@ src/Geneformer/Geneformer-V2-316M/
 src/Geneformer/Geneformer-V2-104M/
 src/Geneformer/Geneformer-V2-104M_CLcancer/
 src/Geneformer/Geneformer-V1-10M/
+src/Geneformer/model.safetensors
 pytorch_model.bin
 optimizer.pt
