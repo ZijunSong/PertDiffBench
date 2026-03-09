@@ -1,0 +1,202 @@
+#!/bin/bash
+
+# 三次运行（训练+测评），统计写入 log 与 csv
+set -e
+trap "echo ERROR && exit 1" ERR
+
+# ---------- 配置 ----------
+NUM_GENES=1000
+NUM_RUNS=3
+METHOD_NAME="scGen"               # CSV 第一列展示的方法名
+N_SAMPLES=100                     # 与原调用保持一致
+
+DATASETS=(
+  'mix2'
+  'mix3'
+  'mix4'
+  'mix5'
+  'mix6'
+  'mix7'
+)
+
+TRAIN_ROOT="data/fig1/hvg_task3"
+TEST_ROOT="data/fig1/hvg_task3"
+CKPT_ROOT="checkpoints/scgen"
+
+# ---------- 主循环 ----------
+for dataset in "${DATASETS[@]}"; do
+  echo "######################################################################"
+  echo "###   Starting to process dataset: ${dataset} (${NUM_RUNS} runs total)"
+  echo "######################################################################"
+
+  OUT_ROOT="samples/fig1/task3/${dataset}/scgen_1000"
+  mkdir -p "${OUT_ROOT}" "${CKPT_ROOT}"
+
+  LOG_FILE="${OUT_ROOT}/${dataset}_pipeline.log"
+  : > "${LOG_FILE}"
+
+  # 累积3次运行的stdout，供AWK统计
+  all_outputs=""
+
+  # ---------- 多次运行 ----------
+  for (( i=1; i<=NUM_RUNS; i++ )); do
+    echo -e "\n--- Running iteration ${i}/${NUM_RUNS} for ${dataset} ---" | tee -a "${LOG_FILE}"
+
+    # 确保输出与模型目录存在
+    mkdir -p "${CKPT_ROOT}/${dataset}_${NUM_GENES}"
+
+    # 运行（训练+评测），捕获输出
+    output=$(python scripts/scGen_eval.py \
+      --train_data_path "${TRAIN_ROOT}/${dataset}_train_HVG_${NUM_GENES}.h5ad" \
+      --test_data_path  "${TEST_ROOT}/${dataset}_test_HVG_${NUM_GENES}.h5ad" \
+      --model_save_path "${CKPT_ROOT}/${dataset}_${NUM_GENES}" \
+      --out_h5ad        "${OUT_ROOT}/${dataset}_pred_${i}.h5ad" \
+      --umap_plot       "${OUT_ROOT}/${dataset}_umap_comparison_${i}.png" \
+      --n_samples       "${N_SAMPLES}" \
+      --celltype_to_predict "${dataset}" 2>&1) || true
+
+    # 打印并追加到日志/累积
+    echo "$output" | tee -a "${LOG_FILE}"
+    all_outputs+="$output\n"
+  done
+
+  # ---------- 统计 + CSV ----------
+  echo -e "\n" | tee -a "${LOG_FILE}"
+  CSV_FILE="${OUT_ROOT}/metrics_${METHOD_NAME}_${dataset}_gene_${NUM_GENES}.csv"
+
+  echo -e "$all_outputs" | awk -v dataset="${dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${CSV_FILE}" '
+    # 抓 11 项指标
+    /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
+    /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
+    /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
+    /E-Distance:/                               { edist[c_edist++] = $NF }
+    /Maximum Mean Discrepancy \(MMD\):/         { mmd[c_mmd++] = $NF }
+    /R-squared \(R2\):/                         { r2[c_r2++] = $NF }
+    /Pearson \(all genes\):/                    { pearson_all[c_pearson_all++] = $NF }
+    /Pearson Delta \(all genes\):/              { pearson_delta_all[c_pearson_delta_all++] = $NF }
+    /Pearson Delta \(top 20 DE genes\):/        { pearson_delta_de20[c_pearson_delta_de20++] = $NF }
+    /Pearson Delta \(top 50 DE genes\):/        { pearson_delta_de50[c_pearson_delta_de50++] = $NF }
+    /Pearson Delta \(top 100 DE genes\):/       { pearson_delta_de100[c_pearson_delta_de100++] = $NF }
+
+    # mean|std
+    function mean_std(idx,   i,n,s,mu,ss,v) {
+      if (idx==1){ n=c_pds;                for(i=0;i<n;i++){v=pds[i];                s+=v} }
+      else if(idx==2){ n=c_mae;            for(i=0;i<n;i++){v=mae[i];                s+=v} }
+      else if(idx==3){ n=c_des;            for(i=0;i<n;i++){v=des[i];                s+=v} }
+      else if(idx==4){ n=c_edist;          for(i=0;i<n;i++){v=edist[i];              s+=v} }
+      else if(idx==5){ n=c_mmd;            for(i=0;i<n;i++){v=mmd[i];                s+=v} }
+      else if(idx==6){ n=c_r2;             for(i=0;i<n;i++){v=r2[i];                 s+=v} }
+      else if(idx==7){ n=c_pearson_all;    for(i=0;i<n;i++){v=pearson_all[i];        s+=v} }
+      else if(idx==8){ n=c_pearson_delta_all;   for(i=0;i<n;i++){v=pearson_delta_all[i];   s+=v} }
+      else if(idx==9){ n=c_pearson_delta_de20;  for(i=0;i<n;i++){v=pearson_delta_de20[i];  s+=v} }
+      else if(idx==10){ n=c_pearson_delta_de50; for(i=0;i<n;i++){v=pearson_delta_de50[i];  s+=v} }
+      else if(idx==11){ n=c_pearson_delta_de100;for(i=0;i<n;i++){v=pearson_delta_de100[i]; s+=v} }
+      mu = (n>0)? s/n : 0;
+      for(i=0;i<n;i++){
+        if (idx==1) v=pds[i];
+        else if(idx==2) v=mae[i];
+        else if(idx==3) v=des[i];
+        else if(idx==4) v=edist[i];
+        else if(idx==5) v=mmd[i];
+        else if(idx==6) v=r2[i];
+        else if(idx==7) v=pearson_all[i];
+        else if(idx==8) v=pearson_delta_all[i];
+        else if(idx==9) v=pearson_delta_de20[i];
+        else if(idx==10) v=pearson_delta_de50[i];
+        else if(idx==11) v=pearson_delta_de100[i];
+        ss += (v - mu) * (v - mu);
+      }
+      return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
+    }
+
+    # 取第 j 次（0-based）的数值
+    function val(idx, j, v){
+      if (idx==1) v=pds[j];
+      else if(idx==2) v=mae[j];
+      else if(idx==3) v=des[j];
+      else if(idx==4) v=edist[j];
+      else if(idx==5) v=mmd[j];
+      else if(idx==6) v=r2[j];
+      else if(idx==7) v=pearson_all[j];
+      else if(idx==8) v=pearson_delta_all[j];
+      else if(idx==9) v=pearson_delta_de20[j];
+      else if(idx==10) v=pearson_delta_de50[j];
+      else if(idx==11) v=pearson_delta_de100[j];
+      return v;
+    }
+
+    function print_stat(name, arr, cnt,   i,s,mu,ss,std){
+      if (cnt>0){
+        for(i=0;i<cnt;i++) s+=arr[i];
+        mu=s/cnt;
+        for(i=0;i<cnt;i++) ss+=(arr[i]-mu)^2;
+        std=(cnt>1)?sqrt(ss/(cnt-1)):0;
+        printf "%-40s: %.4f ± %.4f\n", name, mu, std;
+      } else {
+        printf "%-40s: N/A (No data collected)\n", name;
+      }
+    }
+
+    END{
+      # 控制台/日志打印
+      print "==================================================================";
+      printf " Final statistics for dataset %s (%d runs)\n", dataset, num_runs;
+      print "==================================================================";
+      print_stat("Perturbation Discrimination (PDS)", pds, c_pds);
+      print_stat("Mean Absolute Error (MAE)",       mae, c_mae);
+      print_stat("Differential Expression Score (DES)", des, c_des);
+      print "----------------------------------------";
+      print_stat("E-Distance",                        edist, c_edist);
+      print_stat("Maximum Mean Discrepancy (MMD)",    mmd,  c_mmd);
+      print_stat("R-squared (R2)",                    r2,   c_r2);
+      print "----------------------------------------";
+      print_stat("Pearson (all genes)",               pearson_all,         c_pearson_all);
+      print_stat("Pearson Delta (all genes)",         pearson_delta_all,   c_pearson_delta_all);
+      print_stat("Pearson Delta (top 20 DE genes)",   pearson_delta_de20,  c_pearson_delta_de20);
+      print_stat("Pearson Delta (top 50 DE genes)",   pearson_delta_de50,  c_pearson_delta_de50);
+      print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
+      print "==================================================================\n";
+
+      # CSV：表头 + 一行数值（先 11 个 mean±std，再 3*11 个单次值）
+      metric_names[1]="PDS";
+      metric_names[2]="MAE";
+      metric_names[3]="DES";
+      metric_names[4]="E-Distance";
+      metric_names[5]="MMD";
+      metric_names[6]="R2";
+      metric_names[7]="Pearson (all genes)";
+      metric_names[8]="Pearson Delta (all genes)";
+      metric_names[9]="Pearson Delta (top 20 DE genes)";
+      metric_names[10]="Pearson Delta (top 50 DE genes)";
+      metric_names[11]="Pearson Delta (top 100 DE genes)";
+
+      header="Method";
+      for(i=1;i<=11;i++){ header=header "," metric_names[i] " (mean±std)" }
+      for(r=1;r<=num_runs;r++){
+        for(i=1;i<=11;i++){ header=header ",Run" r " " metric_names[i] }
+      }
+
+      row=method;
+      for(i=1;i<=11;i++){
+        ms=mean_std(i); split(ms, parts, "|");
+        row=row sprintf(",%.4f±%.4f", parts[1], parts[2]);
+      }
+      for(r=0;r<num_runs;r++){
+        for(i=1;i<=11;i++){
+          row=row sprintf(",%.4f", val(i, r));
+        }
+      }
+
+      print header > csv_path;
+      print row    >> csv_path;
+      close(csv_path);
+      printf("CSV written: %s\n", csv_path);
+    }
+  ' | tee -a "${LOG_FILE}"
+
+  echo -e "\n--- Finished pipeline for dataset: ${dataset} ---\n" | tee -a "${LOG_FILE}"
+done
+
+echo "######################################################################"
+echo "###   All dataset processing is complete!                        ###"
+echo "######################################################################"

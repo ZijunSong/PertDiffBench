@@ -1,0 +1,24 @@
+anndata>=0.10
+scanpy>=1.10
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.5
+scipy>=1.11
+
+# Torch & Diffusion
+torch>=2.3
+torchvision>=0.18
+
+# Tahoe-x1 (from PyPI package if available)
+tahoex>=0.1.0; python_version>='3.10'
+# Or install from GitHub if PyPI unavailable:
+# pip install git+https://github.com/tahoebio/tahoe-x1
+
+# Hugging Face hub for checkpoint fetch
+huggingface_hub>=0.25
+
+# YAML config
+pyyaml>=6.0
+
+# Progress & CLI
+tqdm>=4.66

@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+# ----------------- Config -----------------
+DATASETS=(
+  'ACTA2_control_coculture'
+  'ACTA2_control_ifn'
+  'B2M_control_coculture'
+  'B2M_control_ifn'
+)
+
+declare -A SAMPLE_SIZES=(
+  ["ACTA2_control_coculture"]="82"
+  ["ACTA2_control_ifn"]="82"
+  ["B2M_control_coculture"]="74"
+  ["B2M_control_ifn"]="73"
+)
+
+NUM_RUNS="${NUM_RUNS:-3}"                   # 与范例一致：可通过环境变量覆盖
+CELLTYPE_TO_PREDICT="${CELLTYPE_TO_PREDICT:-melanocytes}"
+METHOD_NAME="${METHOD_NAME:-scGen}"         # 新增：方法名写入 CSV（与范例一致）
+
+# -----------------------------------------
+
+for dataset in "${DATASETS[@]}"; do
+  LOG_ROOT="logs/fig1/task4_1/${dataset}/scgen"
+  CSV_ROOT="samples/fig1/task4_1/${dataset}/scgen"
+  SAMPLES_DIR="${CSV_ROOT}"
+  mkdir -p "${LOG_ROOT}" "${CSV_ROOT}" "${SAMPLES_DIR}"
+
+  echo "CSV_ROOT absolute path: $(realpath "$CSV_ROOT")"
+
+  n_samples=${SAMPLE_SIZES[$dataset]}
+  CKPT_ROOT="checkpoints/scgen/task4/${dataset}"
+  mkdir -p "${CKPT_ROOT}"
+
+  echo "######################################################################"
+  echo "###   Starting to process dataset: ${dataset} (${NUM_RUNS} runs total)"
+  echo "######################################################################"
+
+  train="data/fig1/task4/task4_${dataset}_train.h5ad"
+  test="data/fig1/task4/task4_${dataset}_test.h5ad"
+  model_dir="${CKPT_ROOT}/${dataset}"
+  mkdir -p "${model_dir}"
+
+  # ===== 改动点 1：与范例保持一致，仅输出单一 CSV（含 mean±std 与 per-run 值） =====
+  METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv"
+
+  # 累积所有评测标准输出文本（仅评估阶段标准输出）
+  ALL_OUTPUTS=""
+
+  for (( i=1; i<=NUM_RUNS; i++ )); do
+    echo -e "\n--- Running iteration ${i}/${NUM_RUNS} for ${dataset} ---"
+
+    log_file="${LOG_ROOT}/${dataset}_run${i}.log"
+    out_h5ad="${SAMPLES_DIR}/${dataset}_pred_${i}.h5ad"
+    umap_png="${SAMPLES_DIR}/${dataset}_umap_comparison_${i}.png"
+
+    echo "[$(date '+%F %T')] >>> Eval start: ${dataset}, run${i}" | tee "${log_file}"
+    # ===== 改动点 2：捕获评测的标准输出到变量，同时 tee 到日志 =====
+    eval_output="$(
+      python scripts/scGen_eval.py \
+        --train_data_path "${train}" \
+        --test_data_path "${test}" \
+        --model_save_path "${model_dir}" \
+        --out_h5ad "${out_h5ad}" \
+        --umap_plot "${umap_png}" \
+        --n_samples "${n_samples}" \
+        --celltype_to_predict "${CELLTYPE_TO_PREDICT}" \
+        2>&1 | tee -a "${log_file}"
+    )"
+    echo "[$(date '+%F %T')] >>> Eval done: ${dataset}, run${i}" | tee -a "${log_file}"
+
+    # 追加到总汇文本（供 AWK 统一解析）
+    ALL_OUTPUTS+="${eval_output}\n"
+  done
+
+  # 仅依赖以下 11 个标签行（确保评估脚本打印一致；与范例完全对齐）：
+  # Perturbation Discrimination Score (PDS): <num>
+  # Mean Absolute Error (MAE): <num>
+  # Differential Expression Score (DES): <num>
+  # E-Distance: <num>
+  # Maximum Mean Discrepancy (MMD): <num>
+  # R-squared (R2): <num>
+  # Pearson (all genes): <num>
+  # Pearson Delta (all genes): <num>
+  # Pearson Delta (top 20 DE genes): <num>
+  # Pearson Delta (top 50 DE genes): <num>
+  # Pearson Delta (top 100 DE genes): <num>
+
+  # ===== 改动点 3：AWK 产出“大表头 + 单行数据”，含 mean±std 和每次 run 的值 =====
+  echo -e "${ALL_OUTPUTS}" | awk -v ds="${dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
+    /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF + 0 }
+    /Mean Absolute Error \(MAE\):/               { mae[c_mae++] = $NF + 0 }
+    /Differential Expression Score \(DES\):/     { des[c_des++] = $NF + 0 }
+    /^E-Distance:/                               { edist[c_edist++] = $NF + 0 }
+    /Maximum Mean Discrepancy \(MMD\):/          { mmd[c_mmd++] = $NF + 0 }
+    /R-squared \(R2\):/                          { r2[c_r2++] = $NF + 0 }
+    /Pearson \(all genes\):/                     { pearson_all[c_pearson_all++] = $NF + 0 }
+    /Pearson Delta \(all genes\):/               { pearson_delta_all[c_pearson_delta_all++] = $NF + 0 }
+    /Pearson Delta \(top 20 DE genes\):/         { pearson_delta_de20[c_pearson_delta_de20++] = $NF + 0 }
+    /Pearson Delta \(top 50 DE genes\):/         { pearson_delta_de50[c_pearson_delta_de50++] = $NF + 0 }
+    /Pearson Delta \(top 100 DE genes\):/        { pearson_delta_de100[c_pearson_delta_de100++] = $NF + 0 }
+
+    function mean_std(idx,    i,n,s,mu,ss,v) {
+      if (idx==1){n=c_pds;   for(i=0;i<n;i++){v=pds[i];s+=v}}
+      else if(idx==2){n=c_mae;for(i=0;i<n;i++){v=mae[i];s+=v}}
+      else if(idx==3){n=c_des;for(i=0;i<n;i++){v=des[i];s+=v}}
+      else if(idx==4){n=c_edist;for(i=0;i<n;i++){v=edist[i];s+=v}}
+      else if(idx==5){n=c_mmd; for(i=0;i<n;i++){v=mmd[i]; s+=v}}
+      else if(idx==6){n=c_r2;  for(i=0;i<n;i++){v=r2[i];  s+=v}}
+      else if(idx==7){n=c_pearson_all;for(i=0;i<n;i++){v=pearson_all[i];s+=v}}
+      else if(idx==8){n=c_pearson_delta_all;for(i=0;i<n;i++){v=pearson_delta_all[i];s+=v}}
+      else if(idx==9){n=c_pearson_delta_de20;for(i=0;i<n;i++){v=pearson_delta_de20[i];s+=v}}
+      else if(idx==10){n=c_pearson_delta_de50;for(i=0;i<n;i++){v=pearson_delta_de50[i];s+=v}}
+      else if(idx==11){n=c_pearson_delta_de100;for(i=0;i<n;i++){v=pearson_delta_de100[i];s+=v}}
+      mu = (n>0)? s/n : 0;
+      for(i=0;i<n;i++){
+        if (idx==1) v=pds[i];
+        else if(idx==2) v=mae[i];
+        else if(idx==3) v=des[i];
+        else if(idx==4) v=edist[i];
+        else if(idx==5) v=mmd[i];
+        else if(idx==6) v=r2[i];
+        else if(idx==7) v=pearson_all[i];
+        else if(idx==8) v=pearson_delta_all[i];
+        else if(idx==9) v=pearson_delta_de20[i];
+        else if(idx==10) v=pearson_delta_de50[i];
+        else if(idx==11) v=pearson_delta_de100[i];
+        ss += (v - mu) * (v - mu);
+      }
+      return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
+    }
+
+    function val(idx, r,    v){
+      if (idx==1) v=pds[r];
+      else if(idx==2) v=mae[r];
+      else if(idx==3) v=des[r];
+      else if(idx==4) v=edist[r];
+      else if(idx==5) v=mmd[r];
+      else if(idx==6) v=r2[r];
+      else if(idx==7) v=pearson_all[r];
+      else if(idx==8) v=pearson_delta_all[r];
+      else if(idx==9) v=pearson_delta_de20[r];
+      else if(idx==10) v=pearson_delta_de50[r];
+      else if(idx==11) v=pearson_delta_de100[r];
+      if (v=="") v=0; return v+0;
+    }
+
+    END {
+      metric_names[1]="PDS";
+      metric_names[2]="MAE";
+      metric_names[3]="DES";
+      metric_names[4]="E-Distance";
+      metric_names[5]="MMD";
+      metric_names[6]="R2";
+      metric_names[7]="Pearson (all genes)";
+      metric_names[8]="Pearson Delta (all genes)";
+      metric_names[9]="Pearson Delta (top 20 DE genes)";
+      metric_names[10]="Pearson Delta (top 50 DE genes)";
+      metric_names[11]="Pearson Delta (top 100 DE genes)";
+
+      header = "Dataset,Method";
+      for (i=1;i<=11;i++) header = header "," metric_names[i] " (mean±std)";
+      for (r=1;r<=num_runs;r++)
+        for (i=1;i<=11;i++) header = header ",Run" r " " metric_names[i];
+
+      row = ds "," method;
+      for (i=1;i<=11;i++) {
+        ms = mean_std(i); split(ms, parts, "|");
+        row = row sprintf(",%.6f±%.6f", parts[1], parts[2]);
+      }
+      for (r=0;r<num_runs;r++) {
+        for (i=1;i<=11;i++) row = row sprintf(",%.6f", val(i, r));
+      }
+
+      print header > csv_path;   # 覆盖写入表头
+      print row    >> csv_path;  # 追加单行数据
+      close(csv_path);
+      printf("CSV written: %s\n", csv_path);
+    }
+  '
+
+  echo -e "\n--- Finished pipeline for dataset: ${dataset} ---\n"
+done
+
+echo "######################################################################"
+echo "###   All dataset processing is complete!                          ###"
+echo "######################################################################"

@@ -1,0 +1,36 @@
+# 不上传大体积/生成数据目录
+checkpoints/
+data/
+logs/
+output/
+samples/
+
+# 常见 Python / 环境
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# 日志与临时（根目录 .log 也不纳入版本库）
+*.log
+fig4_*.log
+.DS_Store
+
+# src 下各模型仓库的大文件/预训练权重（避免推送数 GB 导致超时）
+*.safetensors
+*.tar.gz
+**/fine_tuned_models/
+**/preprocessed_*.h5ad
+**/input_task1_*.h5ad
+**/annotation_data.zip
+src/annotation_model_v1.tar.gz
+src/Geneformer/Geneformer-V2-316M/
+src/Geneformer/Geneformer-V2-104M/
+src/Geneformer/Geneformer-V2-104M_CLcancer/
+src/Geneformer/Geneformer-V1-10M/
+pytorch_model.bin
+optimizer.pt

@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+# 出错时打印失败命令和行号，便于 nohup 下排查
+trap 'echo "ERROR: a command failed at line $LINENO (last: $BASH_COMMAND). Exiting." >&2' ERR
+export LC_ALL=C LC_NUMERIC=C
+
+# -------------------- Configuration --------------------
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+LOGDIR="${LOGDIR:-logs}"
+NAME="${NAME:-v7.5}"
+OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
+export WANDB_MODE="${WANDB_MODE:-offline}"
+export OFFLINE_SETTINGS="--wandb f"
+NUM_RUNS="${NUM_RUNS:-3}"
+METHOD_NAME="${METHOD_NAME:-scDiff}"   # 仅用于你后续若想统一命名；当前 CSV 里仍按 scDiff(${NAME}) 写
+
+# -------------------- Project Root ---------------------
+# 不依赖 realpath（nohup 下 PATH 可能不同），用 cd + pwd 得到项目根
+# 脚本在 scripts/fig2/fig2_task1_moa/ 下，需上三级到项目根
+SCRIPT_PATH="$0"
+[[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$(pwd)/$SCRIPT_PATH"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+HOMEDIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+cd "$HOMEDIR"
+echo "Current working directory: $(pwd)"
+
+# -------------------- Paths ----------------------------
+# unseen_same_moa: 每个 h5ad 含 perturbation_status(Control/IFN)、perturbation、dose_value，支持 drug+dose 条件
+DATA_ROOT="${DATA_ROOT:-data/fig2/task1_unseenMOA/control_plus_ifn/unseen_same_moa}"
+
+# 若磁盘配额不足，可通过环境变量将输出重定向到有空间的路径，例如：LOG_ROOT=/other/logs SAMPLES_ROOT=/other/samples CKPT_ROOT=/other/ckpt
+LOG_ROOT="${LOG_ROOT:-${LOGDIR}/fig2/task1_unseen_moa_same}"
+SAMPLES_ROOT="${SAMPLES_ROOT:-samples/fig2/task1_unseen_moa_same}"
+CKPT_ROOT="${CKPT_ROOT:-checkpoints/fig2/task1_unseen_moa_same}"
+mkdir -p "${LOG_ROOT}" "${SAMPLES_ROOT}" "${CKPT_ROOT}"
+
+# -------------------- Discover datasets ----------------
+# 约定1（unseen_same_moa）：<dataset_base>_train__plus_control.h5ad / <dataset_base>_test__plus_control.h5ad
+# 约定2（兼容旧）：<dataset_base>_control_train.h5ad / <dataset_base>_control_test.h5ad
+mapfile -t TRAIN_FILES < <(find "${DATA_ROOT}" -maxdepth 1 -type f -name "*_train__plus_control.h5ad" | sort)
+FILE_PATTERN="same_moa"
+if [[ ${#TRAIN_FILES[@]} -eq 0 ]]; then
+  mapfile -t TRAIN_FILES < <(find "${DATA_ROOT}" -maxdepth 1 -type f -name "*_control_train.h5ad" | sort)
+  FILE_PATTERN="control_train"
+fi
+if [[ ${#TRAIN_FILES[@]} -eq 0 ]]; then
+  echo "[ERROR] No *_train__plus_control.h5ad nor *_control_train.h5ad found under: ${DATA_ROOT}" >&2
+  exit 1
+fi
+
+echo "Found ${#TRAIN_FILES[@]} datasets under ${DATA_ROOT}"
+echo "Config: runs=${NUM_RUNS} | name=${NAME}"
+echo
+
+# -------------------- Main Loop ------------------------
+for train_path in "${TRAIN_FILES[@]}"; do
+  train_fname="$(basename "${train_path}")"
+  if [[ "${FILE_PATTERN}" == "same_moa" ]]; then
+    dataset_base="${train_fname%_train__plus_control.h5ad}"
+    test_fname="${dataset_base}_test__plus_control.h5ad"
+    train_ds="${dataset_base}_train"
+    test_ds="${dataset_base}_test"
+  else
+    dataset_base="${train_fname%_control_train.h5ad}"
+    test_fname="${dataset_base}_control_test.h5ad"
+    train_ds="${dataset_base}_control_train"
+    test_ds="${dataset_base}_control_test"
+  fi
+  test_path="${DATA_ROOT}/${test_fname}"
+
+  if [[ ! -f "${test_path}" ]]; then
+    echo "[ERROR] Missing test file for dataset_base=${dataset_base}: ${test_path}" >&2
+    exit 1
+  fi
+
+  echo "######################################################################"
+  echo "###   Starting pipeline for dataset: ${train_ds}"
+  echo "######################################################################"
+
+  # 输出目录结构参考你给的 scDiffusion 脚本：每个 dataset_base 独立目录
+  OUT_DIR="${SAMPLES_ROOT}/${dataset_base}/scdiff"
+  CSV_DIR="${OUT_DIR}/metrics"
+  SEED_CSV="${CSV_DIR}/metrics_${test_ds}.csv"
+  mkdir -p "${OUT_DIR}" "${CSV_DIR}"
+
+  echo "== $(date '+%F %T') | dataset=${dataset_base} runs=${NUM_RUNS} =="
+
+  # scDiff data 配置（保持你原来的逻辑与字段不变）
+  data_settings=()
+
+  {
+    all_outputs=""
+
+    # -------- Run 1..NUM_RUNS --------
+    for (( i=1; i<=NUM_RUNS; i++ )); do
+      run_tag="run${i}"
+      run_postfix="perturbation_${NAME}_${run_tag}"
+
+      echo -e "\n--- Running ${run_tag} / ${NUM_RUNS} for ${train_ds} ---"
+
+      output=$(
+        python src/scDiff/main.py \
+          --custom_data_path "${DATA_ROOT}" \
+          --base configs/scdiff/eval_perturbation.yaml \
+          --name "${NAME}" \
+          --logdir "${LOGDIR}" \
+          --postfix "${run_postfix}" \
+          ${OFFLINE_SETTINGS} \
+          data.params.train.target=scdiff.data.perturbation_drug.PerturbationDrugTrain \
+          data.params.test.target=scdiff.data.perturbation_drug.PerturbationDrugTest \
+          data.params.train.params.datadir="${DATA_ROOT}" \
+          data.params.test.params.datadir="${DATA_ROOT}" \
+          data.params.train.params.dataset=${dataset_base} \
+          data.params.train.params.fname=${train_fname} \
+          data.params.test.params.dataset=${dataset_base} \
+          data.params.test.params.fname=${test_fname} \
+          data.params.train.params.use_drug_cond=true \
+          data.params.train.params.drug_key=perturbation \
+          data.params.train.params.dose_key=dose_value \
+          data.params.train.params.pert_key=perturbation_status \
+          data.params.train.params.ctrl_key=Control \
+          data.params.train.params.stim_key=IFN \
+          data.params.train.params.allow_custom_dataset=true \
+          data.params.train.params.celltype_key=celltype \
+          data.params.train.params.highly_variable=false \
+          data.params.test.params.use_drug_cond=true \
+          data.params.test.params.drug_key=perturbation \
+          data.params.test.params.dose_key=dose_value \
+          data.params.test.params.pert_key=perturbation_status \
+          data.params.test.params.ctrl_key=Control \
+          data.params.test.params.stim_key=IFN \
+          data.params.test.params.allow_custom_dataset=true \
+          data.params.test.params.celltype_key=celltype \
+          data.params.test.params.highly_variable=false \
+          model.params.generation_kwargs.n_samples=1000 \
+          "${data_settings[@]}" 2>&1
+      ) || true
+
+      echo "$output"
+      all_outputs+="$output\n"
+    done
+
+    echo
+    # 下面 AWK：保持你原先的 11 个指标抽取、统计、写 CSV 的逻辑
+    # 仅增加 to_num()，让 $NF 里如果带奇怪符号也能稳定转成数值（不改变指标定义）
+    echo -e "$all_outputs" | awk -v ds="${test_ds}" -v num_runs="${NUM_RUNS}" -v method="scDiff(${NAME})" -v csv_path="${SEED_CSV}" '
+      BEGIN {
+        c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=0;
+        c_pearson_all=c_pearson_delta_all=c_pearson_delta_de20=c_pearson_delta_de50=c_pearson_delta_de100=0;
+      }
+      function to_num(x){ gsub(/[^0-9eE+\-\.]/,"",x); return x+0 }
+
+      # Capture metrics (11)
+      /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = to_num($NF) }
+      /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = to_num($NF) }
+      /Differential Expression Score \(DES\):/    { des[c_des++] = to_num($NF) }
+      /E-Distance:/                               { edist[c_edist++] = to_num($NF) }
+      /Maximum Mean Discrepancy \(MMD\):/         { mmd[c_mmd++] = to_num($NF) }
+      /R-squared \(R2\):/                         { r2[c_r2++] = to_num($NF) }
+      /Pearson \(all genes\):/                    { pearson_all[c_pearson_all++] = to_num($NF) }
+      /Pearson Delta \(all genes\):/              { pearson_delta_all[c_pearson_delta_all++] = to_num($NF) }
+      /Pearson Delta \(top 20 DE genes\):/        { pearson_delta_de20[c_pearson_delta_de20++] = to_num($NF) }
+      /Pearson Delta \(top 50 DE genes\):/        { pearson_delta_de50[c_pearson_delta_de50++] = to_num($NF) }
+      /Pearson Delta \(top 100 DE genes\):/       { pearson_delta_de100[c_pearson_delta_de100++] = to_num($NF) }
+
+      function mean_std(idx,    i,n,s,mu,ss,v) {
+        if (idx==1)  { n=c_pds;                 for(i=0;i<n;i++){v=pds[i];                 s+=v} }
+        else if(idx==2){ n=c_mae;               for(i=0;i<n;i++){v=mae[i];                 s+=v} }
+        else if(idx==3){ n=c_des;               for(i=0;i<n;i++){v=des[i];                 s+=v} }
+        else if(idx==4){ n=c_edist;             for(i=0;i<n;i++){v=edist[i];               s+=v} }
+        else if(idx==5){ n=c_mmd;               for(i=0;i<n;i++){v=mmd[i];                 s+=v} }
+        else if(idx==6){ n=c_r2;                for(i=0;i<n;i++){v=r2[i];                  s+=v} }
+        else if(idx==7){ n=c_pearson_all;       for(i=0;i<n;i++){v=pearson_all[i];         s+=v} }
+        else if(idx==8){ n=c_pearson_delta_all; for(i=0;i<n;i++){v=pearson_delta_all[i];   s+=v} }
+        else if(idx==9){ n=c_pearson_delta_de20;for(i=0;i<n;i++){v=pearson_delta_de20[i];  s+=v} }
+        else if(idx==10){ n=c_pearson_delta_de50;for(i=0;i<n;i++){v=pearson_delta_de50[i]; s+=v} }
+        else if(idx==11){ n=c_pearson_delta_de100;for(i=0;i<n;i++){v=pearson_delta_de100[i]; s+=v} }
+        mu = (n>0)? s/n : 0;
+        for(i=0;i<n;i++){
+          if (idx==1) v=pds[i];
+          else if(idx==2) v=mae[i];
+          else if(idx==3) v=des[i];
+          else if(idx==4) v=edist[i];
+          else if(idx==5) v=mmd[i];
+          else if(idx==6) v=r2[i];
+          else if(idx==7) v=pearson_all[i];
+          else if(idx==8) v=pearson_delta_all[i];
+          else if(idx==9) v=pearson_delta_de20[i];
+          else if(idx==10) v=pearson_delta_de50[i];
+          else if(idx==11) v=pearson_delta_de100[i];
+          ss += (v - mu) * (v - mu);
+        }
+        return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
+      }
+
+      function val(idx, j,    v){
+        if (idx==1) v=pds[j];
+        else if(idx==2) v=mae[j];
+        else if(idx==3) v=des[j];
+        else if(idx==4) v=edist[j];
+        else if(idx==5) v=mmd[j];
+        else if(idx==6) v=r2[j];
+        else if(idx==7) v=pearson_all[j];
+        else if(idx==8) v=pearson_delta_all[j];
+        else if(idx==9) v=pearson_delta_de20[j];
+        else if(idx==10) v=pearson_delta_de50[j];
+        else if(idx==11) v=pearson_delta_de100[j];
+        return v;
+      }
+
+      function print_stat(idx, name,    i,n,s,mu,ss,std,v) {
+        if (idx==1)  { n=c_pds;                 for(i=0;i<n;i++){v=pds[i];                 s+=v} }
+        else if(idx==2){ n=c_mae;               for(i=0;i<n;i++){v=mae[i];                 s+=v} }
+        else if(idx==3){ n=c_des;               for(i=0;i<n;i++){v=des[i];                 s+=v} }
+        else if(idx==4){ n=c_edist;             for(i=0;i<n;i++){v=edist[i];               s+=v} }
+        else if(idx==5){ n=c_mmd;               for(i=0;i<n;i++){v=mmd[i];                 s+=v} }
+        else if(idx==6){ n=c_r2;                for(i=0;i<n;i++){v=r2[i];                  s+=v} }
+        else if(idx==7){ n=c_pearson_all;       for(i=0;i<n;i++){v=pearson_all[i];         s+=v} }
+        else if(idx==8){ n=c_pearson_delta_all; for(i=0;i<n;i++){v=pearson_delta_all[i];   s+=v} }
+        else if(idx==9){ n=c_pearson_delta_de20;for(i=0;i<n;i++){v=pearson_delta_de20[i];  s+=v} }
+        else if(idx==10){ n=c_pearson_delta_de50;for(i=0;i<n;i++){v=pearson_delta_de50[i]; s+=v} }
+        else if(idx==11){ n=c_pearson_delta_de100;for(i=0;i<n;i++){v=pearson_delta_de100[i]; s+=v} }
+        else n=0;
+        if (n > 0) {
+          mu = s / n;
+          ss = 0;
+          for (i = 0; i < n; i++) {
+            if (idx==1) v=pds[i]; else if(idx==2) v=mae[i]; else if(idx==3) v=des[i];
+            else if(idx==4) v=edist[i]; else if(idx==5) v=mmd[i]; else if(idx==6) v=r2[i];
+            else if(idx==7) v=pearson_all[i]; else if(idx==8) v=pearson_delta_all[i];
+            else if(idx==9) v=pearson_delta_de20[i]; else if(idx==10) v=pearson_delta_de50[i];
+            else if(idx==11) v=pearson_delta_de100[i];
+            ss += (v - mu) * (v - mu);
+          }
+          std = (n > 1) ? sqrt(ss / (n - 1)) : 0;
+          printf "%-40s: %.4f ± %.4f\n", name, mu, std;
+        } else {
+          printf "%-40s: N/A (No data)\n", name;
+        }
+      }
+
+      END {
+        print "==================================================================";
+        printf " Final statistics for %s (%d runs: train+eval)\n", ds, num_runs;
+        print "==================================================================";
+        print_stat(1, "Perturbation Discrimination (PDS)");
+        print_stat(2, "Mean Absolute Error (MAE)");
+        print_stat(3, "Differential Expression Score (DES)");
+        print "----------------------------------------";
+        print_stat(4, "E-Distance");
+        print_stat(5, "Maximum Mean Discrepancy (MMD)");
+        print_stat(6, "R-squared (R2)");
+        print "----------------------------------------";
+        print_stat(7, "Pearson (all genes)");
+        print_stat(8, "Pearson Delta (all genes)");
+        print_stat(9, "Pearson Delta (top 20 DE genes)");
+        print_stat(10, "Pearson Delta (top 50 DE genes)");
+        print_stat(11, "Pearson Delta (top 100 DE genes)");
+        print "==================================================================\n";
+
+        metric_names[1]="PDS";
+        metric_names[2]="MAE";
+        metric_names[3]="DES";
+        metric_names[4]="E-Distance";
+        metric_names[5]="MMD";
+        metric_names[6]="R2";
+        metric_names[7]="Pearson (all genes)";
+        metric_names[8]="Pearson Delta (all genes)";
+        metric_names[9]="Pearson Delta (top 20 DE genes)";
+        metric_names[10]="Pearson Delta (top 50 DE genes)";
+        metric_names[11]="Pearson Delta (top 100 DE genes)";
+
+        header = "Method";
+        for (i=1;i<=11;i++) header = header "," metric_names[i] " (mean±std)";
+        for (r=1;r<=num_runs;r++) for (i=1;i<=11;i++) header = header ",Run" r " " metric_names[i];
+
+        row = method;
+        for (i=1;i<=11;i++) {
+          ms = mean_std(i); split(ms, parts, "|");
+          row = row sprintf(",%.4f±%.4f", parts[1], parts[2]);
+        }
+        for (r=0;r<num_runs;r++) for (i=1;i<=11;i++) row = row sprintf(",%.4f", val(i, r));
+
+        print header > csv_path;
+        print row    >> csv_path;
+        close(csv_path);
+        printf("CSV written: %s\n", csv_path);
+      }
+    '
+
+    echo
+    echo "--- Finished pipeline for dataset: ${train_ds} ---"
+    echo
+  }
+
+done
+
+echo "######################################################################"
+echo "###   All datasets completed! CSVs are under ${SAMPLES_ROOT}/*/scdiff/metrics/metrics_*.csv"
+echo "######################################################################"

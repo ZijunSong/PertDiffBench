@@ -1,0 +1,24 @@
+model:
+  diffusion:
+    timesteps: 1000
+    beta_1: 1e-4
+    beta_T: 0.02
+    hidden_dim: 512
+
+  ae:
+    input_dim: 6998   # = 基因数 (train/valid h5ad 的 n_vars)
+    latent_dim: 32    # = scVI n_latent
+    hidden_dim: 1024
+
+train:
+  batch_size:       512
+  device:           "cuda"
+  epoch:            1000
+  lr:               2e-4
+  weight_decay:     1e-4
+  grad_clip:        1.0
+  warmup_multiplier: 10
+  save_weight_dir:  "./checkpoints/scvi_ddpm_mlp"
+  num_workers:      16
+  recon_weight:     1.0
+  ckpt_save_interval: 500

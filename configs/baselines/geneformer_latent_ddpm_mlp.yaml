@@ -1,0 +1,18 @@
+train:
+  batch_size: 256
+  num_workers: 4
+  epoch: 200
+  lr: 1e-4
+  weight_decay: 1e-2
+  ckpt_save_interval: 10
+  save_weight_dir: ...
+model:
+  ae:
+    latent_dim:   256  
+    hidden_dim:   1024
+    output_dim:   2000
+  diffusion:
+    beta_1: 1e-4
+    beta_T: 0.02
+    timesteps: 1000
+    hidden_dim: 1024

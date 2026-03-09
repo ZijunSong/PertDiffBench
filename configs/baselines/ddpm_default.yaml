@@ -1,0 +1,39 @@
+# configs/ddpm_default.yaml
+data:
+  path: ./datasets/CIFAR10
+  batch_size: 128
+  transform:
+    - RandomHorizontalFlip: {}
+    - ToTensor: {}
+    - Normalize: 
+        mean: [0.5, 0.5, 0.5]
+        std:  [0.5, 0.5, 0.5]
+
+model:
+  unet:
+    T: 1000
+    ch: 256
+    ch_mult: [1, 2, 4]
+    attn: [1]
+    num_res_blocks: 2
+    dropout: 0.1
+  beta_1: 1e-4
+  beta_T: 0.02
+
+train:
+  device: cuda
+  epoch: 300
+  lr: 2e-4
+  weight_decay: 1e-4
+  grad_clip: 1.0
+  warmup_multiplier: 10
+  save_weight_dir: ./checkpoints/ddpm
+  resume_from: null
+
+sample:
+  batch_size: 64
+  sampled_dir: ./samples/ddpm
+  sampledNoisyImgName: noisy.png
+  sampledImgName: denoised.png
+  nrow: 1
+  test_load_weight: ckpt_199_.pt  # used by eval()

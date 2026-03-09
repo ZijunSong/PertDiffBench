@@ -1,0 +1,38 @@
+model:
+  geneformer:
+    # Using a standard pre-trained GeneFormer model from Hugging Face
+    model_name: "ctheodoris/GeneFormer" 
+  diffusion:
+    T:      1000
+    beta_1: 1e-4
+    beta_T: 0.02
+    hidden_dim: 512  
+
+  decoder:
+    # MODIFIED: GeneFormer's base model has a latent dimension of 256
+    latent_dim:   256  
+    hidden_dim:   1024
+    output_dim:   2000
+
+data:
+  path:        data/scrna_data/scrna_positive.h5ad
+  batch_size:  64
+  num_workers: 4
+  label_key:   Condition
+
+train:
+  batch_size: 64
+  device:           cuda
+  epoch:            100
+  lr:               2e-4
+  weight_decay:     1e-4
+  grad_clip:        1.0
+  warmup_multiplier: 10
+  # MODIFIED: Updated checkpoint directory name for clarity
+  save_weight_dir:  ./checkpoints/geneformer_ddpm_mlp
+  num_workers:      16
+
+sample:
+  batch_size:    64
+  # MODIFIED: Updated output file name
+  sampled_h5ad:  samples/geneformer_ddpm_mlp_synthetic.h5ad
