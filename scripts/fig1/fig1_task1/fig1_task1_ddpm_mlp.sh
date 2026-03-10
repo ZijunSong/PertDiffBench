@@ -5,8 +5,9 @@ set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
 # ========= Configuration =========
-# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under checkpoints/<method>/<cell_type>_hvg_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
+# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under CKPT_ROOT/fig1/task1/<method>/<cell_type>_hvg_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
 ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
 CELL_TYPES=(
   'B'
@@ -50,7 +51,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
   # Paths (same convention across fig1 task1 scripts)
   train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_train_HVG_${NUM_GENES}.h5ad"
   valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_valid_HVG_${NUM_GENES}.h5ad"
-  save_dir_base="${ROOT_DIR}checkpoints/ddpm_mlp/${cell_type}_hvg_${NUM_GENES}"
+  save_dir_base="${CKPT_ROOT}/fig1/task1/ddpm_mlp/${cell_type}_hvg_${NUM_GENES}"
   sample_dir_base="${ROOT_DIR}samples/fig1/task1/${cell_type}/mlp_ddpm_mlp_1000"
   mkdir -p "${save_dir_base}" "${sample_dir_base}"
   mkdir -p "${LOGDIR}"

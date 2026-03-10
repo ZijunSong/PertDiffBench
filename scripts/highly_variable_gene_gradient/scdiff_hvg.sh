@@ -4,8 +4,9 @@
 trap 'echo "ERROR: A command failed. Exiting." >&2; exit 1' ERR
 
 # --- Configuration Area ---
-# Path prefix; convention: checkpoints under checkpoints/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}, logs under logs/highly_variable_gene_gradient/<method>
-ROOT_DIR="${ROOT_DIR:-}"
+# Path prefix; convention: checkpoints under CKPT_ROOT/highly_variable_gene_gradient/<method>/CD4T_hvg_${gene_num}/run{i}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}, logs under logs/highly_variable_gene_gradient/<method>
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
 # Gene counts to process
 GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)
@@ -47,8 +48,9 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     for (( i=1; i<=NUM_RUNS; i++ )); do
         echo -e "\n--- Now running iteration $i/$NUM_RUNS ---"
 
-        # Unique postfix per run to avoid log conflicts
+        # Unique postfix per run to avoid log conflicts; checkpoint under CKPT_ROOT/highly_variable_gene_gradient/scdiff/CD4T_hvg_${gene_num}/run{i}
         run_postfix="perturbation_${NAME}_gene${gene_num}_run${i}"
+        model_save_path="${CKPT_ROOT}/highly_variable_gene_gradient/scdiff/CD4T_hvg_${gene_num}/run${i}"
 
         # Run training + eval (as defined in eval_perturbation.yaml)
         output=$(python src/scDiff/main.py \
@@ -57,6 +59,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
             --name "${NAME}" \
             --logdir "${LOGDIR}" \
             --postfix "${run_postfix}" \
+            --model_save_path "${model_save_path}" \
             ${OFFLINE_SETTINGS} \
             ${data_settings} 2>&1) || true
 

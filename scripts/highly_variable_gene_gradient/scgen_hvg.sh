@@ -4,8 +4,9 @@
 set -e
 
 # --- Configuration ---
-# Path prefix; convention: checkpoints under checkpoints/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
-ROOT_DIR="${ROOT_DIR:-}"
+# Path prefix; convention: checkpoints under CKPT_ROOT/highly_variable_gene_gradient/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
 GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)
 NUM_RUNS=3
@@ -22,7 +23,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     cell_type='CD4T'
 
     # checkpoints and samples (same convention as ddpm_hvg.sh)
-    save_dir_base="${ROOT_DIR}checkpoints/scgen/CD4T_hvg_${gene_num}"
+    save_dir_base="${CKPT_ROOT}/highly_variable_gene_gradient/scgen/CD4T_hvg_${gene_num}"
     sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/scgen_${gene_num}"
     mkdir -p "${save_dir_base}" "${sample_dir_base}"
 

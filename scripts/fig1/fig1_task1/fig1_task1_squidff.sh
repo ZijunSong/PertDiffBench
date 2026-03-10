@@ -4,8 +4,9 @@
 set -e
 
 # ========= Configuration =========
-# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under checkpoints/<method>/<cell_type>_hvg_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
-ROOT_DIR="${ROOT_DIR:-}"
+# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under CKPT_ROOT/fig1/task1/<method>/<cell_type>_hvg_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 NUM_RUNS=3
 METHOD_NAME="Squidiff"
 LOG_ROOT="${ROOT_DIR}logs/fig1_task1"
@@ -42,7 +43,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
   [ -z "$n_samples" ] && { echo "No n_samples configured for ${cell_type}"; exit 1; }
 
   # Paths (same convention across fig1 task1 scripts)
-  save_dir_base="${ROOT_DIR}checkpoints/squidiff/${cell_type}_hvg_1000"
+  save_dir_base="${CKPT_ROOT}/fig1/task1/squidiff/${cell_type}_hvg_1000"
   sample_dir_base="${ROOT_DIR}samples/fig1/task1/${cell_type}/squidiff_1000"
   train_path="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_train_HVG_1000.h5ad"
   valid_path="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_valid_HVG_1000.h5ad"

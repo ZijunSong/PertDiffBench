@@ -5,8 +5,9 @@ set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
 # -------------------- Configuration --------------------
-# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under checkpoints/scdiffusion/.../task1/<cell_type>_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
-ROOT_DIR="${ROOT_DIR:-}"
+# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under CKPT_ROOT/fig1/task1/scdiffusion/.../<cell_type>_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 # scDiffusion external annotation model (e.g. /data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1)
 ANNOTATION_MODEL_DIR="${ANNOTATION_MODEL_DIR:-/data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1}"
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
@@ -52,9 +53,9 @@ for cell_type in "${CELL_TYPES[@]}"; do
   # Paths (same convention across fig1 task1 scripts; scdiffusion uses subdirs under checkpoints/scdiffusion/)
   train_h5="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_train_HVG_${NUM_GENES}.h5ad"
   valid_h5="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_valid_HVG_${NUM_GENES}.h5ad"
-  vae_base="${ROOT_DIR}checkpoints/scdiffusion/vae_checkpoint/task1/${cell_type}_${NUM_GENES}"
-  diff_base="${ROOT_DIR}checkpoints/scdiffusion/diffusion_checkpoint/task1/${cell_type}_${NUM_GENES}"
-  cls_base="${ROOT_DIR}checkpoints/scdiffusion/classifier_checkpoint/2-classifier/task1/${cell_type}_${NUM_GENES}"
+  vae_base="${CKPT_ROOT}/fig1/task1/scdiffusion/vae_checkpoint/${cell_type}_${NUM_GENES}"
+  diff_base="${CKPT_ROOT}/fig1/task1/scdiffusion/diffusion_checkpoint/${cell_type}_${NUM_GENES}"
+  cls_base="${CKPT_ROOT}/fig1/task1/scdiffusion/classifier_checkpoint/${cell_type}_${NUM_GENES}"
   sample_dir_base="${ROOT_DIR}samples/fig1/task1/${cell_type}/scDiffusion_1000"
   mkdir -p "${vae_base}" "${diff_base}" "${cls_base}" "${sample_dir_base}"
   csv_path="${sample_dir_base}/metrics_${METHOD_NAME}_${cell_type}_hvg_${NUM_GENES}.csv"

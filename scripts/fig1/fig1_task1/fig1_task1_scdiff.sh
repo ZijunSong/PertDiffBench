@@ -6,8 +6,9 @@ trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
 # --------------------
 # Configuration
-# Path prefix; convention: data under data/highly_variable_gene_gradient/; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
-ROOT_DIR="${ROOT_DIR:-}"
+# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under CKPT_ROOT/fig1/task1/scdiff/<cell_type>_hvg_1000/run{i}; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 LOGDIR="${LOGDIR:-${ROOT_DIR}logs/fig1_task1}"
 NAME=${NAME:-v7.5}
@@ -86,8 +87,9 @@ for cell_type in "${CELL_TYPES[@]}"; do
       echo " Run ${i}/${NUM_RUNS} for ${cell_type}"
       echo "======================"
 
-      # Unique postfix per run to avoid overwrite
+      # Unique postfix per run to avoid overwrite; checkpoint under CKPT_ROOT/fig1/task1/scdiff/<cell_type>_hvg_1000/run{i}
       run_postfix="perturbation_${NAME}_run${i}"
+      model_save_path="${CKPT_ROOT}/fig1/task1/scdiff/${cell_type}_hvg_1000/run${i}"
 
       # One-shot pipeline (train + eval) inside your main.py
       output=$(
@@ -97,6 +99,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           --name "${NAME}" \
           --logdir "${LOGDIR}" \
           --postfix "${run_postfix}" \
+          --model_save_path "${model_save_path}" \
           ${OFFLINE_SETTINGS} \
           "${base_data_settings[@]}" 2>&1
       ) || true

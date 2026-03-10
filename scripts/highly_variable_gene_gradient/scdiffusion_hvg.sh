@@ -4,8 +4,9 @@
 set -e
 
 # ===== Configuration =====
-# Path prefix; convention: checkpoints under checkpoints/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
-ROOT_DIR="${ROOT_DIR:-}"
+# Path prefix; convention: checkpoints under CKPT_ROOT/highly_variable_gene_gradient/scdiffusion/.../CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 # scDiffusion external annotation model (e.g. /data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1)
 ANNOTATION_MODEL_DIR="${ANNOTATION_MODEL_DIR:-/data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1}"
 
@@ -27,10 +28,10 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
     cell_type='CD4T'   # only for logs/statistics
 
-    # Base checkpoints and samples (same convention as ddpm_hvg.sh; scdiffusion uses subdirs under checkpoints/scdiffusion/)
-    vae_ckpt_base="${ROOT_DIR}checkpoints/scdiffusion/vae_checkpoint/CD4T_hvg_${gene_num}"
-    [ -n "$ROOT_DIR" ] && diff_ckpt_base="${ROOT_DIR}checkpoints/scdiffusion/diffusion_checkpoint/CD4T_hvg_${gene_num}" || diff_ckpt_base="../../checkpoints/scdiffusion/diffusion_checkpoint/CD4T_hvg_${gene_num}"
-    [ -n "$ROOT_DIR" ] && cls_ckpt_base="${ROOT_DIR}checkpoints/scdiffusion/classifier_checkpoint/2-classifier/CD4T_hvg_${gene_num}" || cls_ckpt_base="../../checkpoints/scdiffusion/classifier_checkpoint/2-classifier/CD4T_hvg_${gene_num}"
+    # Base checkpoints and samples (same convention as ddpm_hvg.sh; scdiffusion uses subdirs under CKPT_ROOT/highly_variable_gene_gradient/scdiffusion/)
+    vae_ckpt_base="${CKPT_ROOT}/highly_variable_gene_gradient/scdiffusion/vae_checkpoint/CD4T_hvg_${gene_num}"
+    diff_ckpt_base="${CKPT_ROOT}/highly_variable_gene_gradient/scdiffusion/diffusion_checkpoint/CD4T_hvg_${gene_num}"
+    cls_ckpt_base="${CKPT_ROOT}/highly_variable_gene_gradient/scdiffusion/classifier_checkpoint/CD4T_hvg_${gene_num}"
     sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/scDiffusion_${gene_num}"
 
     mkdir -p "${vae_ckpt_base}" "${diff_ckpt_base}" "${cls_ckpt_base}" "${sample_dir_base}"
@@ -48,8 +49,8 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         echo -e " Run $i/$NUM_RUNS (gene count $gene_num)"
         echo -e "======================"
 
-        # Independent save/output dirs for each run
-        vae_ckpt_dir="../../${vae_ckpt_base}/run${i}"
+        # Independent save/output dirs for each run (ckpt bases are under CKPT_ROOT, absolute paths)
+        vae_ckpt_dir="${vae_ckpt_base}/run${i}"
         diff_ckpt_dir="${diff_ckpt_base}/run${i}"
         cls_ckpt_dir="${cls_ckpt_base}/run${i}"
         sample_dir="${sample_dir_base}/run${i}"
@@ -61,9 +62,9 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         diff_model_file="${diff_ckpt_dir}/my_diffusion/model010000.pt"
         cls_model_file="${cls_ckpt_dir}/model009999.pt"
 
-        # Step A: Train VAE
-        [ -n "$ROOT_DIR" ] && vae_save_dir="${vae_ckpt_dir}" || vae_save_dir="../../../${vae_ckpt_base}/run${i}"
-        [ -n "$ROOT_DIR" ] && vae_data_dir="${train_data_path}" || vae_data_dir="../../../${train_data_path}"
+        # Step A: Train VAE (paths are absolute under CKPT_ROOT / ROOT_DIR)
+        vae_save_dir="${vae_ckpt_dir}"
+        vae_data_dir="${train_data_path}"
         echo -e "\n--- Step A: Train VAE (genes: $gene_num, run $i) ---"
         python VAE_train.py \
             --data_dir "${vae_data_dir}" \
@@ -75,7 +76,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         cd ..
 
         # Step B: Train diffusion backbone
-        [ -n "$ROOT_DIR" ] && diff_data_dir="${train_data_path}" || diff_data_dir="../../${train_data_path}"
+        diff_data_dir="${train_data_path}"
         echo -e "\n--- Step B: Train diffusion backbone (genes: $gene_num, run $i) ---"
         python cell_train.py \
             --data_dir "${diff_data_dir}" \
@@ -90,8 +91,8 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
             --model_path "${cls_ckpt_dir}"
 
         # Step D: Perturbation prediction and evaluation
-        [ -n "$ROOT_DIR" ] && sample_dir_abs="${sample_dir}" || sample_dir_abs="../../${sample_dir}"
-        [ -n "$ROOT_DIR" ] && valid_path_abs="${valid_data_path}" || valid_path_abs="../../${valid_data_path}"
+        sample_dir_abs="${sample_dir}"
+        valid_path_abs="${valid_data_path}"
         echo -e "\n--- Step D: Perturbation prediction & evaluation (genes: $gene_num, run $i) ---"
         output=$(python classifier_sample.py \
             --num_samples 278 \

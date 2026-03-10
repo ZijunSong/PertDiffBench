@@ -4,9 +4,10 @@
 set -e
 
 # --- Configuration Area ---
-# Path prefix for data/checkpoints/samples (set for different servers, e.g. /data/ppnm/data/PertDiffBench/)
-# Path convention: data: ${ROOT_DIR}data/highly_variable_gene_gradient/; checkpoints: ${ROOT_DIR}checkpoints/<method>/CD4T_hvg_${gene_num}; samples: ${ROOT_DIR}samples/highly_variable_gene_gradient/<method>_${gene_num}
+# Path prefix for data/samples (set for different servers, e.g. /data/ppnm/data/PertDiffBench/)
+# Path convention: data: ${ROOT_DIR}data/highly_variable_gene_gradient/; checkpoints: ${CKPT_ROOT}/highly_variable_gene_gradient/<method>/CD4T_hvg_${gene_num}; samples: ${ROOT_DIR}samples/highly_variable_gene_gradient/<method>_${gene_num}
 ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
 # Define the list of gene counts to process
 GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)
@@ -32,7 +33,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
     valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
 
-    save_dir_base="${ROOT_DIR}checkpoints/ddpm/CD4T_hvg_${gene_num}"
+    save_dir_base="${CKPT_ROOT}/highly_variable_gene_gradient/ddpm/CD4T_hvg_${gene_num}"
     sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/scrna_ddpm_scrna_${gene_num}"
     mkdir -p "$save_dir_base" "$sample_dir_base"
 

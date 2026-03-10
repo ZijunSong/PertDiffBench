@@ -225,44 +225,29 @@ The process is repeated in a leave-one-out manner over all MOAs. The file format
 
 To facilitate downstream modeling, we provide a unified preprocessing pipeline that converts all CSV files into standardized `.h5ad` format and constructs Control+IFN merged datasets.
 
-From the directory:
-
-```
-data/fig2/task1_unseenMOA
-```
-
-run the following commands sequentially:
-
 ```bash
-python control_csv_to_h5ad.py
-python merge_unseen_moa_to_h5ad.py
-python merge_control_with_each_ifn.py
-python check_pairs.py
+python preprocess_data/fig2/task1_unseenMOA/control_csv_to_h5ad.py
+python preprocess_data/fig2/task1_unseenMOA/merge_unseen_moa_to_h5ad.py
+python preprocess_data/fig2/task1_unseenMOA/merge_control_with_each_ifn.py
+python preprocess_data/fig2/task1_unseenMOA/add_smiles_from_chembl.py
+python preprocess_data/fig2/task1_unseenMOA/check_pairs.py
 ```
 
-This pipeline performs the following steps:
+The pipeline performs the following steps in order:
 
-1. Convert the control CSV files into `control_merged.h5ad`.
-2. Convert all IFN-only MOA datasets into `.h5ad` format under:
+1. Convert the control CSV files into `control_merged.h5ad` and write it to the output directory.
+2. Convert IFN-only data for each MOA into `.h5ad` format, writing to:
    * `unseen_same_moa/h5ad/`
    * `unseen_diff_moa/h5ad/`
-3. Merge each MOA with the control dataset, generating:
+3. Merge each MOA with the control dataset, producing:
+   * `control_plus_ifn/<split>/<MOA>_train__plus_control.h5ad`
+   * `control_plus_ifn/<split>/<MOA>_test__plus_control.h5ad`
+4. Add SMILES from ChEMBL to the h5ad files in `control_plus_ifn`, writing results to `control_plus_ifn_with_smiles/`.
+5. Verify dataset integrity (e.g. `perturbation_status`, Control/IFN sample counts, and merged sample sizes).
 
-   ```
-   control_plus_ifn/<split>/<MOA>_train__plus_control.h5ad
-   control_plus_ifn/<split>/<MOA>_test__plus_control.h5ad
-   ```
-4. Verify dataset integrity, including:
-
-   * Presence of `perturbation_status`
-   * Correct Control/IFN sample counts
-   * Consistency of merged sample sizes
-
-After preprocessing, all resulting `.h5ad` files are ready for direct model training and evaluation under both Same-MOA and Unseen-MOA experimental settings.
+After preprocessing, all resulting `.h5ad` files are ready for training and evaluation under both Same-MOA and Unseen-MOA settings.
 
 ```bash
-cd /share/PertBench && conda activate pertbench && export PYTHONPATH=./
-
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_same.sh > fig2_task1_squidiff_moa_same.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiff_moa_same.sh > fig2_task1_scdiff_moa_same.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiffusion_moa_same.sh > fig2_task1_scdiffusion_moa_same.log 2>&1 &
@@ -270,10 +255,7 @@ nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_moa_same.sh > fig2_task1_
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_mlp_moa_same.sh > fig2_task1_ddpm_mlp_moa_same.log 2>&1 &
 
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_diff.sh > fig2_task1_squidiff_moa_diff.log 2>&1 &
-
-cd /share/PertBench && conda activate pertbench && export PYTHONPATH=./
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiff_moa_diff.sh > fig2_task1_scdiff_moa_diff.log 2>&1 &
-
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiffusion_moa_diff.sh > fig2_task1_scdiffusion_moa_diff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_moa_diff.sh > fig2_task1_ddpm_moa_diff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_mlp_moa_diff.sh > fig2_task1_ddpm_mlp_moa_diff.log 2>&1 &
