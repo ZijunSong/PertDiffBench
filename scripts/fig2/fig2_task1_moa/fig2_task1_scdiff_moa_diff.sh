@@ -6,7 +6,7 @@ export LC_ALL=C LC_NUMERIC=C
 
 # -------------------- Configuration --------------------
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
-# 降低 test 阶段显存/内存占用，避免聚合评估时 OOM（仍 OOM 可试：BATCH_SIZE=16, T_SAMPLE=500）
+# Reduce memory during test; increase BATCH_SIZE/T_SAMPLE if OOM
 BATCH_SIZE="${BATCH_SIZE:-8}"
 NUM_WORKERS="${NUM_WORKERS:-0}"
 T_SAMPLE="${T_SAMPLE:-1000}"
@@ -16,26 +16,28 @@ OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 export WANDB_MODE="${WANDB_MODE:-offline}"
 export OFFLINE_SETTINGS="--wandb f"
 NUM_RUNS="${NUM_RUNS:-3}"
-METHOD_NAME="${METHOD_NAME:-scDiff}"   # 仅用于你后续若想统一命名；当前 CSV 里仍按 scDiff(${NAME}) 写
+METHOD_NAME="${METHOD_NAME:-scDiff}"
 
 # -------------------- Project Root ---------------------
-# 脚本在 scripts/fig2/fig2_task1_moa/ 下，三次 dirname 得到 scripts，再 /.. 到项目根
 HOMEDIR=$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")/..
 cd "$HOMEDIR"
 echo "Current working directory: $(pwd)"
 
 # -------------------- Paths ----------------------------
-# unseen_diff_moa: 每个 h5ad 含 perturbation_status(Control/IFN)、perturbation、dose_value，支持 drug+dose 条件
-DATA_ROOT="${DATA_ROOT:-data/fig2/task1_unseenMOA/control_plus_ifn/unseen_diff_moa}"
+# Preprocessed data root (control_plus_ifn per split). Checkpoints and samples use fixed base paths.
+DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA}"
+SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
+CKPT_BASE="${CKPT_BASE:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
-LOG_ROOT="${LOGDIR}/fig2/task1_unseen_moa_diff"
-SAMPLES_ROOT="samples/fig2/task1_unseen_moa_diff"
-CKPT_ROOT="checkpoints/fig2/task1_unseen_moa_diff"
+DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn/unseen_diff_moa}"
+LOG_ROOT="${LOG_ROOT:-${LOGDIR}/fig2/task1_unseenMOA/diff}"
+SAMPLES_ROOT="${SAMPLES_ROOT:-${SAMPLES_BASE}/fig2/task1_unseenMOA/diff}"
+CKPT_ROOT="${CKPT_ROOT:-${CKPT_BASE}/fig2/task1_unseenMOA/diff}"
 mkdir -p "${LOG_ROOT}" "${SAMPLES_ROOT}" "${CKPT_ROOT}"
 
 # -------------------- Discover datasets ----------------
-# 约定1（unseen_diff_moa）：<dataset_base>_train__plus_control.h5ad / <dataset_base>_test__plus_control.h5ad
-# 约定2（兼容旧）：<dataset_base>_control_train.h5ad / <dataset_base>_control_test.h5ad
+# Convention 1: <dataset_base>_train__plus_control.h5ad / <dataset_base>_test__plus_control.h5ad
+# Convention 2 (legacy): <dataset_base>_control_train.h5ad / <dataset_base>_control_test.h5ad
 mapfile -t TRAIN_FILES < <(find "${DATA_ROOT}" -maxdepth 1 -type f -name "*_train__plus_control.h5ad" | sort)
 FILE_PATTERN="diff_moa"
 if [[ ${#TRAIN_FILES[@]} -eq 0 ]]; then
@@ -76,7 +78,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
   echo "###   Starting pipeline for dataset: ${train_ds}"
   echo "######################################################################"
 
-  # 输出目录结构参考你给的 scDiffusion 脚本：每个 dataset_base 独立目录
+  # Output layout: task/split/method/<dataset_base>/run{i}
   OUT_DIR="${SAMPLES_ROOT}/${dataset_base}/scdiff"
   CSV_DIR="${OUT_DIR}/metrics"
   SEED_CSV="${CSV_DIR}/metrics_${test_ds}.csv"
@@ -84,7 +86,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
 
   echo "== $(date '+%F %T') | dataset=${dataset_base} runs=${NUM_RUNS} =="
 
-  # scDiff data 配置（保持你原来的逻辑与字段不变）
+  # scDiff data config
   data_settings=()
   data_settings+=("data.params.batch_size=${BATCH_SIZE}")
   data_settings+=("data.params.num_workers=${NUM_WORKERS}")
@@ -92,7 +94,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
   data_settings+=("model.params.path_to_save_fig=")
 
   {
-    # 使用临时文件保存每轮输出，避免 output=$(...) 因输出过大被 bash 截断导致丢失末尾的 Evaluation Metrics
+    # Use temp logs per run to avoid truncation of evaluation metrics
     RUN_LOGS=()
     for (( i=1; i<=NUM_RUNS; i++ )); do
       RUN_LOGS+=("${OUT_DIR}/.run${i}.log")
@@ -144,7 +146,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     done
 
     echo
-    # 从临时文件读取全部输出做指标解析，避免变量长度截断
+    # Parse metrics from run logs
     cat "${RUN_LOGS[@]}" 2>/dev/null | awk -v ds="${test_ds}" -v num_runs="${NUM_RUNS}" -v method="scDiff(${NAME})" -v csv_path="${SEED_CSV}" '
       BEGIN {
         c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=0;

@@ -247,6 +247,10 @@ The pipeline performs the following steps in order:
 
 After preprocessing, all resulting `.h5ad` files are ready for training and evaluation under both Same-MOA and Unseen-MOA settings.
 
+**Path convention for training scripts:** Input data is read from `DATA_BASE` (default `/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA`). Checkpoints are written to `/data/ppnm/checkpoints/PertDiffBench/checkpoints/fig2/task1_unseenMOA/<same|diff>/<method>/...`. Generated samples and metrics are written to `/data/ppnm/data/PertDiffBench/samples/fig2/task1_unseenMOA/<same|diff>/<method>/<dataset>/run{i}`. You can override `DATA_BASE`, `SAMPLES_BASE`, or `CKPT_BASE` via environment variables if needed.
+
+Run from the project root (e.g. after `conda activate pertdiffbench && export PYTHONPATH=./`):
+
 ```bash
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_same.sh > fig2_task1_squidiff_moa_same.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiff_moa_same.sh > fig2_task1_scdiff_moa_same.log 2>&1 &

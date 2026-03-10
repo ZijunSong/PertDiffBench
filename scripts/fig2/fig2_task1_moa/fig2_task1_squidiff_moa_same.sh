@@ -12,24 +12,24 @@ OUTPUT_DIM="${OUTPUT_DIM:-3000}"
 N_SAMPLES="${N_SAMPLES:-100}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 
-DATA_ROOT="${DATA_ROOT:-data/fig2/task1_unseenMOA/control_plus_ifn_with_smiles/control_plus_ifn/unseen_same_moa}"
+DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA}"
+SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
-# 统一的control数据路径
-CONTROL_DATA_PATH="data/fig2/task1_unseenMOA/control_merged.h5ad"
-[[ -f "${CONTROL_DATA_PATH}" ]] || die "Control file not found: ${CONTROL_DATA_PATH}"
+DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn_with_smiles/unseen_same_moa}"
+CONTROL_DATA_PATH="${CONTROL_DATA_PATH:-${DATA_BASE}/control_merged.h5ad}"
+[[ -f "${CONTROL_DATA_PATH}" ]] || { echo "[ERROR] Control file not found: ${CONTROL_DATA_PATH}" >&2; exit 1; }
 
 LOGROOT="${LOGROOT:-logs/squidiff}"
-OUT_BASE="${OUT_BASE:-samples/fig2/task1_unseenMOA/same/Squidiff_${GENE_SIZE}_withSMILES}"
-CKPT_BASE="${CKPT_BASE:-checkpoints/squidiff/fig2_task1_unseenMOA/same/${GENE_SIZE}_withSMILES}"
+OUT_BASE="${OUT_BASE:-${SAMPLES_BASE}/fig2/task1_unseenMOA/same/squidiff}"
+CKPT_BASE="${CKPT_ROOT}/fig2/task1_unseenMOA/same/squidiff"
 CSV_BASE="${CSV_BASE:-${OUT_BASE}/metrics}"
 
 mkdir -p "${OUT_BASE}" "${CKPT_BASE}" "${CSV_BASE}"
 
-die() { echo "[ERROR] $*" >&2; exit 1; }
-
 # =================== Discover datasets ===================
 mapfile -t TRAIN_FILES < <(find "${DATA_ROOT}" -maxdepth 1 -type f -name "*_train__plus_control.h5ad" | sort)
-[[ ${#TRAIN_FILES[@]} -gt 0 ]] || die "No *_train__plus_control.h5ad found under: ${DATA_ROOT}"
+[[ ${#TRAIN_FILES[@]} -gt 0 ]] || { echo "[ERROR] No *_train__plus_control.h5ad found under: ${DATA_ROOT}" >&2; exit 1; }
 
 echo "Found ${#TRAIN_FILES[@]} MOA datasets under ${DATA_ROOT}"
 echo "Using unified control data: ${CONTROL_DATA_PATH}"
@@ -42,7 +42,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
   moa="${train_file%_train__plus_control.h5ad}"
   test_path="${DATA_ROOT}/${moa}_test__plus_control.h5ad"
 
-  [[ -f "${test_path}" ]] || die "Missing test file for MOA=${moa}: ${test_path}"
+  [[ -f "${test_path}" ]] || { echo "[ERROR] Missing test file for MOA=${moa}: ${test_path}" >&2; exit 1; }
 
   echo "######################################################################"
   echo "###   Squidiff for MOA: ${moa} (${NUM_RUNS} runs)"
@@ -54,7 +54,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
 
   mkdir -p "${OUT_ROOT}" "${CKPT_ROOT}"
 
-  # 用文件汇总各 run 的采样输出，避免超大变量触发 argument list too long 或管道/ERR 问题
+  # Collect run outputs in a file to avoid argument list length limits
   ALL_OUTPUTS_FILE="${OUT_ROOT}/all_sample_outputs.txt"
   : > "${ALL_OUTPUTS_FILE}"
 
@@ -68,7 +68,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     RUN_OUT_DIR="${OUT_ROOT}/run${i}"
     mkdir -p "${RUN_CKPT_DIR}" "${RUN_OUT_DIR}"
 
-    # ---- Step 1: Train（启用SMILES + 统一control数据）----
+    # ---- Step 1: Train (SMILES + shared control) ----
     echo -e "\n--- Training model for ${moa} (run ${i}) ---"
     python src/Squidiff/train_squidiff.py \
       --logger_path "${LOGROOT}/fig2_task1_unseenMOA_${moa}_run${i}" \
@@ -87,7 +87,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     UMAP_PNG="${RUN_OUT_DIR}/umap_comparison_${i}.png"
     MODEL_PT="${RUN_CKPT_DIR}/model.pt"
 
-    # 采样：先写临时日志再读取，避免 python 非零退出时 output="$(...)" 触发 set -e/ERR
+    # Sample: write to temp log then parse to avoid set -e on python non-zero exit
     SAMPLE_LOG="${RUN_OUT_DIR}/sample_log.txt"
     python src/Squidiff/sample_squidiff.py \
       --model_path "${MODEL_PT}" \
@@ -104,7 +104,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     echo "" >> "${ALL_OUTPUTS_FILE}"
   done
 
-  # ---- Step 3: 统计三次运行均值并写入 CSV ----
+  # ---- Step 3: Aggregate metrics and write CSV ----
   echo
   awk -v dataset="${moa}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
     BEGIN { c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=c_p_all=c_pd_all=c_pd20=c_pd50=c_pd100=0 }

@@ -5,7 +5,7 @@ IFS=$'\n\t'
 trap 'echo "[ERROR] command failed" >&2; exit 1' ERR
 export LC_ALL=C LC_NUMERIC=C
 
-# 保证从项目根目录运行（nohup 可能从其他目录启动）
+# Run from project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "${PROJECT_ROOT}"
@@ -17,24 +17,24 @@ OUTPUT_DIM="${OUTPUT_DIM:-3000}"
 N_SAMPLES="${N_SAMPLES:-100}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 
-DATA_ROOT="${DATA_ROOT:-data/fig2/task1_unseenMOA/control_plus_ifn_with_smiles/control_plus_ifn/unseen_diff_moa}"
+DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA}"
+SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
+CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
-# 统一的control数据路径
-CONTROL_DATA_PATH="data/fig2/task1_unseenMOA/control_merged.h5ad"
-[[ -f "${CONTROL_DATA_PATH}" ]] || die "Control file not found: ${CONTROL_DATA_PATH}"
+DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn_with_smiles/unseen_diff_moa}"
+CONTROL_DATA_PATH="${CONTROL_DATA_PATH:-${DATA_BASE}/control_merged.h5ad}"
+[[ -f "${CONTROL_DATA_PATH}" ]] || { echo "[ERROR] Control file not found: ${CONTROL_DATA_PATH}" >&2; exit 1; }
 
 LOGROOT="${LOGROOT:-logs/squidiff}"
-OUT_BASE="${OUT_BASE:-samples/fig2/task1_unseenMOA/diff/Squidiff_${GENE_SIZE}_withSMILES}"
-CKPT_BASE="${CKPT_BASE:-checkpoints/squidiff/fig2_task1_unseenMOA/diff/${GENE_SIZE}_withSMILES}"
+OUT_BASE="${OUT_BASE:-${SAMPLES_BASE}/fig2/task1_unseenMOA/diff/squidiff}"
+CKPT_BASE="${CKPT_ROOT}/fig2/task1_unseenMOA/diff/squidiff"
 CSV_BASE="${CSV_BASE:-${OUT_BASE}/metrics}"
 
 mkdir -p "${OUT_BASE}" "${CKPT_BASE}" "${CSV_BASE}"
 
-die() { echo "[ERROR] $*" >&2; exit 1; }
-
 # =================== Discover datasets ===================
 mapfile -t TRAIN_FILES < <(find "${DATA_ROOT}" -maxdepth 1 -type f -name "*_train__plus_control.h5ad" | sort)
-[[ ${#TRAIN_FILES[@]} -gt 0 ]] || die "No *_train__plus_control.h5ad found under: ${DATA_ROOT}"
+[[ ${#TRAIN_FILES[@]} -gt 0 ]] || { echo "[ERROR] No *_train__plus_control.h5ad found under: ${DATA_ROOT}" >&2; exit 1; }
 
 echo "Found ${#TRAIN_FILES[@]} MOA datasets under ${DATA_ROOT}"
 echo "Using unified control data: ${CONTROL_DATA_PATH}"
@@ -47,7 +47,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
   moa="${train_file%_train__plus_control.h5ad}"
   test_path="${DATA_ROOT}/${moa}_test__plus_control.h5ad"
 
-  [[ -f "${test_path}" ]] || die "Missing test file for MOA=${moa}: ${test_path}"
+  [[ -f "${test_path}" ]] || { echo "[ERROR] Missing test file for MOA=${moa}: ${test_path}" >&2; exit 1; }
 
   echo "######################################################################"
   echo "###   Squidiff for MOA: ${moa} (${NUM_RUNS} runs)"
@@ -71,7 +71,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     RUN_OUT_DIR="${OUT_ROOT}/run${i}"
     mkdir -p "${RUN_CKPT_DIR}" "${RUN_OUT_DIR}"
 
-    # ---- Step 1: Train（启用SMILES + 统一control数据）----
+    # ---- Step 1: Train (SMILES + shared control) ----
     echo -e "\n--- Training model for ${moa} (run ${i}) ---"
     python src/Squidiff/train_squidiff.py \
       --logger_path "${LOGROOT}/fig2_task1_unseenMOA_${moa}_run${i}" \
@@ -90,7 +90,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     UMAP_PNG="${RUN_OUT_DIR}/umap_comparison_${i}.png"
     MODEL_PT="${RUN_CKPT_DIR}/model.pt"
 
-    # 暂时关闭 ERR trap 和 set -e，否则 Python 非零退出会直接触发 trap 且看不到报错
+    # Disable ERR trap / set -e so Python non-zero exit does not hide error output
     set +e
     trap - ERR
     output="$(
@@ -110,7 +110,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     trap 'echo "[ERROR] command failed" >&2; exit 1' ERR
     set -e
 
-    # 将 Python 输出写入当前标准输出（nohup 会写入日志），便于排查
+    # Write Python output to stdout (nohup captures to log)
     echo "${output}"
 
     if [ "${eval_ret}" -ne 0 ]; then
@@ -121,7 +121,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     ALL_OUTPUTS+="${output}"$'\n'
   done
 
-  # ---- Step 3: 统计 + CSV 输出 ----
+  # ---- Step 3: Aggregate metrics and write CSV ----
   echo
   printf "%s\n" "${ALL_OUTPUTS}" | awk -v ds="${moa}_test" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
     function to_num(x){ gsub(/[^0-9eE+\-\.]/,"",x); return x+0 }

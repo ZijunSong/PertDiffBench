@@ -20,10 +20,14 @@ cd "$HOMEDIR"
 echo "PWD: $(pwd)"
 
 # ---------------- Paths -------------------------
-DATA_ROOT="${DATA_ROOT:-data/fig2/task1_unseenMOA/control_plus_ifn/unseen_same_moa}"
+DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA}"
+SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
+CKPT_BASE="${CKPT_BASE:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
+
+DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn/unseen_same_moa}"
 VAE_STATE_DICT="${VAE_STATE_DICT:-checkpoints/annotation_model_v1}"
-SAMPLES_ROOT="${SAMPLES_ROOT:-samples/fig2/task1_unseen_moa_same}"
-CKPT_ROOT="${CKPT_ROOT:-checkpoints/fig2/task1_unseen_moa_same}"
+SAMPLES_ROOT="${SAMPLES_ROOT:-${SAMPLES_BASE}/fig2/task1_unseenMOA/same}"
+CKPT_ROOT="${CKPT_ROOT:-${CKPT_BASE}/fig2/task1_unseenMOA/same}"
 mkdir -p "${SAMPLES_ROOT}" "${CKPT_ROOT}"
 
 # -------------------- Discover datasets ----------------------
@@ -79,7 +83,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     cls_ckpt="${cls_dir}/model009999.pt"
     label_enc_path="${cls_dir}/label_encoder.npz"
 
-    # ---- Step 1: VAE 训练 ----
+    # ---- Step 1: Train VAE ----
     echo "--- Step 1: Training VAE ..."
     if [[ ! -f "${vae_ckpt}" ]]; then
       pushd src/scDiffusion/VAE >/dev/null
@@ -93,7 +97,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
       echo "  [Skip] VAE checkpoint exists: ${vae_ckpt}"
     fi
 
-    # ---- Step 2: Diffusion 训练 ----
+    # ---- Step 2: Train Diffusion ----
     echo "--- Step 2: Training Diffusion ..."
     if [[ ! -f "${diff_ckpt}" ]]; then
       pushd src/scDiffusion >/dev/null
@@ -106,7 +110,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
       echo "  [Skip] Diffusion checkpoint exists: ${diff_ckpt}"
     fi
 
-    # ---- Step 3: Classifier 训练 (MOA: drug+dose conditioning) ----
+    # ---- Step 3: Train Classifier (MOA: drug+dose conditioning) ----
     echo "--- Step 3: Training Classifier (drug+dose) ..."
     if [[ ! -f "${cls_ckpt}" ]]; then
       pushd src/scDiffusion >/dev/null
@@ -122,7 +126,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
       echo "  [Skip] Classifier checkpoint exists: ${cls_ckpt}"
     fi
 
-    # ---- Step 4: 采样与评测 (MOA: use drug+dose from test as target) ----
+    # ---- Step 4: Sampling & Evaluation (MOA: use drug+dose from test as target) ----
     echo "--- Step 4: Sampling & Evaluation ..."
     pushd src/scDiffusion >/dev/null
     run_out="$(
@@ -148,7 +152,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     ALL_OUTPUTS+="${run_out}"$'\n'
   done
 
-  # ---- Step 5: 统计 + CSV 输出 ----
+  # ---- Step 5: Aggregate metrics and write CSV ----
   echo
   printf "%s\n" "${ALL_OUTPUTS}" | awk -v ds="${moa}_test" -v num_runs="${NUM_RUNS}" -v method="scDiffusion(${NUM_GENES})" -v csv_path="${csv_dir}/metrics_${moa}.csv" '
     function to_num(x){ gsub(/[^0-9eE+\-\.]/,"",x); return x+0 }
@@ -222,7 +226,7 @@ echo "######################################################################"
 echo "###   All MOAs completed! CSVs under ${SAMPLES_ROOT}/*/scDiffusion_*/metrics/"
 echo "######################################################################"
 
-# ---- Step 6: 汇总所有MOA的CSV结果 ----
+# ---- Step 6: Aggregate all MOA CSVs ----
 echo
 echo "######################################################################"
 echo "###   Aggregating all MOA results into a single CSV file..."

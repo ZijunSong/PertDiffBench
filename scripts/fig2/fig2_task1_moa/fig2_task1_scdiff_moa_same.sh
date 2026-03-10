@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 IFS=$'\n\t'
-# 出错时打印失败命令和行号，便于 nohup 下排查
 trap 'echo "ERROR: a command failed at line $LINENO (last: $BASH_COMMAND). Exiting." >&2' ERR
 export LC_ALL=C LC_NUMERIC=C
 
@@ -13,11 +12,9 @@ OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 export WANDB_MODE="${WANDB_MODE:-offline}"
 export OFFLINE_SETTINGS="--wandb f"
 NUM_RUNS="${NUM_RUNS:-3}"
-METHOD_NAME="${METHOD_NAME:-scDiff}"   # 仅用于你后续若想统一命名；当前 CSV 里仍按 scDiff(${NAME}) 写
+METHOD_NAME="${METHOD_NAME:-scDiff}"
 
 # -------------------- Project Root ---------------------
-# 不依赖 realpath（nohup 下 PATH 可能不同），用 cd + pwd 得到项目根
-# 脚本在 scripts/fig2/fig2_task1_moa/ 下，需上三级到项目根
 SCRIPT_PATH="$0"
 [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$(pwd)/$SCRIPT_PATH"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
@@ -26,18 +23,19 @@ cd "$HOMEDIR"
 echo "Current working directory: $(pwd)"
 
 # -------------------- Paths ----------------------------
-# unseen_same_moa: 每个 h5ad 含 perturbation_status(Control/IFN)、perturbation、dose_value，支持 drug+dose 条件
-DATA_ROOT="${DATA_ROOT:-data/fig2/task1_unseenMOA/control_plus_ifn/unseen_same_moa}"
+DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA}"
+SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
+CKPT_BASE="${CKPT_BASE:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
-# 若磁盘配额不足，可通过环境变量将输出重定向到有空间的路径，例如：LOG_ROOT=/other/logs SAMPLES_ROOT=/other/samples CKPT_ROOT=/other/ckpt
-LOG_ROOT="${LOG_ROOT:-${LOGDIR}/fig2/task1_unseen_moa_same}"
-SAMPLES_ROOT="${SAMPLES_ROOT:-samples/fig2/task1_unseen_moa_same}"
-CKPT_ROOT="${CKPT_ROOT:-checkpoints/fig2/task1_unseen_moa_same}"
+DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn/unseen_same_moa}"
+LOG_ROOT="${LOG_ROOT:-${LOGDIR}/fig2/task1_unseenMOA/same}"
+SAMPLES_ROOT="${SAMPLES_ROOT:-${SAMPLES_BASE}/fig2/task1_unseenMOA/same}"
+CKPT_ROOT="${CKPT_ROOT:-${CKPT_BASE}/fig2/task1_unseenMOA/same}"
 mkdir -p "${LOG_ROOT}" "${SAMPLES_ROOT}" "${CKPT_ROOT}"
 
 # -------------------- Discover datasets ----------------
-# 约定1（unseen_same_moa）：<dataset_base>_train__plus_control.h5ad / <dataset_base>_test__plus_control.h5ad
-# 约定2（兼容旧）：<dataset_base>_control_train.h5ad / <dataset_base>_control_test.h5ad
+# Convention 1: <dataset_base>_train__plus_control.h5ad / <dataset_base>_test__plus_control.h5ad
+# Convention 2 (legacy): <dataset_base>_control_train.h5ad / <dataset_base>_control_test.h5ad
 mapfile -t TRAIN_FILES < <(find "${DATA_ROOT}" -maxdepth 1 -type f -name "*_train__plus_control.h5ad" | sort)
 FILE_PATTERN="same_moa"
 if [[ ${#TRAIN_FILES[@]} -eq 0 ]]; then
@@ -78,7 +76,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
   echo "###   Starting pipeline for dataset: ${train_ds}"
   echo "######################################################################"
 
-  # 输出目录结构参考你给的 scDiffusion 脚本：每个 dataset_base 独立目录
+  # Output layout: task/split/method/<dataset_base>/run{i}
   OUT_DIR="${SAMPLES_ROOT}/${dataset_base}/scdiff"
   CSV_DIR="${OUT_DIR}/metrics"
   SEED_CSV="${CSV_DIR}/metrics_${test_ds}.csv"
@@ -86,7 +84,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
 
   echo "== $(date '+%F %T') | dataset=${dataset_base} runs=${NUM_RUNS} =="
 
-  # scDiff data 配置（保持你原来的逻辑与字段不变）
+  # scDiff data config
   data_settings=()
 
   {
@@ -142,8 +140,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
     done
 
     echo
-    # 下面 AWK：保持你原先的 11 个指标抽取、统计、写 CSV 的逻辑
-    # 仅增加 to_num()，让 $NF 里如果带奇怪符号也能稳定转成数值（不改变指标定义）
+    # AWK: extract 11 metrics, compute mean±std, write CSV
     echo -e "$all_outputs" | awk -v ds="${test_ds}" -v num_runs="${NUM_RUNS}" -v method="scDiff(${NAME})" -v csv_path="${SEED_CSV}" '
       BEGIN {
         c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=0;

@@ -14,10 +14,14 @@ HOMEDIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$HOMEDIR"
 export PYTHONPATH="${HOMEDIR}:${PYTHONPATH:-}"
 
-DATA_ROOT="${DATA_ROOT:-data/fig2/task1_unseenMOA/control_plus_ifn/unseen_same_moa}"
+DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA}"
+SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
+CKPT_BASE="${CKPT_BASE:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
+
+DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn/unseen_same_moa}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
-SAMPLES_ROOT="${SAMPLES_ROOT:-samples/fig2/task1_unseen_moa_same}"
-CKPT_ROOT="${CKPT_ROOT:-checkpoints/fig2/task1_unseen_moa_same}"
+SAMPLES_ROOT="${SAMPLES_ROOT:-${SAMPLES_BASE}/fig2/task1_unseenMOA/same}"
+CKPT_ROOT="${CKPT_ROOT:-${CKPT_BASE}/fig2/task1_unseenMOA/same}"
 
 mkdir -p "${SAMPLES_ROOT}" "${CKPT_ROOT}"
 
@@ -122,7 +126,7 @@ echo "######################################################################"
 echo "### All DDPM MOAs completed! CSVs under ${SAMPLES_ROOT}/*/DDPM_*/metrics/"
 echo "######################################################################"
 
-# ---- Step: 汇总所有MOA的CSV结果 ----
+# ---- Step: Aggregate all MOA CSV results ----
 echo
 echo "######################################################################"
 echo "###   Aggregating all MOA results into a single CSV file..."
