@@ -6,8 +6,8 @@ import glob
 import scanpy as sc
 
 # --- Configuration ---
-data_dir = 'data/fig1/raw_task1/'
-output_dir = 'data/highly_variable_gene_gradient'
+data_dir = '/data/ppnm/data/PertDiffBench/data_ori/fig1/raw_task1/'  # TODO: Change to your data path
+output_dir = '/data/ppnm/data/PertDiffBench/data/highly_variable_gene_gradient'  # TODO: Change to your data path
 os.makedirs(output_dir, exist_ok=True)
 
 # Define target cell types and dataset types to process

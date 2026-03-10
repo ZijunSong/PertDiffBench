@@ -4,6 +4,9 @@
 set -euo pipefail
 
 # ======================== Config ========================
+# Path prefix; convention: checkpoints under checkpoints/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}, logs under logs/highly_variable_gene_gradient/<method>
+ROOT_DIR="${ROOT_DIR:-}"
+
 # Gene counts to process (edit as needed)
 GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)
 
@@ -13,13 +16,10 @@ NUM_RUNS=3
 # Method name for CSV first column
 METHOD_NAME="Squidiff"
 
-# Paths
+# Paths (same convention as ddpm_hvg.sh)
 CELL_TYPE="CD4T"
-CHECKPOINT_ROOT="checkpoints/squidiff"
-SAMPLE_ROOT="samples/highly_variable_gene_gradient"
-LOG_ROOT="logs/squidiff"
-
-mkdir -p "${CHECKPOINT_ROOT}" "${SAMPLE_ROOT}" "${LOG_ROOT}"
+LOG_ROOT="${ROOT_DIR}logs/highly_variable_gene_gradient/squidiff"
+mkdir -p "${LOG_ROOT}"
 
 # ====================== Main Loop =======================
 for gene_num in "${GENE_NUMS_LIST[@]}"; do
@@ -27,17 +27,17 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
   echo "###   Starting Squidiff pipeline for: ${CELL_TYPE}, Genes = ${gene_num}"
   echo "######################################################################"
 
-  # ---- Data paths (fixed for this gene_num) ----
-  train_data_path="data/highly_variable_gene_gradient/${CELL_TYPE}_train_HVG_${gene_num}.h5ad"
-  valid_data_path="data/highly_variable_gene_gradient/${CELL_TYPE}_valid_HVG_${gene_num}.h5ad"
+  # Data paths
+  train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/${CELL_TYPE}_train_HVG_${gene_num}.h5ad"
+  valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/${CELL_TYPE}_valid_HVG_${gene_num}.h5ad"
 
-  # A combined log per gene_num
+  # checkpoints and samples (same convention as ddpm_hvg.sh)
+  save_dir_base="${ROOT_DIR}checkpoints/squidiff/CD4T_hvg_${gene_num}"
+  sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/squidiff_${gene_num}"
+  mkdir -p "${save_dir_base}" "${sample_dir_base}"
+
   ts_all=$(date +%Y%m%d_%H%M%S)
   gene_log_file="${LOG_ROOT}/squidiff_${CELL_TYPE}_hvg_${gene_num}_ALL_${ts_all}.log"
-
-  # Base dir for samples (per gene)
-  sample_dir_base="${SAMPLE_ROOT}/squidiff_${gene_num}"
-  mkdir -p "${sample_dir_base}"
 
   # We will collect all evaluation outputs across runs in this variable
   all_outputs=""
@@ -50,28 +50,28 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
       echo
       echo "====================== RUN ${run}/${NUM_RUNS} ======================"
 
-      # ---- Per-run paths ----
-      checkpoint_dir="${CHECKPOINT_ROOT}/${CELL_TYPE}_hvg_${gene_num}/run${run}"
-      model_file="${checkpoint_dir}/model.pt"
-      run_dir="${sample_dir_base}/run${run}"
-      mkdir -p "${checkpoint_dir}" "${run_dir}"
+      # Per-run paths
+      save_dir_run="${save_dir_base}/run${run}"
+      sample_dir_run="${sample_dir_base}/run${run}"
+      mkdir -p "${save_dir_run}" "${sample_dir_run}"
+      model_file="${save_dir_run}/model.pt"
 
       ts=$(date +%Y%m%d_%H%M%S)
       run_log="${LOG_ROOT}/squidiff_${CELL_TYPE}_hvg_${gene_num}_run${run}_${ts}.log"
 
       echo "--- Step 1: Training (run ${run}) ---"
-      # 如果你的训练脚本支持 --seed，可追加： --seed "${run}"
+      # If your training script supports --seed, you can add: --seed ${run}
       python src/Squidiff/train_squidiff.py \
         --logger_path "${LOG_ROOT}" \
         --data_path "${train_data_path}" \
-        --resume_checkpoint "${checkpoint_dir}" \
+        --resume_checkpoint "${save_dir_run}" \
         --gene_size "${gene_num}" \
         --output_dim "${gene_num}"
 
       echo
       echo "--- Step 2: Sampling + Evaluation (run ${run}) ---"
-      # 若采样脚本支持保存 h5ad，这里会写到 run 目录
-      # 若不支持，请去掉 --out_h5ad 这个参数
+      # If the sampling script supports saving h5ad, output will be written to the run directory.
+      # If not supported, remove the --out_h5ad parameter.
       output=$(python src/Squidiff/sample_squidiff.py \
         --model_path "${model_file}" \
         --train_data_path "${train_data_path}" \
@@ -79,7 +79,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         --output_dim "${gene_num}" \
         --n_samples 278 \
         --data_path "${valid_data_path}" \
-        --out_h5ad "${run_dir}/synthetic_ifn_run${run}.h5ad" 2>&1) || true
+        --out_h5ad "${sample_dir_run}/synthetic_ifn_run${run}.h5ad" 2>&1) || true
 
       echo "$output" | tee -a "${run_log}"
       all_outputs+=$'\n'"$output"

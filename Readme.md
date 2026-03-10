@@ -19,19 +19,18 @@ sudo apt install openmpi-bin libopenmpi-dev
 pip install mpi4py
 ```
 
-### 📥 Download the data and the pre-train model
+### 📥 Download the data and pre-trained model
 
-#### 📊 Data
+Pre-trained models for each baseline are available at [Google Drive (models)](https://drive.google.com/file/d/1ckeo3Ku0r1B9bk2yrzIgNOR3nyGpcGGE/view?usp=sharing), and the raw CSV data at [Google Drive (data)](https://drive.google.com/file/d/1-I6Je5nT5QcBm0AGn-mLUHKGx8_FZJdH/view?usp=sharing).
 
-Data are still being organized...
+You can download them with the following commands:
 
-Raw CSV/TXT files used to derive all processed `.h5ad` datasets are organized under:
+```bash
+pip install gdown
 
-- `data_ori/fig1/`
-- `data_ori/fig2/`
-- `data_ori/fig4/`
-
-The `data/` directory mainly stores processed `.h5ad` files and intermediate results used for experiments.
+gdown "https://drive.google.com/uc?id=1ckeo3Ku0r1B9bk2yrzIgNOR3nyGpcGGE" --fuzzy
+gdown "https://drive.google.com/uc?id=1-I6Je5nT5QcBm0AGn-mLUHKGx8_FZJdH" --fuzzy
+```
 
 ## 📈 Evaluation
 
@@ -39,7 +38,11 @@ The `data/` directory mainly stores processed `.h5ad` files and intermediate res
 
 In the data of Task 1 in Figure 1, the CD4T cell type has the largest number of cells (5,564), and is therefore chosen as the representative.
 
-First, run `python preprocess_data/get_the_hvg_data_for_fig1.py` to generate the hvg data. Then run
+首先，你需要运行 `python preprocess_data/fig1/fig1_task1.py` 来将 `data_ori/fig1/raw_task1` 中的 .csv 文件转化为 .h5ad 文件。
+
+然后通过运行 `python preprocess_data/get_the_hvg_data_for_fig1.py` 从原始的 .h5ad 数据中获得高变基因数据。
+
+然后运行
 
 ```
 nohup bash scripts/highly_variable_gene_gradient/ddpm_hvg.sh > ddpm_hvg.log 2>&1 &
@@ -52,6 +55,8 @@ nohup bash scripts/highly_variable_gene_gradient/scdiffusion_hvg.sh > scdiffusio
 
 to obtain the evaluation results, respectively. The script will output the results from three experimental runs and their averaged results in the log, while also generating a CSV file for easy table completion.
 
+注意，所有的脚本中，你可能需要修改为你自己的数据路径与模型路径。
+
 ### Fig 1
 
 #### Task 1
@@ -60,26 +65,15 @@ to obtain the evaluation results, respectively. The script will output the resul
 
 Since, overall, the models trained on the data with the lowest number of highly variable genes (1000) achieved the best performance, the experiments of Task 1 and Task 3 in Figure 1 are conducted using the processed data with 1000 HVGs extracted from the original data.  
 
-First, run `python preprocess_data/get_the_hvg_data_for_fig3.py` to generate the data used in the Task 3 experiment of Figure 1. Then, organize this data together with the data obtained from the highly variable gene gradient experiments, for example:
-
-```
-/PertBench/
-├── /data/
-│  ├── /hvg_fig1/
-│  │  └── B_train_HVG_1000.h5ad
-│  ├── /hvg_fig3/
-│  │  └── mix2_test_HVG_1000.h5ad
-```
-
 **Run the evaluation**
 
 ```bash
-nohup bash scripts/fig1/fig1_task2_ddpm_mlp.sh > fig1_task2_ddpm_mlp.log 2>&1 &
-nohup bash scripts/fig1/fig1_task2_ddpm.sh > fig1_task2_ddpm.log 2>&1 &
-nohup bash scripts/fig1/fig1_task2_scgen.sh > fig1_task2_scgen.log 2>&1 &
-nohup bash scripts/fig1/fig1_task2_scdiff.sh > fig1_task2_scdiff.log 2>&1 &
-nohup bash scripts/fig1/fig1_task2_scdiffusion.sh > fig1_task2_scdiffusion.log 2>&1 &
-nohup bash scripts/fig1/fig1_task2_squidff.sh > fig1_task2_squidff.log 2>&1 &
+nohup bash scripts/fig1/fig1_task1/fig1_task1_ddpm_mlp.sh > fig1_task1_ddpm_mlp.log 2>&1 &
+nohup bash scripts/fig1/fig1_task1/fig1_task1_ddpm.sh > fig1_task1_ddpm.log 2>&1 &
+nohup bash scripts/fig1/fig1_task1/fig1_task1_scgen.sh > fig1_task1_scgen.log 2>&1 &
+nohup bash scripts/fig1/fig1_task1/fig1_task1_scdiff.sh > fig1_task1_scdiff.log 2>&1 &
+nohup bash scripts/fig1/fig1_task1/fig1_task1_scdiffusion.sh > fig1_task1_scdiffusion.log 2>&1 &
+nohup bash scripts/fig1/fig1_task1/fig1_task1_squidff.sh > fig1_task1_squidff.log 2>&1 &
 ```
 
 #### Task 2

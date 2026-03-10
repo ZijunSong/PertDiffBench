@@ -4,6 +4,9 @@
 set -e
 
 # --- Configuration Area ---
+# Path prefix for data/checkpoints/samples (set for different servers, e.g. /data/ppnm/data/PertDiffBench/)
+# Path convention: data: ${ROOT_DIR}data/highly_variable_gene_gradient/; checkpoints: ${ROOT_DIR}checkpoints/<method>/CD4T_hvg_${gene_num}; samples: ${ROOT_DIR}samples/highly_variable_gene_gradient/<method>_${gene_num}
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
 
 # Define the list of gene counts to process
 GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)
@@ -26,11 +29,11 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     echo "######################################################################"
 
     # Paths for data
-    train_data_path="data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
-    valid_data_path="data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
+    train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
+    valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
 
-    save_dir_base="checkpoints/ddpm/CD4T_hvg_${gene_num}"
-    sample_dir_base="samples/highly_variable_gene_gradient/scrna_ddpm_scrna_${gene_num}"
+    save_dir_base="${ROOT_DIR}checkpoints/ddpm/CD4T_hvg_${gene_num}"
+    sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/scrna_ddpm_scrna_${gene_num}"
     mkdir -p "$save_dir_base" "$sample_dir_base"
 
     # Aggregate logs from all (train+eval) runs
@@ -50,7 +53,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
 
         # --- Step A: Training ---
         echo -e "\n--- Step A: Training Model (Gene Count: $gene_num, Run: $run_idx) ---"
-        python scripts/baseline/train_scrna_ddpm_scrna.py \
+        python scripts/baseline_exp/train_scrna_ddpm_scrna.py \
             --config "$CONFIG_FILE" \
             --data-path "$train_data_path" \
             --save-weight-dir "$save_dir_run" \
@@ -58,7 +61,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
 
         # --- Step B: Single Evaluation right after training ---
         echo -e "\n--- Step B: Evaluating Model (Gene Count: $gene_num, Run: $run_idx) ---"
-        output=$(python scripts/baseline/eval_scrna_ddpm_scrna.py \
+        output=$(python scripts/baseline_exp/eval_scrna_ddpm_scrna.py \
             --config "$CONFIG_FILE" \
             --train-data-path "$train_data_path" \
             --data-path "$valid_data_path" \
@@ -151,7 +154,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         }
 
         END {
-            # 1) Log pretty stats (保持原有日志输出)
+            # 1) Log pretty stats (keep original log output)
             print "==================================================================";
             printf " Final statistics for Gene Count %s (%d runs: train+sample)\n", gene_count, num_runs;
             print "==================================================================";
@@ -171,7 +174,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
             print "==================================================================\n";
 
             # 2) Build 2x45 CSV
-            # Metric names in fixed order (11)
+            # Metric names in fixed order (11 metrics)
             metric_names[1]="PDS";
             metric_names[2]="MAE";
             metric_names[3]="DES";

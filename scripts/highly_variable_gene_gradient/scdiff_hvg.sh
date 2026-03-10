@@ -4,6 +4,8 @@
 trap 'echo "ERROR: A command failed. Exiting." >&2; exit 1' ERR
 
 # --- Configuration Area ---
+# Path prefix; convention: checkpoints under checkpoints/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}, logs under logs/highly_variable_gene_gradient/<method>
+ROOT_DIR="${ROOT_DIR:-}"
 
 # Gene counts to process
 GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)
@@ -13,7 +15,8 @@ NUM_RUNS=3
 
 # Shared script parameters
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-LOGDIR=${LOGDIR:-logs}
+LOGDIR="${LOGDIR:-${ROOT_DIR}logs/highly_variable_gene_gradient/scdiff}"
+mkdir -p "${LOGDIR}"
 NAME=v7.5
 OFFLINE_SETTINGS="--wandb_offline t"
 
@@ -31,7 +34,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     dataset_name="fig1_task1_CD4T_${gene_num}"
     train_fname="CD4T_train_HVG_${gene_num}.h5ad"
     valid_fname="CD4T_valid_HVG_${gene_num}.h5ad"
-    CUSTOM_DATA_PATH="data/highly_variable_gene_gradient"
+    CUSTOM_DATA_PATH="${ROOT_DIR}data/highly_variable_gene_gradient"
 
     data_settings="data.params.train.params.dataset=${dataset_name} data.params.train.params.fname=${train_fname}"
     data_settings+=" data.params.test.params.dataset=${dataset_name} data.params.test.params.fname=${valid_fname}"
@@ -61,11 +64,10 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         all_outputs+="$output\n"
     done
 
-    # ----- Step 2: Stats (+ CSV 2×45) -----
-    # CSV directory & file (one per gene_num)
-    csv_dir="samples/highly_variable_gene_gradient/scdiff_${gene_num}"
-    mkdir -p "samples/highly_variable_gene_gradient/scdiff_${gene_num}"
-    csv_file="samples/highly_variable_gene_gradient/scdiff_${gene_num}/metrics_scdiff_${dataset_name}.csv"
+    # Step 2: Stats (+ CSV 2x45); samples follow same convention as ddpm_hvg.sh
+    sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/scdiff_${gene_num}"
+    mkdir -p "${sample_dir_base}"
+    csv_file="${sample_dir_base}/metrics_scdiff_${dataset_name}.csv"
 
     echo -e "\n"
     echo -e "$all_outputs" | awk -v dataset="${dataset_name}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${csv_file}" '

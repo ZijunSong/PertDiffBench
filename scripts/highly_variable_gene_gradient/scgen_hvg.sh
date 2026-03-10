@@ -4,6 +4,9 @@
 set -e
 
 # --- Configuration ---
+# Path prefix; convention: checkpoints under checkpoints/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
+ROOT_DIR="${ROOT_DIR:-}"
+
 GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)
 NUM_RUNS=3
 METHOD_NAME="scGen"  
@@ -14,14 +17,14 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     echo "###   Start processing: gene count = $gene_num (scGen Model)"
     echo "######################################################################"
 
-    train_data_path="data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
-    test_data_path="data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
-    cell_type='CD4T'  
+    train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
+    test_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
+    cell_type='CD4T'
 
-    # output & checkpoints
-    save_dir_base="checkpoints/scgen/cd4t_hvg_${gene_num}"
-    csv_out_dir="samples/highly_variable_gene_gradient/scgen_${gene_num}"
-    mkdir -p "${save_dir_base}" "${csv_out_dir}"
+    # checkpoints and samples (same convention as ddpm_hvg.sh)
+    save_dir_base="${ROOT_DIR}checkpoints/scgen/CD4T_hvg_${gene_num}"
+    sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/scgen_${gene_num}"
+    mkdir -p "${save_dir_base}" "${sample_dir_base}"
 
     all_outputs=""
 
@@ -44,7 +47,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         all_outputs+="$output\n"
     done
 
-    csv_file="${csv_out_dir}/metrics_scgen_gene_${gene_num}.csv"
+    csv_file="${sample_dir_base}/metrics_scgen_gene_${gene_num}.csv"
 
     echo -e "\n"
     echo -e "$all_outputs" | awk -v dataset="$cell_type" -v num_runs="$NUM_RUNS" -v method="$METHOD_NAME" -v csv_path="$csv_file" '
@@ -136,7 +139,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
             print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
             print "==================================================================\n";
 
-            # ===== 2x45 CSV：Method + 11*(mean±std) + 3*11 个 run 值 =====
+            # ===== 2x45 CSV: Method + 11*(mean+/-std) + 3*11 run values =====
             metric_names[1]="PDS";
             metric_names[2]="MAE";
             metric_names[3]="DES";

@@ -4,6 +4,11 @@
 set -e
 
 # ===== Configuration =====
+# Path prefix; convention: checkpoints under checkpoints/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
+ROOT_DIR="${ROOT_DIR:-}"
+# scDiffusion external annotation model (e.g. /data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1)
+ANNOTATION_MODEL_DIR="${ANNOTATION_MODEL_DIR:-/data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1}"
+
 # List of gene numbers
 GENE_NUMS_LIST=(3000 2000 1000)
 # Number of (train+eval) repetitions
@@ -18,17 +23,17 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     echo "######################################################################"
 
     # Data paths
-    train_data_path="data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
-    valid_data_path="data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
+    train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
+    valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
     cell_type='CD4T'   # only for logs/statistics
 
-    # Base checkpoints and sample output directories (each run will create runN under these)
-    vae_ckpt_base="checkpoints/scdiffusion/vae_checkpoint/CD4T_hvg_${gene_num}"
-    diff_ckpt_base="../../checkpoints/scdiffusion/diffusion_checkpoint/cd4t_hvg_${gene_num}"
-    cls_ckpt_base="../../checkpoints/scdiffusion/classifier_checkpoint/2-classifier/cd4t_hvg_${gene_num}"
-    sample_base="samples/highly_variable_gene_gradient/scDiffusion_${gene_num}"
+    # Base checkpoints and samples (same convention as ddpm_hvg.sh; scdiffusion uses subdirs under checkpoints/scdiffusion/)
+    vae_ckpt_base="${ROOT_DIR}checkpoints/scdiffusion/vae_checkpoint/CD4T_hvg_${gene_num}"
+    [ -n "$ROOT_DIR" ] && diff_ckpt_base="${ROOT_DIR}checkpoints/scdiffusion/diffusion_checkpoint/CD4T_hvg_${gene_num}" || diff_ckpt_base="../../checkpoints/scdiffusion/diffusion_checkpoint/CD4T_hvg_${gene_num}"
+    [ -n "$ROOT_DIR" ] && cls_ckpt_base="${ROOT_DIR}checkpoints/scdiffusion/classifier_checkpoint/2-classifier/CD4T_hvg_${gene_num}" || cls_ckpt_base="../../checkpoints/scdiffusion/classifier_checkpoint/2-classifier/CD4T_hvg_${gene_num}"
+    sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/scDiffusion_${gene_num}"
 
-    mkdir -p "${vae_ckpt_base}" "${diff_ckpt_base}" "${cls_ckpt_base}" "${sample_base}"
+    mkdir -p "${vae_ckpt_base}" "${diff_ckpt_base}" "${cls_ckpt_base}" "${sample_dir_base}"
 
     # Collect outputs of all runs for statistics and CSV
     all_outputs=""
@@ -47,7 +52,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         vae_ckpt_dir="../../${vae_ckpt_base}/run${i}"
         diff_ckpt_dir="${diff_ckpt_base}/run${i}"
         cls_ckpt_dir="${cls_ckpt_base}/run${i}"
-        sample_dir="${sample_base}/run${i}"
+        sample_dir="${sample_dir_base}/run${i}"
 
         mkdir -p "${vae_ckpt_dir}" "${diff_ckpt_dir}" "${cls_ckpt_dir}" "${sample_dir}"
 
@@ -56,42 +61,47 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         diff_model_file="${diff_ckpt_dir}/my_diffusion/model010000.pt"
         cls_model_file="${cls_ckpt_dir}/model009999.pt"
 
-        # —— Step A: Train VAE —— 
+        # Step A: Train VAE
+        [ -n "$ROOT_DIR" ] && vae_save_dir="${vae_ckpt_dir}" || vae_save_dir="../../../${vae_ckpt_base}/run${i}"
+        [ -n "$ROOT_DIR" ] && vae_data_dir="${train_data_path}" || vae_data_dir="../../../${train_data_path}"
         echo -e "\n--- Step A: Train VAE (genes: $gene_num, run $i) ---"
         python VAE_train.py \
-            --data_dir "../../../${train_data_path}" \
+            --data_dir "${vae_data_dir}" \
             --num_genes "$gene_num" \
-            --state_dict "../../../checkpoints/annotation_model_v1" \
-            --save_dir "../${vae_ckpt_dir}"
+            --state_dict "${ANNOTATION_MODEL_DIR}" \
+            --save_dir "${vae_save_dir}"
 
         # Go back to src/scDiffusion for next steps
         cd ..
 
-        # —— Step B: Train diffusion backbone —— 
+        # Step B: Train diffusion backbone
+        [ -n "$ROOT_DIR" ] && diff_data_dir="${train_data_path}" || diff_data_dir="../../${train_data_path}"
         echo -e "\n--- Step B: Train diffusion backbone (genes: $gene_num, run $i) ---"
         python cell_train.py \
-            --data_dir "../../${train_data_path}" \
+            --data_dir "${diff_data_dir}" \
             --vae_path "${vae_model_file}" \
             --save_dir "${diff_ckpt_dir}"
 
-        # —— Step C: Train classifier —— 
+        # Step C: Train classifier
         echo -e "\n--- Step C: Train classifier (genes: $gene_num, run $i) ---"
         python classifier_train.py \
-            --data_dir "../../${train_data_path}" \
+            --data_dir "${diff_data_dir}" \
             --vae_path "${vae_model_file}" \
             --model_path "${cls_ckpt_dir}"
 
-        # —— Step D: Perturbation prediction & evaluation —— 
+        # Step D: Perturbation prediction and evaluation
+        [ -n "$ROOT_DIR" ] && sample_dir_abs="${sample_dir}" || sample_dir_abs="../../${sample_dir}"
+        [ -n "$ROOT_DIR" ] && valid_path_abs="${valid_data_path}" || valid_path_abs="../../${valid_data_path}"
         echo -e "\n--- Step D: Perturbation prediction & evaluation (genes: $gene_num, run $i) ---"
         output=$(python classifier_sample.py \
             --num_samples 278 \
-            --train-data-path "../../${train_data_path}" \
+            --train-data-path "${diff_data_dir}" \
             --model_path "${diff_model_file}" \
             --classifier_path "${cls_model_file}" \
             --ae_dir "${vae_model_file}" \
             --num_gene "$gene_num" \
-            --sample_dir "../../${sample_dir}" \
-            --init_cell_path "../../${valid_data_path}" 2>&1) || true
+            --sample_dir "${sample_dir_abs}" \
+            --init_cell_path "${valid_path_abs}" 2>&1) || true
 
         echo "$output"
         all_outputs+="$output\n"
@@ -105,12 +115,12 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     # ===== Statistics & CSV export (2×45) =====
     # Note: CSV header row:
     #  method + 11 “mean±std” + each run’s 11 metrics (total 1+11+33 = 45 cols)
-    csv_file="${sample_base}/metrics_scdiffusion_gene_${gene_num}.csv"
+    csv_file="${sample_dir_base}/metrics_scdiffusion_gene_${gene_num}.csv"
     echo "Absolute path of csv_file: $(realpath "$csv_file")"
 
     echo -e "\n"
     echo -e "$all_outputs" | awk -v dataset="$cell_type" -v runs="$NUM_RUNS" -v method="$METHOD_NAME" -v outpath="$csv_file" '
-        # —— Extract 11 metrics from log —— 
+        # Extract 11 metrics from log
         /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
         /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
         /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
@@ -123,7 +133,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         /Pearson Delta \(top 50 DE genes\):/        { pearson_delta_de50[c_pearson_delta_de50++] = $NF }
         /Pearson Delta \(top 100 DE genes\):/       { pearson_delta_de100[c_pearson_delta_de100++] = $NF }
 
-        # —— Compute mean and std —— 
+        # Compute mean and std
         function mean_std(idx,    i, n, s, mu, ss, v) {
             if (idx==1)      { n=c_pds;                 for(i=0;i<n;i++){v=pds[i];                 s+=v} }
             else if (idx==2) { n=c_mae;                 for(i=0;i<n;i++){v=mae[i];                 s+=v} }
@@ -154,7 +164,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
             return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
         }
 
-        # —— Get j-th value of metric —— 
+        # Get j-th value of metric
         function get_val(idx, j,    v){
             if (idx==1) v=pds[j];
             else if(idx==2) v=mae[j];
@@ -170,7 +180,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
             return v;
         }
 
-        # —— Print stats to console —— 
+        # Print stats to console
         function print_stats(name, arr, n,    i, s, mu, ss, std) {
             if (n > 0) {
                 for (i = 0; i < n; i++) s += arr[i];
