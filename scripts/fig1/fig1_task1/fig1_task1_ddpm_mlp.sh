@@ -5,6 +5,9 @@ set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
 # ========= Configuration =========
+# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under checkpoints/<method>/<cell_type>_hvg_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
+
 CELL_TYPES=(
   'B'
   'CD4T'
@@ -29,11 +32,11 @@ declare -A SAMPLES_MAP=(
 NUM_GENES="1000"
 NUM_RUNS=3
 CONFIG_FILE="configs/baselines/mlp_ddpm_mlp.yaml"
-METHOD_NAME="DDPM"
-CKPT_NAME="scrna_ddpm_epoch1000.pt"   # 若你的训练脚本保存为其它名字，请改这里
+METHOD_NAME="DDPM+MLP"
+CKPT_NAME="model_epoch_1000.pth"   # Change here if your training script saves a different filename
 
-# 可覆写的日志根目录（export LOGDIR=...）
-LOGDIR=${LOGDIR:-logs}
+# Overridable log root (export LOGDIR=...)
+LOGDIR="${LOGDIR:-${ROOT_DIR}logs/fig1_task1}"
 
 # ========= Main Loop =========
 for cell_type in "${CELL_TYPES[@]}"; do
@@ -44,17 +47,14 @@ for cell_type in "${CELL_TYPES[@]}"; do
   n_samples=${SAMPLES_MAP[$cell_type]}
   [ -z "$n_samples" ] && { echo "No n_samples configured for ${cell_type}"; exit 1; }
 
-  # Paths
-  train_data_path="data/fig1/hvg_task1/${cell_type}_train_HVG_${NUM_GENES}.h5ad"
-  valid_data_path="data/fig1/hvg_task1/${cell_type}_valid_HVG_${NUM_GENES}.h5ad"
-
-  ckpt_base="checkpoints/ddpm/${cell_type}_hvg_${NUM_GENES}"
-  sample_base="samples/fig1/task1/${cell_type}/mlp_ddpm_mlp_1000"
-  mkdir -p "${ckpt_base}" "${sample_base}"
-
-  # log file per cell type
-  mkdir -p "${LOGDIR}/fig1_task1"
-  log_file="${LOGDIR}/fig1_task1/${cell_type}_hvg_${NUM_GENES}.log"
+  # Paths (same convention across fig1 task1 scripts)
+  train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_train_HVG_${NUM_GENES}.h5ad"
+  valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_valid_HVG_${NUM_GENES}.h5ad"
+  save_dir_base="${ROOT_DIR}checkpoints/ddpm_mlp/${cell_type}_hvg_${NUM_GENES}"
+  sample_dir_base="${ROOT_DIR}samples/fig1/task1/${cell_type}/mlp_ddpm_mlp_1000"
+  mkdir -p "${save_dir_base}" "${sample_dir_base}"
+  mkdir -p "${LOGDIR}"
+  log_file="${LOGDIR}/${cell_type}_hvg_${NUM_GENES}.log"
 
   {
     echo "== $(date '+%F %T') | cell_type=${cell_type} genes=${NUM_GENES} runs=${NUM_RUNS} n_samples=${n_samples} =="
@@ -68,8 +68,8 @@ for cell_type in "${CELL_TYPES[@]}"; do
       echo " Run ${run_idx}/${NUM_RUNS} for ${cell_type}"
       echo "======================"
 
-      save_dir_run="${ckpt_base}/run${run_idx}"
-      sample_dir_run="${sample_base}/run${run_idx}"
+      save_dir_run="${save_dir_base}/run${run_idx}"
+      sample_dir_run="${sample_dir_base}/run${run_idx}"
       mkdir -p "${save_dir_run}" "${sample_dir_run}"
 
       ckpt_path="${save_dir_run}/${CKPT_NAME}"
@@ -77,7 +77,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
       # Step A: Train
       echo
       echo "--- Step A: Training (${cell_type}) [run ${run_idx}] ---"
-      python scripts/baseline/train_mlp_ddpm_mlp.py \
+      python scripts/baseline_exp/train_mlp_ddpm_mlp.py \
         --config "${CONFIG_FILE}" \
         --data-path "${train_data_path}" \
         --save-weight-dir "${save_dir_run}" \
@@ -87,7 +87,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
       echo
       echo "--- Step B: Evaluating (${cell_type}) [run ${run_idx}] ---"
       output=$(
-        python scripts/baseline/eval_mlp_ddpm_mlp.py \
+        python scripts/baseline_exp/eval_mlp_ddpm_mlp.py \
           --config "${CONFIG_FILE}" \
           --train-data-path "${train_data_path}" \
           --data-path "${valid_data_path}" \
@@ -102,11 +102,11 @@ for cell_type in "${CELL_TYPES[@]}"; do
       all_outputs+="$output\n"
     done
 
-    # ----- Step C: Aggregate stats + write CSV -----
-    csv_path="${sample_base}/metrics_ddpm_${cell_type}_hvg_${NUM_GENES}.csv"
+    # Step C: Aggregate stats and write CSV
+    csv_path="${sample_dir_base}/metrics_mlp_ddpm_mlp_${cell_type}_hvg_${NUM_GENES}.csv"
     echo
     echo -e "$all_outputs" | awk -v dataset="${cell_type}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${csv_path}" '
-      # Capture 11 metrics (same order as your参考脚本)
+      # Capture 11 metrics (same order as reference scripts)
       /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
       /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
       /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }

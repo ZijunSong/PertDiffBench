@@ -6,18 +6,21 @@ trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
 # --------------------
 # Configuration
+# Path prefix; convention: data under data/highly_variable_gene_gradient/; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
+ROOT_DIR="${ROOT_DIR:-}"
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-LOGDIR=${LOGDIR:-logs}
+LOGDIR="${LOGDIR:-${ROOT_DIR}logs/fig1_task1}"
 NAME=${NAME:-v7.5}
 OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 NUM_RUNS=${NUM_RUNS:-3}
-METHOD_NAME=${METHOD_NAME:-scDiff}   # CSV 第一列方法名
+METHOD_NAME="${METHOD_NAME:-scDiff}"   # Method name (first column in CSV)
 # --------------------
 
-# Project root (keep your original logic)
+# Project root
 HOMEDIR=$(dirname $(dirname $(realpath $0)))/..
 cd "$HOMEDIR"
 echo "Current working directory: $(pwd)"
+mkdir -p "${LOGDIR}"
 
 # Cell types
 CELL_TYPES=(
@@ -41,9 +44,6 @@ declare -A SAMPLES_MAP=(
   ['NK']=54
 )
 
-# Output folders
-mkdir -p "${LOGDIR}/fig1_task1"
-
 # Loop each cell type
 for cell_type in "${CELL_TYPES[@]}"; do
   echo "######################################################################"
@@ -56,7 +56,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
   fi
   echo "### Using n_samples: $n_samples for this cell type."
 
-  # Data settings (1000 HVG 固定)
+  # Data settings (1000 HVG)
   dataset_name="fig1_task1_${cell_type}"
   train_fname="${cell_type}_train_HVG_1000.h5ad"
   valid_fname="${cell_type}_valid_HVG_1000.h5ad"
@@ -68,19 +68,18 @@ for cell_type in "${CELL_TYPES[@]}"; do
   base_data_settings+=("data.params.test.params.fname=${valid_fname}")
   base_data_settings+=("model.params.generation_kwargs.n_samples=${n_samples}")
 
-  # Where to save CSV & logs
-  csv_dir="samples/fig1/task1/${cell_type}/scdiff_1000"
-  mkdir -p "${csv_dir}"
-  csv_path="${csv_dir}/metrics_${METHOD_NAME}_${cell_type}_hvg_1000.csv"
-
-  log_file="${LOGDIR}/fig1_task1/${cell_type}_hvg_1000.log"
+  # Paths (same convention across fig1 task1 scripts)
+  sample_dir_base="${ROOT_DIR}samples/fig1/task1/${cell_type}/scdiff_1000"
+  mkdir -p "${sample_dir_base}"
+  csv_path="${sample_dir_base}/metrics_${METHOD_NAME}_${cell_type}_hvg_1000.csv"
+  log_file="${LOGDIR}/${cell_type}_hvg_1000.log"
 
   {
     echo "== $(date '+%F %T') | cell_type=${cell_type} runs=${NUM_RUNS} n_samples=${n_samples} =="
 
     all_outputs=""
 
-    # ---------- 3x runs: train + eval ----------
+    # 3x runs: train + eval
     for (( i=1; i<=NUM_RUNS; i++ )); do
       echo
       echo "======================"
@@ -93,7 +92,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
       # One-shot pipeline (train + eval) inside your main.py
       output=$(
         python src/scDiff/main.py \
-          --custom_data_path data/fig1/hvg_task1 \
+          --custom_data_path "${ROOT_DIR}data/highly_variable_gene_gradient" \
           --base configs/scdiff/eval_perturbation.yaml \
           --name "${NAME}" \
           --logdir "${LOGDIR}" \

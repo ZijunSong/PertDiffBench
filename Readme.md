@@ -36,13 +36,14 @@ gdown "https://drive.google.com/uc?id=1-I6Je5nT5QcBm0AGn-mLUHKGx8_FZJdH" --fuzzy
 
 ### Highly variable gene gradient
 
-In the data of Task 1 in Figure 1, the CD4T cell type has the largest number of cells (5,564), and is therefore chosen as the representative.
+In the data of Task 1 in Figure 1, the CD4T cell type has the largest number of cells (5,564) and is therefore chosen as the representative.
 
-首先，你需要运行 `python preprocess_data/fig1/fig1_task1.py` 来将 `data_ori/fig1/raw_task1` 中的 .csv 文件转化为 .h5ad 文件。
+**Preprocessing (in order):**
 
-然后通过运行 `python preprocess_data/get_the_hvg_data_for_fig1.py` 从原始的 .h5ad 数据中获得高变基因数据。
+1. Run `python preprocess_data/fig1/fig1_task1.py` to convert the `.csv` files in `data_ori/fig1/raw_task1` into `.h5ad` format.
+2. Run `python preprocess_data/get_the_hvg_data_for_fig1.py` to extract highly variable gene (HVG) data from the resulting `.h5ad` files.
 
-然后运行
+**Evaluation:** Run the following commands to obtain results for each baseline:
 
 ```
 nohup bash scripts/highly_variable_gene_gradient/ddpm_hvg.sh > ddpm_hvg.log 2>&1 &
@@ -53,9 +54,9 @@ nohup bash scripts/highly_variable_gene_gradient/squidiff_hvg.sh > squidiff_hvg.
 nohup bash scripts/highly_variable_gene_gradient/scdiffusion_hvg.sh > scdiffusion_hvg.log 2>&1 &
 ```
 
-to obtain the evaluation results, respectively. The script will output the results from three experimental runs and their averaged results in the log, while also generating a CSV file for easy table completion.
+Each script runs three trials and writes the per-run and averaged metrics to the log, and also outputs a CSV file for easy tabulation.
 
-注意，所有的脚本中，你可能需要修改为你自己的数据路径与模型路径。
+**Note:** You may need to set your own data and model paths (e.g. via the `ROOT_DIR` and `ANNOTATION_MODEL_DIR` environment variables or the defaults at the top of each script).
 
 ### Fig 1
 

@@ -9,7 +9,7 @@ from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from data.scrna import PairedScrnaDataset
+from data_files.scrna import PairedScrnaDataset
 from src.diffusion_baselines.models.mlp_ddpm_mlp_diffusion import MLPDDPMMLP
 from src.diffusion_baselines.trainers.mlp_ddpm_mlp_trainer import ScRNATrainer
 from src.diffusion_baselines.schedulers.warmup import GradualWarmupScheduler

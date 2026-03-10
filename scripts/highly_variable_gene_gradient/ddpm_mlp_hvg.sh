@@ -5,7 +5,7 @@ set -e
 
 # --- Configuration Area ---
 # Path prefix; convention: checkpoints under checkpoints/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
-ROOT_DIR="${ROOT_DIR:-}"
+ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
 
 # Gene counts to process
 GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)

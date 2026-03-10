@@ -5,11 +5,15 @@ set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
 # -------------------- Configuration --------------------
+# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under checkpoints/scdiffusion/.../task1/<cell_type>_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
+ROOT_DIR="${ROOT_DIR:-}"
+# scDiffusion external annotation model (e.g. /data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1)
+ANNOTATION_MODEL_DIR="${ANNOTATION_MODEL_DIR:-/data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1}"
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-LOGDIR=${LOGDIR:-logs}
+LOGDIR="${LOGDIR:-${ROOT_DIR}logs/fig1_task1}"
 NUM_GENES="${NUM_GENES:-1000}"
 NUM_RUNS=${NUM_RUNS:-3}
-METHOD_NAME=${METHOD_NAME:-scDiffusion}   # CSV 第一列方法名
+METHOD_NAME="${METHOD_NAME:-scDiffusion}"   # Method name (first column in CSV)
 # -------------------------------------------------------
 
 # Define cell types
@@ -34,7 +38,7 @@ declare -A SAMPLES_MAP=(
   ['NK']=54
 )
 
-mkdir -p "${LOGDIR}/fig1_task1"
+mkdir -p "${LOGDIR}"
 
 for cell_type in "${CELL_TYPES[@]}"; do
   echo "######################################################################"
@@ -45,27 +49,23 @@ for cell_type in "${CELL_TYPES[@]}"; do
   [ -z "$num_samples" ] && { echo "No n_samples configured for ${cell_type}"; exit 1; }
   echo "### Using num_samples: ${num_samples}"
 
-  # Common paths
-  train_h5="data/fig1/hvg_task1/${cell_type}_train_HVG_${NUM_GENES}.h5ad"
-  valid_h5="data/fig1/hvg_task1/${cell_type}_valid_HVG_${NUM_GENES}.h5ad"
-
-  # Base output roots (per cell)
-  vae_base="checkpoints/scdiffusion/vae_checkpoint/task1/${cell_type}_${NUM_GENES}"
-  diff_base="checkpoints/scdiffusion/diffusion_checkpoint/task1/${cell_type}_${NUM_GENES}"
-  cls_base="checkpoints/scdiffusion/classifier_checkpoint/2-classifier/task1/${cell_type}_${NUM_GENES}"
-  sample_base="samples/fig1/task1/${cell_type}/scDiffusion_1000"
-  mkdir -p "${vae_base}" "${diff_base}" "${cls_base}" "${sample_base}"
-
-  # Where to save CSV & logs
-  csv_path="${sample_base}/metrics_${METHOD_NAME}_${cell_type}_hvg_${NUM_GENES}.csv"
-  log_file="${LOGDIR}/fig1_task1/scdiffusion_${cell_type}_hvg_${NUM_GENES}.log"
+  # Paths (same convention across fig1 task1 scripts; scdiffusion uses subdirs under checkpoints/scdiffusion/)
+  train_h5="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_train_HVG_${NUM_GENES}.h5ad"
+  valid_h5="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_valid_HVG_${NUM_GENES}.h5ad"
+  vae_base="${ROOT_DIR}checkpoints/scdiffusion/vae_checkpoint/task1/${cell_type}_${NUM_GENES}"
+  diff_base="${ROOT_DIR}checkpoints/scdiffusion/diffusion_checkpoint/task1/${cell_type}_${NUM_GENES}"
+  cls_base="${ROOT_DIR}checkpoints/scdiffusion/classifier_checkpoint/2-classifier/task1/${cell_type}_${NUM_GENES}"
+  sample_dir_base="${ROOT_DIR}samples/fig1/task1/${cell_type}/scDiffusion_1000"
+  mkdir -p "${vae_base}" "${diff_base}" "${cls_base}" "${sample_dir_base}"
+  csv_path="${sample_dir_base}/metrics_${METHOD_NAME}_${cell_type}_hvg_${NUM_GENES}.csv"
+  log_file="${LOGDIR}/scdiffusion_${cell_type}_hvg_${NUM_GENES}.log"
 
   {
     echo "== $(date '+%F %T') | cell_type=${cell_type} genes=${NUM_GENES} runs=${NUM_RUNS} n_samples=${num_samples} =="
 
     all_outputs=""
 
-    # ========== 3x runs: train (VAE+Diff+Cls) + sample/eval ==========
+    # 3x runs: train (VAE + Diffusion + Classifier) + sample/eval
     for (( i=1; i<=NUM_RUNS; i++ )); do
       echo
       echo "======================"
@@ -76,61 +76,71 @@ for cell_type in "${CELL_TYPES[@]}"; do
       vae_dir="${vae_base}/run${i}"
       diff_dir="${diff_base}/run${i}"
       cls_dir="${cls_base}/run${i}"
-      run_sample_dir="${sample_base}/run${i}"
-      mkdir -p "${vae_dir}" "${diff_dir}" "${cls_dir}" "${run_sample_dir}"
+      sample_dir_run="${sample_dir_base}/run${i}"
+      mkdir -p "${vae_dir}" "${diff_dir}" "${cls_dir}" "${sample_dir_run}"
 
-      # Expected filenames (按你原脚本约定)
       vae_ckpt="${vae_dir}/model_seed=0_step=9999.pt"
       diff_ckpt="${diff_dir}/my_diffusion/model010000.pt"
       cls_ckpt="${cls_dir}/model009999.pt"
 
-      # --- Step 1: Train the Autoencoder (VAE) ---
+      [ -n "$ROOT_DIR" ] && train_h5_vae="${train_h5}" || train_h5_vae="../../../${train_h5}"
+      [ -n "$ROOT_DIR" ] && train_h5_sd="${train_h5}" || train_h5_sd="../../${train_h5}"
+      [ -n "$ROOT_DIR" ] && valid_h5_arg="${valid_h5}" || valid_h5_arg="../../${valid_h5}"
+      [ -n "$ROOT_DIR" ] && vae_dir_arg="${vae_dir}" || vae_dir_arg="../../../${vae_dir}"
+      [ -n "$ROOT_DIR" ] && diff_dir_arg="${diff_dir}" || diff_dir_arg="../../${diff_dir}"
+      [ -n "$ROOT_DIR" ] && cls_dir_arg="${cls_dir}" || cls_dir_arg="../../${cls_dir}"
+      [ -n "$ROOT_DIR" ] && vae_ckpt_arg="${vae_ckpt}" || vae_ckpt_arg="../../${vae_ckpt}"
+      [ -n "$ROOT_DIR" ] && diff_ckpt_arg="${diff_ckpt}" || diff_ckpt_arg="../../${diff_ckpt}"
+      [ -n "$ROOT_DIR" ] && cls_ckpt_arg="${cls_ckpt}" || cls_ckpt_arg="../../${cls_ckpt}"
+      [ -n "$ROOT_DIR" ] && sample_run_arg="${sample_dir_run}" || sample_run_arg="../../${sample_dir_run}"
+
+      # Step 1: Train the Autoencoder (VAE)
       echo
       echo "--- Step 1: Training VAE for ${cell_type} [run ${i}] ---"
       pushd src/scDiffusion/VAE >/dev/null
       python VAE_train.py \
-        --data_dir "../../../${train_h5}" \
+        --data_dir "${train_h5_vae}" \
         --num_genes "${NUM_GENES}" \
-        --state_dict ../../../checkpoints/annotation_model_v1 \
-        --save_dir "../../../${vae_dir}"
+        --state_dict "${ANNOTATION_MODEL_DIR}" \
+        --save_dir "${vae_dir_arg}"
       popd >/dev/null
 
-      # --- Step 2: Train the diffusion backbone ---
+      # Step 2: Train the diffusion backbone
       echo
       echo "--- Step 2: Training Diffusion for ${cell_type} [run ${i}] ---"
       pushd src/scDiffusion >/dev/null
       python cell_train.py \
-        --data_dir "../../${train_h5}" \
-        --vae_path "../../${vae_ckpt}" \
-        --save_dir "../../${diff_dir}"
+        --data_dir "${train_h5_sd}" \
+        --vae_path "${vae_ckpt_arg}" \
+        --save_dir "${diff_dir_arg}"
       popd >/dev/null
 
-      # --- Step 3: Train the classifier ---
+      # Step 3: Train the classifier
       echo
       echo "--- Step 3: Training Classifier for ${cell_type} [run ${i}] ---"
       pushd src/scDiffusion >/dev/null
       python classifier_train.py \
-        --data_dir "../../${train_h5}" \
-        --vae_path "../../${vae_ckpt}" \
-        --model_path "../../${cls_dir}"
+        --data_dir "${train_h5_sd}" \
+        --vae_path "${vae_ckpt_arg}" \
+        --model_path "${cls_dir_arg}"
       popd >/dev/null
 
-      # --- Step 4: Sampling & Evaluation ---
+      # Step 4: Sampling and Evaluation
       echo
       echo "--- Step 4: Sampling & Evaluation for ${cell_type} [run ${i}] ---"
       pushd src/scDiffusion >/dev/null
       output=$(
         python classifier_sample.py \
           --num_samples "${num_samples}" \
-          --train-data-path "../../${train_h5}" \
-          --model_path "../../${diff_ckpt}" \
-          --classifier_path "../../${cls_ckpt}" \
-          --ae_dir "../../${vae_ckpt}" \
+          --train-data-path "${train_h5_sd}" \
+          --model_path "${diff_ckpt_arg}" \
+          --classifier_path "${cls_ckpt_arg}" \
+          --ae_dir "${vae_ckpt_arg}" \
           --num_gene "${NUM_GENES}" \
-          --sample_dir "../../${run_sample_dir}" \
-          --out_h5ad "../../${run_sample_dir}/synthetic_ifn_${i}.h5ad" \
-          --umap_plot "../../${run_sample_dir}/umap_comparison_${i}.png" \
-          --init_cell_path "../../${valid_h5}" 2>&1
+          --sample_dir "${sample_run_arg}" \
+          --out_h5ad "${sample_run_arg}/synthetic_ifn_${i}.h5ad" \
+          --umap_plot "${sample_run_arg}/umap_comparison_${i}.png" \
+          --init_cell_path "${valid_h5_arg}" 2>&1
       ) || true
       popd >/dev/null
 

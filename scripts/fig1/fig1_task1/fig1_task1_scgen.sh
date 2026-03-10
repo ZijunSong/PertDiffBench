@@ -5,10 +5,12 @@ set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
 # -------------------- Configuration --------------------
+# Path prefix; convention: data under data/highly_variable_gene_gradient/; checkpoints under checkpoints/<method>/<cell_type>_hvg_1000; samples under samples/fig1/task1/<cell_type>/<method>_1000; logs under logs/fig1_task1
+ROOT_DIR="${ROOT_DIR:-}"
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-LOGDIR=${LOGDIR:-logs}
+LOGDIR="${LOGDIR:-${ROOT_DIR}logs/fig1_task1}"
 NUM_RUNS=${NUM_RUNS:-3}
-METHOD_NAME=${METHOD_NAME:-scGen}   # CSV 第一列方法名
+METHOD_NAME="${METHOD_NAME:-scGen}"   # Method name (first column in CSV)
 # -------------------------------------------------------
 
 # Cell types to evaluate
@@ -22,10 +24,10 @@ CELL_TYPES=(
   'NK'
 )
 
-# n_samples map (注意：CD4T=100 按你给出的表)
+# n_samples per cell type
 declare -A SAMPLES_MAP=(
   ['B']=110
-  ['CD4T']=100
+  ['CD4T']=278
   ['CD8T']=53
   ['CD14+Mono']=83
   ['Dendritic']=55
@@ -33,7 +35,7 @@ declare -A SAMPLES_MAP=(
   ['NK']=54
 )
 
-mkdir -p "${LOGDIR}/fig1_task1"
+mkdir -p "${LOGDIR}"
 
 for cell_type in "${CELL_TYPES[@]}"; do
   echo "######################################################################"
@@ -44,39 +46,39 @@ for cell_type in "${CELL_TYPES[@]}"; do
   [ -z "$n_samples" ] && { echo "No n_samples configured for ${cell_type}"; exit 1; }
   echo "### Using n_samples: $n_samples for this cell type."
 
-  # 基础路径
-  train_path="data/fig1/hvg_task1/${cell_type}_train_HVG_1000.h5ad"
-  valid_path="data/fig1/hvg_task1/${cell_type}_valid_HVG_1000.h5ad"
+  # Paths (same convention across fig1 task1 scripts)
+  train_path="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_train_HVG_1000.h5ad"
+  valid_path="${ROOT_DIR}data/highly_variable_gene_gradient/${cell_type}_valid_HVG_1000.h5ad"
+  save_dir_base="${ROOT_DIR}checkpoints/scgen/${cell_type}_hvg_1000"
+  sample_dir_base="${ROOT_DIR}samples/fig1/task1/${cell_type}/scgen_1000"
+  mkdir -p "${save_dir_base}" "${sample_dir_base}"
 
-  pred_base="samples/fig1/task1/${cell_type}/scgen_1000/"
-  mkdir -p "${pred_base}"
-
-  # CSV + 日志文件
-  csv_path="${pred_base}/metrics_${METHOD_NAME}_${cell_type}_hvg_1000.csv"
-  log_file="${LOGDIR}/fig1_task1/scgen_${cell_type}_hvg_1000.log"
+  csv_path="${sample_dir_base}/metrics_${METHOD_NAME}_${cell_type}_hvg_1000.csv"
+  log_file="${LOGDIR}/scgen_${cell_type}_hvg_1000.log"
 
   {
     echo "== $(date '+%F %T') | cell_type=${cell_type} runs=${NUM_RUNS} n_samples=${n_samples} =="
 
     all_outputs=""
 
-    # 3 次运行：每次输出到 run{i} 子目录，避免覆盖
+    # NUM_RUNS runs: each writes to run{i} subdir
     for (( i=1; i<=NUM_RUNS; i++ )); do
       echo
       echo "======================"
       echo " Run ${i}/${NUM_RUNS} for ${cell_type}"
       echo "======================"
 
-      run_dir="${pred_base}/run${i}"
-      mkdir -p "${run_dir}"
+      save_dir_run="${save_dir_base}/run${i}"
+      sample_dir_run="${sample_dir_base}/run${i}"
+      mkdir -p "${save_dir_run}" "${sample_dir_run}"
 
       output=$(
         python scripts/scGen_eval.py \
           --train_data_path "${train_path}" \
           --test_data_path  "${valid_path}"  \
-          --model_save_path "checkpoints/scgen/${cell_type}_hvg_1000/run${i}" \
-          --out_h5ad   "${run_dir}/${cell_type}_1000_pred_${i}.h5ad" \
-          --umap_plot  "${run_dir}/${cell_type}_umap_comparison_${i}.png" \
+          --model_save_path "${save_dir_run}" \
+          --out_h5ad   "${sample_dir_run}/${cell_type}_1000_pred_${i}.h5ad" \
+          --umap_plot  "${sample_dir_run}/${cell_type}_umap_comparison_${i}.png" \
           --n_samples "${n_samples}" \
           --celltype_to_predict "${cell_type}" 2>&1
       ) || true
@@ -85,10 +87,10 @@ for cell_type in "${CELL_TYPES[@]}"; do
       all_outputs+="$output\n"
     done
 
-    # 统计并写 CSV（含 mean±std 与每次原始值）
+    # Aggregate stats and write CSV (mean+/-std and per-run values)
     echo
     echo -e "$all_outputs" | awk -v dataset="${cell_type}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${csv_path}" '
-      # 抓取 11 项指标
+      # Capture 11 metrics
       /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
       /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
       /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
@@ -101,7 +103,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
       /Pearson Delta \(top 50 DE genes\):/        { pearson_delta_de50[c_pearson_delta_de50++] = $NF }
       /Pearson Delta \(top 100 DE genes\):/       { pearson_delta_de100[c_pearson_delta_de100++] = $NF }
 
-      # 计算 mean|std
+      # Compute mean|std
       function mean_std(idx,    i,n,s,mu,ss,v) {
         if (idx==1)  { n=c_pds;                 for(i=0;i<n;i++){v=pds[i];                 s+=v} }
         else if(idx==2){ n=c_mae;               for(i=0;i<n;i++){v=mae[i];                 s+=v} }
@@ -132,7 +134,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
       }
 
-      # 取第 j 次的原始值（0-based）
+      # j-th run value of metric idx (0-based)
       function val(idx, j,    v){
         if (idx==1) v=pds[j];
         else if(idx==2) v=mae[j];
@@ -179,7 +181,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
         print "==================================================================\n";
 
-        # 生成 CSV：Method + 11(mean±std) + 每次原始(3x11)
+        # CSV: Method + 11(mean+/-std) + per-run (3x11)
         metric_names[1]="PDS";
         metric_names[2]="MAE";
         metric_names[3]="DES";
