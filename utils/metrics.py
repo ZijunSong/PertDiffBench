@@ -7,6 +7,9 @@ from scipy.spatial.distance import pdist, cdist
 import warnings
 from typing import Set, Dict, Optional, List
 
+# 当样本量超过此值时，E-Distance/MMD 在随机子集上计算，避免 pdist/cdist 导致 OOM（约 4.93 TiB）
+EDISTANCE_MMD_MAX_SAMPLES = 8000
+
 def _find_non_finite_indices(arr: np.ndarray) -> np.ndarray:
     """Helper function to find the indices of non-finite values (nan, inf)."""
     # For multi-dimensional arrays, returns the flattened indices.
@@ -376,6 +379,17 @@ def compute_edistance(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         warnings.warn("Input arrays must not be empty. Returning nan.", UserWarning)
         return np.nan
 
+    # 样本过多时在随机子集上计算，避免 pdist/cdist 分配 TiB 级内存
+    rng = np.random.default_rng(42)
+    if n > EDISTANCE_MMD_MAX_SAMPLES or m > EDISTANCE_MMD_MAX_SAMPLES:
+        n_sub = min(n, EDISTANCE_MMD_MAX_SAMPLES)
+        m_sub = min(m, EDISTANCE_MMD_MAX_SAMPLES)
+        idx_true = rng.choice(n, size=n_sub, replace=False)
+        idx_pred = rng.choice(m, size=m_sub, replace=False)
+        y_true = y_true[idx_true]
+        y_pred = y_pred[idx_pred]
+        n, m = n_sub, m_sub
+
     # Calculate pairwise distances
     d_pred_pred = pdist(y_pred, 'euclidean')
     d_true_true = pdist(y_true, 'euclidean')
@@ -452,6 +466,17 @@ def compute_mmd(y_true: np.ndarray, y_pred: np.ndarray, gamma: Optional[float] =
     if n == 0 or m == 0:
         warnings.warn("Input arrays must not be empty. Returning nan.", UserWarning)
         return np.nan
+
+    # 样本过多时在随机子集上计算，避免 kernel/cdist 分配 TiB 级内存
+    rng = np.random.default_rng(42)
+    if n > EDISTANCE_MMD_MAX_SAMPLES or m > EDISTANCE_MMD_MAX_SAMPLES:
+        n_sub = min(n, EDISTANCE_MMD_MAX_SAMPLES)
+        m_sub = min(m, EDISTANCE_MMD_MAX_SAMPLES)
+        idx_true = rng.choice(n, size=n_sub, replace=False)
+        idx_pred = rng.choice(m, size=m_sub, replace=False)
+        y_true = y_true[idx_true]
+        y_pred = y_pred[idx_pred]
+        n, m = n_sub, m_sub
 
     # Gamma for RBF kernel is often set to 1 / (2 * sigma^2), where sigma is the median distance.
     if gamma is None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 留一法 (leave-one-out)：每次留一个物种做测试，其余物种合并做训练。
+# Leave-one-out: hold one species for test, merge the rest for training.
 set -euo pipefail
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
@@ -8,7 +8,9 @@ ALL_SPECIES=( "mouse" "pig" "rabbit" "rat" )
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scGen}"
 
-DATA_ROOT="data/fig2/task3_cross_species"
+# Unified data and checkpoint roots (override via env if needed)
+DATA_ROOT="${DATA_ROOT:-/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species}"
+CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 HOMEDIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "$HOMEDIR"
@@ -33,7 +35,7 @@ for test_species in "${ALL_SPECIES[@]}"; do
   fi
 
   descriptive_name="Leave1out_test_${test_species}"
-  MODEL_SAVE_ROOT="checkpoints/fig2/task3_extend/leave_one_out_${test_species}/scgen"
+  MODEL_SAVE_ROOT="${CHECKPOINT_ROOT}/fig2/task3_cross_species/leave_one_out_${test_species}/scgen"
   OUT_ROOT="samples/fig2/task3_extend/${test_species}/scgen"
   LOG_ROOT="logs/fig2/task3_extend/${test_species}/scgen"
   METRICS_CSV="${OUT_ROOT}/metrics_${descriptive_name}.csv"

@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
-# 留一法 (leave-one-out)：每次留一个物种做测试，其余物种合并做训练。scDiff 需同一 DATA_ROOT 下同时有 merged 与 test h5ad。
+# Leave-one-out: hold one species for test, merge the rest for training. scDiff expects merged and test h5ad under the same DATA_ROOT.
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
-export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-LOGDIR=${LOGDIR:-logs}
+DATA_ROOT="${DATA_ROOT:-/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species}"
+CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
+LOGDIR="${LOGDIR:-${CHECKPOINT_ROOT}/fig2/task3_cross_species}"
 NAME="${NAME:-v7.5}"
 OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 NUM_RUNS="${NUM_RUNS:-3}"
 N_SAMPLES="${N_SAMPLES:-1000}"
+# 与 fig2_task1_scdiff_moa_diff.sh 保持一致，避免评测时 OOM（E-Distance/MMD 已在 utils/metrics.py 做子采样）
+BATCH_SIZE="${BATCH_SIZE:-3072}"
+NUM_WORKERS="${NUM_WORKERS:-0}"
+T_SAMPLE="${T_SAMPLE:-1000}"
 METHOD_NAME="${METHOD_NAME:-scDiff}"
 
-DATA_ROOT="data/fig2/task3_cross_species"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 HOMEDIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "$HOMEDIR"
@@ -39,8 +43,12 @@ for test_species in "mouse" "pig" "rabbit" "rat"; do
   train_fname="merged_train_${test_species}.h5ad"
   test_fname="${test_species}_control_ifn.h5ad"
 
+  FOLD_LOGDIR="${CHECKPOINT_ROOT}/fig2/task3_cross_species/leave_one_out_${test_species}/scdiff"
+  mkdir -p "${FOLD_LOGDIR}"
+
   echo "######################################################################"
   echo "###   Starting pipeline for leave-one-out test species: ${test_species}"
+  echo "###   Config: runs=${NUM_RUNS} | batch_size=${BATCH_SIZE} | num_workers=${NUM_WORKERS} | t_sample=${T_SAMPLE}"
   echo "######################################################################"
 
   data_settings=()
@@ -48,6 +56,10 @@ for test_species in "mouse" "pig" "rabbit" "rat"; do
   data_settings+=("data.params.train.params.fname=${train_fname}")
   data_settings+=("data.params.test.params.dataset=${dataset_name}")
   data_settings+=("data.params.test.params.fname=${test_fname}")
+  data_settings+=("data.params.batch_size=${BATCH_SIZE}")
+  data_settings+=("data.params.num_workers=${NUM_WORKERS}")
+  data_settings+=("model.params.t_sample=${T_SAMPLE}")
+  data_settings+=("model.params.path_to_save_fig=")
 
   OUT_ROOT="samples/fig2/task3_extend/scdiff/${test_species}"
   LOG_ROOT="logs/fig2/task3_extend/scdiff/${test_species}"
@@ -62,7 +74,7 @@ for test_species in "mouse" "pig" "rabbit" "rat"; do
           --custom_data_path "${DATA_ROOT}" \
           --base configs/scdiff/eval_perturbation.yaml \
           --name "${NAME}" \
-          --logdir "${LOGDIR}" \
+          --logdir "${FOLD_LOGDIR}" \
           --postfix "perturbation_${NAME}" \
           ${OFFLINE_SETTINGS} \
           "${data_settings[@]}" \

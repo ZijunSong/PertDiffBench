@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 留一法 (leave-one-out)：每次留一个物种做测试，其余物种合并做训练，探究跨物种泛化。
+# Leave-one-out: hold one species for test, merge the rest for training (cross-species generalization).
 set -euo pipefail
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
@@ -13,7 +13,9 @@ NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
 METHOD_NAME="${METHOD_NAME:-MLP-DDPM-MLP}"
 
-DATA_ROOT="data/fig2/task3_cross_species"
+# Unified data and checkpoint roots (override via env if needed)
+DATA_ROOT="${DATA_ROOT:-/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species}"
+CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 HOMEDIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "$HOMEDIR"
@@ -21,9 +23,9 @@ echo "PWD: $(pwd)"
 
 mkdir -p "$DATA_ROOT"
 
-# -------------------- 留一法：按测试物种循环 --------------------
+# -------------------- Leave-one-out: loop over test species --------------------
 for test_species in "${ALL_SPECIES[@]}"; do
-  # 训练物种 = 除 test_species 外的所有物种
+  # Train species = all except test_species
   train_species_list=()
   for s in "${ALL_SPECIES[@]}"; do
     [[ "$s" != "$test_species" ]] && train_species_list+=( "$s" )
@@ -39,7 +41,7 @@ for test_species in "${ALL_SPECIES[@]}"; do
       --out "${MERGED_TRAIN}"
   fi
 
-  CKPT_ROOT="checkpoints/fig2/task3_extend/leave_one_out_${test_species}/mlp_ddpm_mlp"
+  CKPT_ROOT="${CHECKPOINT_ROOT}/fig2/task3_cross_species/leave_one_out_${test_species}/mlp_ddpm_mlp"
   mkdir -p "$CKPT_ROOT"
 
   echo "######################################################################"

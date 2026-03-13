@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 留一法 (leave-one-out)：每次留一个物种做测试，其余物种合并做训练。
+# Leave-one-out: hold one species for test, merge the rest for training.
 set -euo pipefail
 IFS=$'\n\t'
 trap 'echo "[ERROR] command failed — abort." >&2' ERR
@@ -13,7 +13,9 @@ NUM_GENES="${NUM_GENES:-6619}"
 NUM_RUNS="${NUM_RUNS:-3}"
 ALL_SPECIES=( "mouse" "pig" "rabbit" "rat" )
 
-DATA_ROOT="data/fig2/task3_cross_species"
+# Unified data and checkpoint roots (override via env if needed)
+DATA_ROOT="${DATA_ROOT:-/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species}"
+CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 HOMEDIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "$HOMEDIR"
@@ -21,7 +23,7 @@ echo "PWD: $(pwd)"
 
 mkdir -p "$DATA_ROOT"
 
-# 全局 CSV（留一法所有 fold）
+# Global CSV for all leave-one-out folds
 GLOBAL_DIR="samples/fig2/task3_extend/scDiffusion_${NUM_GENES}"
 mkdir -p "${GLOBAL_DIR}"
 GLOBAL_CSV="${GLOBAL_DIR}/metrics_all.csv"
@@ -58,15 +60,17 @@ for test_species in "${ALL_SPECIES[@]}"; do
   fi
 
   TRAIN_H5="${MERGED_TRAIN}"
-  VALID_H5="data/fig2/task3_cross_species/${test_species}_control_ifn.h5ad"
+  VALID_H5="${DATA_ROOT}/${test_species}_control_ifn.h5ad"
 
   echo "######################################################################"
   echo "###   Full pipeline leave-one-out test: ${test_species} (${NUM_RUNS} runs, ${NUM_GENES} HVG)"
   echo "######################################################################"
 
-  vae_base="checkpoints/scdiffusion/vae_checkpoint/task3_extend/${test_species}_${NUM_GENES}"
-  diff_base="checkpoints/scdiffusion/diffusion_checkpoint/task3_extend/${test_species}_${NUM_GENES}"
-  cls_base="checkpoints/scdiffusion/classifier_checkpoint/2-classifier/task3_extend/${test_species}_${NUM_GENES}"
+  # Checkpoints: fig2/task3_cross_species/leave_one_out_$species/scdiffusion/run$i/{vae,diffusion,classifier}
+  ckpt_fold="${CHECKPOINT_ROOT}/fig2/task3_cross_species/leave_one_out_${test_species}/scdiffusion"
+  vae_base="${ckpt_fold}/vae_${NUM_GENES}"
+  diff_base="${ckpt_fold}/diffusion_${NUM_GENES}"
+  cls_base="${ckpt_fold}/classifier_${NUM_GENES}"
   sample_base="samples/fig2/task3_extend/${test_species}_control_ifn/scDiffusion_${NUM_GENES}"
   mkdir -p "${vae_base}" "${diff_base}" "${cls_base}" "${sample_base}"
 
@@ -91,26 +95,26 @@ for test_species in "${ALL_SPECIES[@]}"; do
     echo "--- Step 1: Training VAE ..."
     pushd src/scDiffusion/VAE >/dev/null
     python VAE_train.py \
-      --data_dir "../../../${TRAIN_H5}" \
+      --data_dir "${TRAIN_H5}" \
       --num_genes "${NUM_GENES}" \
-      --state_dict ../../../checkpoints/annotation_model_v1 \
-      --save_dir "../../../${vae_dir}"
+      --state_dict "${HOMEDIR}/checkpoints/annotation_model_v1" \
+      --save_dir "${vae_dir}"
     popd >/dev/null
 
     echo "--- Step 2: Training Diffusion ..."
     pushd src/scDiffusion >/dev/null
     python cell_train.py \
-      --data_dir "../../${TRAIN_H5}" \
-      --vae_path "../../${vae_ckpt}" \
-      --save_dir "../../${diff_dir}"
+      --data_dir "${TRAIN_H5}" \
+      --vae_path "${vae_ckpt}" \
+      --save_dir "${diff_dir}"
     popd >/dev/null
 
     echo "--- Step 3: Training Classifier ..."
     pushd src/scDiffusion >/dev/null
     python classifier_train.py \
-      --data_dir "../../${TRAIN_H5}" \
-      --vae_path "../../${vae_ckpt}" \
-      --model_path "../../${cls_dir}"
+      --data_dir "${TRAIN_H5}" \
+      --vae_path "${vae_ckpt}" \
+      --model_path "${cls_dir}"
     popd >/dev/null
 
     echo "--- Step 4: Sampling & Evaluation ..."
@@ -118,15 +122,15 @@ for test_species in "${ALL_SPECIES[@]}"; do
     run_out="$(
       python classifier_sample.py \
         --num_samples 100 \
-        --train-data-path "../../${TRAIN_H5}" \
-        --model_path "../../${diff_ckpt}" \
-        --classifier_path "../../${cls_ckpt}" \
-        --ae_dir "../../${vae_ckpt}" \
+        --train-data-path "${TRAIN_H5}" \
+        --model_path "${diff_ckpt}" \
+        --classifier_path "${cls_ckpt}" \
+        --ae_dir "${vae_ckpt}" \
         --num_gene "${NUM_GENES}" \
-        --sample_dir "../../${run_sample_dir}" \
-        --out_h5ad "../../${run_sample_dir}/synthetic_ifn_${i}.h5ad" \
-        --umap_plot "../../${run_sample_dir}/umap_comparison_${i}.png" \
-        --init_cell_path "../../${VALID_H5}" 2>&1
+        --sample_dir "${run_sample_dir}" \
+        --out_h5ad "${run_sample_dir}/synthetic_ifn_${i}.h5ad" \
+        --umap_plot "${run_sample_dir}/umap_comparison_${i}.png" \
+        --init_cell_path "${VALID_H5}" 2>&1
     )" || true
     popd >/dev/null
 

@@ -7,7 +7,7 @@ export LC_ALL=C LC_NUMERIC=C
 # -------------------- Configuration --------------------
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 # Reduce memory during test; increase BATCH_SIZE/T_SAMPLE if OOM
-BATCH_SIZE="${BATCH_SIZE:-8}"
+BATCH_SIZE="${BATCH_SIZE:-3072}"
 NUM_WORKERS="${NUM_WORKERS:-0}"
 T_SAMPLE="${T_SAMPLE:-1000}"
 LOGDIR="${LOGDIR:-logs}"

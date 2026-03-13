@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 留一法 (leave-one-out)：每次留一个物种做测试，其余物种合并做训练。
+# Leave-one-out: hold one species for test, merge the rest for training.
 set -euo pipefail
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
@@ -10,7 +10,9 @@ GENE_SIZE="${GENE_SIZE:-6619}"
 NUM_RUNS="${NUM_RUNS:-3}"
 N_SAMPLES="${N_SAMPLES:-100}"
 
-DATA_ROOT="data/fig2/task3_cross_species"
+# Unified data and checkpoint roots (override via env if needed)
+DATA_ROOT="${DATA_ROOT:-/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species}"
+CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 HOMEDIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "$HOMEDIR"
@@ -28,16 +30,16 @@ for test_species in "${ALL_SPECIES[@]}"; do
   done
   train_species_comma=$(IFS=,; echo "${train_species_list[*]}")
 
-  MERGED_TRAIN="${HOMEDIR}/${DATA_ROOT}/merged_train_${test_species}.h5ad"
+  MERGED_TRAIN="${DATA_ROOT}/merged_train_${test_species}.h5ad"
   if [[ ! -f "${MERGED_TRAIN}" ]]; then
     echo "### Building merged train (leave-out ${test_species}): ${train_species_comma} -> ${MERGED_TRAIN}"
     python "${HOMEDIR}/scripts/fig2/fig2_task3_extend/merge_species_control_ifn.py" \
-      --data-root "${HOMEDIR}/${DATA_ROOT}" \
+      --data-root "${DATA_ROOT}" \
       --train-species "${train_species_comma}" \
       --out "${MERGED_TRAIN}"
   fi
 
-  CKPT_DIR="${HOMEDIR}/checkpoints/fig2/task3_extend/leave_one_out_${test_species}/squidiff"
+  CKPT_DIR="${CHECKPOINT_ROOT}/fig2/task3_cross_species/leave_one_out_${test_species}/squidiff"
   mkdir -p "${CKPT_DIR}"
 
   echo "######################################################################"
@@ -76,7 +78,7 @@ for test_species in "${ALL_SPECIES[@]}"; do
         --out_h5ad "${OUT_DIR}/synthetic_ifn_run_${i}.h5ad" \
         --n_samples "${N_SAMPLES}" \
         --umap_plot "${OUT_DIR}/umap_comparison_${i}.png" \
-        --data_path "${HOMEDIR}/${DATA_ROOT}/${test_species}_control_ifn.h5ad" \
+        --data_path "${DATA_ROOT}/${test_species}_control_ifn.h5ad" \
         2>&1 | tee /dev/fd/3
     )"; then
       echo "[ERROR] evaluation failed for species=${test_species} run=${i}" >&2

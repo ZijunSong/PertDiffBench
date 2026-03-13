@@ -1,23 +1,25 @@
 #!/usr/bin/env bash
-# 留一法 (leave-one-out)：每次留一个物种做测试，其余物种合并做训练。
+# Leave-one-out: hold one species for test, merge the rest for training.
 set -euo pipefail
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
-# 留一法：ALL_SPECIES 需包含「训练用物种 + 被留出测试的物种」。只跑 rat 测试时仍写全四个，用 TARGET_SPECIES 限制只跑 rat。
+# ALL_SPECIES = train + test species. Use TARGET_SPECIES to run only specific test species (e.g. TARGET_SPECIES=( "rat" )).
 ALL_SPECIES=( "mouse" "pig" "rabbit" "rat" )
-# 若只测某一物种，设为该物种列表；设为空或注释掉则跑全部留一法
-TARGET_SPECIES=( "rat" )   # 例: TARGET_SPECIES=( "rat" ) 只跑 rat 测试
+# To run only one test species, set to that species; set empty to run all leave-one-out folds.
+TARGET_SPECIES=( "rat" )   # e.g. TARGET_SPECIES=( "rat" ) for rat only
 
 NUM_GENES="${NUM_GENES:-6619}"
 N_SAMPLES="${N_SAMPLES:-1000}"
 NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
 METHOD_NAME="${METHOD_NAME:-scRNA-DDPM-scRNA}"
-# 默认跳过 UMAP，避免合并多物种数据时 OOM（Killed）；设为 "false" 可开启 UMAP 可视化
+# Skip UMAP by default to avoid OOM on merged multi-species data; set to "false" to enable UMAP.
 SKIP_UMAP="${SKIP_UMAP:-true}"
 
-DATA_ROOT="data/fig2/task3_cross_species"
+# Unified data and checkpoint roots (override via env if needed)
+DATA_ROOT="${DATA_ROOT:-/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species}"
+CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 HOMEDIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "$HOMEDIR"
@@ -25,12 +27,12 @@ echo "PWD: $(pwd)"
 
 mkdir -p "$DATA_ROOT"
 
-# 若指定了 TARGET_SPECIES 则只跑这些测试物种，否则跑 ALL_SPECIES 全部
+# If TARGET_SPECIES is set, run only those; otherwise run all ALL_SPECIES.
 RUN_SPECIES=( "${TARGET_SPECIES[@]}" )
 [[ ${#RUN_SPECIES[@]} -eq 0 ]] && RUN_SPECIES=( "${ALL_SPECIES[@]}" )
 
 for test_species in "${RUN_SPECIES[@]}"; do
-  # 检查 test_species 必须在 ALL_SPECIES 中（不依赖 IFS，因 IFS=$'\n\t' 时 ${ARR[*]} 用换行连接）
+  # Ensure test_species is in ALL_SPECIES
   found=0
   for _s in "${ALL_SPECIES[@]}"; do [[ "$_s" == "$test_species" ]] && { found=1; break; }; done
   if [[ $found -eq 0 ]]; then
@@ -52,7 +54,7 @@ for test_species in "${RUN_SPECIES[@]}"; do
       --out "${MERGED_TRAIN}"
   fi
 
-  CKPT_ROOT="checkpoints/fig2/task3_extend/leave_one_out_${test_species}/scrna_ddpm_scrna"
+  CKPT_ROOT="${CHECKPOINT_ROOT}/fig2/task3_cross_species/leave_one_out_${test_species}/scrna_ddpm_scrna"
   CKPT_FILE="${CKPT_ROOT}/scrna_ddpm_epoch1000.pt"
   mkdir -p "$CKPT_ROOT"
 
@@ -80,7 +82,7 @@ for test_species in "${RUN_SPECIES[@]}"; do
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo "[$(date '+%F %T')] >>> run${i}: EVAL (${test_species}_control_ifn)"
     EVAL_TMP="$(mktemp)"
-    # 显式传 --umap_plot "" 时 Python 才会跳过 UMAP；不传则用默认路径仍会跑 UMAP 易 OOM
+    # Pass --umap_plot "" explicitly so Python skips UMAP; otherwise default path may trigger UMAP and OOM.
     UMAP_OPT=(--umap_plot "")
     if [[ "$SKIP_UMAP" != "true" ]]; then
       UMAP_OPT=(--umap_plot "${OUT_DIR}/umap_comparison_${i}.png")

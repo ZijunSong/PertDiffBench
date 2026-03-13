@@ -259,7 +259,10 @@ nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_moa_same.sh > fig2_task1_
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_mlp_moa_same.sh > fig2_task1_ddpm_mlp_moa_same.log 2>&1 &
 
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_diff.sh > fig2_task1_squidiff_moa_diff.log 2>&1 &
+
+conda activate pertdiffbench && export PYTHONPATH=./ && cd /home/szj/PertDiffBench && export CUDA_VISIBLE_DEVICES=4
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiff_moa_diff.sh > fig2_task1_scdiff_moa_diff.log 2>&1 &
+
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiffusion_moa_diff.sh > fig2_task1_scdiffusion_moa_diff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_moa_diff.sh > fig2_task1_ddpm_moa_diff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_mlp_moa_diff.sh > fig2_task1_ddpm_mlp_moa_diff.log 2>&1 &
@@ -304,7 +307,7 @@ nohup bash scripts/fig2/fig2_task2_extend/fig2_task2_extend_scgen.sh > fig2_task
 将 exp.csv 和 meta.csv 合并为 .h5ad 数据。运行
 
 ```bash
-bash preprocess_data/fig2_task3.sh
+bash preprocess_data/fig2/task3_cross_species/fig2_task3.sh
 ```
 
 You will get `mouse_control_ifn.h5ad`等四个数据。
@@ -323,10 +326,9 @@ nohup bash scripts/fig2/fig2_task3/fig2_task3_ddpm_mlp.sh > fig2_task3_ddpm_mlp.
 在期刊版本，我们又新增了留一法实验设置的结果。
 
 ```bash
-cd /share/PertBench &&conda activate pertbench && export PYTHONPATH=./
 nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_squidiff.sh > fig2_task3_extend_squidiff.log 2>&1 &
 
-cd /share/PertBench && conda activate pertbench && export PYTHONPATH=./
+conda activate pertdiffbench && export PYTHONPATH=./ && cd /home/szj/PertDiffBench && export CUDA_VISIBLE_DEVICES=5
 nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_scdiff.sh > fig2_task3_extend_scdiff.log 2>&1 &
 
 nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_scdiffusion.sh > fig2_task3_extend_scdiffusion.log 2>&1 &
