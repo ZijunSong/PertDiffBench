@@ -266,7 +266,6 @@ Run from the project root (e.g. after `conda activate pertdiffbench && export PY
 ```bash
 
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_same.sh > fig2_task1_squidiff_moa_same.log 2>&1 &
-nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_diff.sh > fig2_task1_squidiff_moa_diff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiffusion_moa_same.sh > fig2_task1_scdiffusion_moa_same.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_moa_same.sh > fig2_task1_ddpm_moa_same.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_mlp_moa_same.sh > fig2_task1_ddpm_mlp_moa_same.log 2>&1 &
@@ -312,17 +311,17 @@ nohup bash scripts/fig2/fig2_task2_extend/fig2_task2_extend_scgen.sh > fig2_task
 
 #### Task 3
 
-**0  Get the data**
+**Get the data**
 
-将 exp.csv 和 meta.csv 合并为 .h5ad 数据。运行
+Merge `exp.csv` and `meta.csv` into `.h5ad` files. Run:
 
 ```bash
 bash preprocess_data/fig2/task3_cross_species/fig2_task3.sh
 ```
 
-You will get `mouse_control_ifn.h5ad`等四个数据。
+This produces four `.h5ad` datasets, including `mouse_control_ifn.h5ad`.
 
-**Run the Evaluation**
+**Run the evaluation**
 
 ```bash
 nohup bash scripts/fig2/fig2_task3/fig2_task3_squidiff.sh > fig2_task3_squidiff.log 2>&1 &
@@ -333,14 +332,11 @@ nohup bash scripts/fig2/fig2_task3/fig2_task3_ddpm.sh > fig2_task3_ddpm.log 2>&1
 nohup bash scripts/fig2/fig2_task3/fig2_task3_ddpm_mlp.sh > fig2_task3_ddpm_mlp.log 2>&1 &
 ```
 
-在期刊版本，我们又新增了留一法实验设置的结果。
+In the journal extension, we additionally report results under a **leave-one-out** experimental setting:
 
 ```bash
 nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_squidiff.sh > fig2_task3_extend_squidiff.log 2>&1 &
-
-conda activate pertdiffbench && export PYTHONPATH=./ && cd /home/szj/PertDiffBench && export CUDA_VISIBLE_DEVICES=5
 nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_scdiff.sh > fig2_task3_extend_scdiff.log 2>&1 &
-
 nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_scdiffusion.sh > fig2_task3_extend_scdiffusion.log 2>&1 &
 nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_scgen.sh > fig2_task3_extend_scgen.log 2>&1 &
 nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_ddpm.sh > fig2_task3_extend_ddpm.log 2>&1 &
