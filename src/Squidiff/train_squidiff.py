@@ -59,7 +59,7 @@ def run_training(args):
     logger.log("creating data loader...")
     data = prepared_data(
         data_dir = args['data_path'],
-        control_data_dir = '/share/PertBench/data/fig2/task1_unseenMOA/control_merged.h5ad',
+        control_data_dir = '/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA/control_merged.h5ad',
         batch_size = args['batch_size'],
         use_drug_structure= args['use_drug_structure'],
         comb_num = args['comb_num']

@@ -16,8 +16,9 @@ import numpy as np
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 SAMPLES_FIG4 = REPO_ROOT / "samples" / "fig4"
-TEST_H5 = REPO_ROOT / "data" / "fig4" / "fig4_test.h5ad"
-TRAIN_H5 = REPO_ROOT / "data" / "fig4" / "fig4_train.h5ad"
+FIG4_TASK1_DIR = Path("/data/ppnm/data/PertDiffBench/data/fig4_task1")
+TEST_H5 = FIG4_TASK1_DIR / "fig4_test.h5ad"
+TRAIN_H5 = FIG4_TASK1_DIR / "fig4_train.h5ad"
 OUT_CSV = SAMPLES_FIG4 / "fig4_metrics_merged.csv"
 
 # 子目录名 -> 显示用的 Method 名

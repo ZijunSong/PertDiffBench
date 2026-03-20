@@ -13,8 +13,9 @@ N_SAMPLES="${N_SAMPLES:-500}"
 CONFIG_FILE="configs/baselines/scrna_ddpm_scrna.yaml"
 CKPT_NAME="scrna_ddpm_epoch1000.pt"
 
-TRAIN_H5="data/fig4/fig4_train.h5ad"
-TEST_H5="data/fig4/fig4_test.h5ad"
+DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
+TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
+TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 
 ckpt_base="checkpoints/ddpm/fig4_${NUM_GENES}"
 # DDPM 专用 VAE（仅 encoder+decoder），与 DDPM+MLP 独立

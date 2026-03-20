@@ -11,8 +11,9 @@ NUM_RUNS=${NUM_RUNS:-3}
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
 N_SAMPLES="${N_SAMPLES:-500}"
 
-TRAIN_H5="data/fig4/fig4_train.h5ad"
-TEST_H5="data/fig4/fig4_test.h5ad"
+DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
+TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
+TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 # 预训练 VAE（encoder.ckpt / decoder.ckpt / gene_order.tsv），与 fig2 一致
 VAE_STATE_DICT="${VAE_STATE_DICT:-checkpoints/annotation_model_v1}"
 

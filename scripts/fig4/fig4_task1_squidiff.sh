@@ -15,8 +15,9 @@ NUM_RUNS=${NUM_RUNS:-3}
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 N_SAMPLES="${N_SAMPLES:-500}"
 
-TRAIN_H5="data/fig4/fig4_train.h5ad"
-TEST_H5="data/fig4/fig4_test.h5ad"
+DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
+TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
+TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 
 ckpt_base="checkpoints/fig4/squidiff_${NUM_GENES}"
 sample_base="samples/fig4/squidiff_${NUM_GENES}"

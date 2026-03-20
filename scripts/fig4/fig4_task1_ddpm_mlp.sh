@@ -14,8 +14,9 @@ CONFIG_FILE="configs/baselines/mlp_ddpm_mlp.yaml"
 # 与 train_mlp_ddpm_mlp / mlp_ddpm_mlp_trainer 保存名一致
 CKPT_NAME="model_epoch_1000.pth"
 
-TRAIN_H5="data/fig4/fig4_train.h5ad"
-TEST_H5="data/fig4/fig4_test.h5ad"
+DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
+TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
+TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 
 ckpt_base="checkpoints/ddpm_mlp/fig4_${NUM_GENES}"
 sample_base="samples/fig4/mlp_ddpm_mlp_${NUM_GENES}"

@@ -13,13 +13,14 @@ OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 HOMEDIR=$(dirname "$(dirname "$(realpath "$0")")")
 cd "$HOMEDIR"
 
-TRAIN_H5="data/fig4/fig4_train.h5ad"
-TEST_H5="data/fig4/fig4_test.h5ad"
+DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
+TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
+TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 # scDiff 需要 config + custom_data_path；fig4 数据需单独 config 或覆盖 data.params
 dataset_name="fig4"
 train_fname="fig4_train.h5ad"
 valid_fname="fig4_test.h5ad"
-data_dir="data/fig4"
+data_dir="${DATA_FIG4}"
 
 sample_base="samples/fig4/scdiff_3000"
 csv_path="${sample_base}/metrics_${METHOD_NAME}_fig4.csv"

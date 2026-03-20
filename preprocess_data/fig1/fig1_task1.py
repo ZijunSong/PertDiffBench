@@ -6,8 +6,11 @@ import glob
 
 # Directory containing the input CSV files
 data_dir = '/data/ppnm/data/PertDiffBench/data_ori/fig1/raw_task1/'  # TODO: Change to your data path
+# Directory for processed H5AD outputs
+out_dir = '/data/ppnm/data/PertDiffBench/data/fig1_task1'
 
 print(f"Processing CSV files in directory: {data_dir}...")
+print(f"Writing H5AD files to: {out_dir}...")
 
 # Collect all CSV files
 csv_files = glob.glob(os.path.join(data_dir, '*.csv'))
@@ -16,10 +19,12 @@ if not csv_files:
     print(f"Error: No CSV files found in {data_dir}.")
     exit()
 
+os.makedirs(out_dir, exist_ok=True)
+
 for csv_file in csv_files:
     # Derive H5AD filename from the CSV filename
     base_name = os.path.basename(csv_file)
-    h5ad_file = os.path.join(data_dir, base_name.replace('.csv', '.h5ad'))
+    h5ad_file = os.path.join(out_dir, base_name.replace('.csv', '.h5ad'))
 
     print(f"\n--- Processing file: {csv_file} ---")
 

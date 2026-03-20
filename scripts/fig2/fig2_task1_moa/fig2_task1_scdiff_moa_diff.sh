@@ -54,6 +54,10 @@ echo "Config: runs=${NUM_RUNS} | name=${NAME} | batch_size=${BATCH_SIZE} | num_w
 echo
 
 # -------------------- Main Loop ------------------------
+# Optional filter: if DATASET_FILTER is set (substring match), only run datasets whose
+# dataset_base contains this string (e.g. "JAKSTAT signaling").
+FILTER="${DATASET_FILTER:-}"
+
 for train_path in "${TRAIN_FILES[@]}"; do
   train_fname="$(basename "${train_path}")"
   if [[ "${FILE_PATTERN}" == "diff_moa" ]]; then
@@ -68,6 +72,10 @@ for train_path in "${TRAIN_FILES[@]}"; do
     test_ds="${dataset_base}_control_test"
   fi
   test_path="${DATA_ROOT}/${test_fname}"
+
+  if [[ -n "${FILTER}" && "${dataset_base}" != *"${FILTER}"* ]]; then
+    continue
+  fi
 
   if [[ ! -f "${test_path}" ]]; then
     echo "[ERROR] Missing test file for dataset_base=${dataset_base}: ${test_path}" >&2

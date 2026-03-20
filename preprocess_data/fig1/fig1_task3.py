@@ -4,10 +4,13 @@ import numpy as np
 import os
 import glob
 
-# 定义文件所在的目录
-data_dir = 'data/fig1/task3/'
+# 输入：原始 CSV（与 fig1_task1 相同风格：data_ori/fig1/raw_task*）
+data_dir = '/data/ppnm/data/PertDiffBench/data_ori/fig1/raw_task3/'
+# 输出：处理后的 H5AD
+out_dir = '/data/ppnm/data/PertDiffBench/data/fig1_task3'
 
 print(f"开始处理目录中的CSV文件: {data_dir}...")
+print(f"H5AD 将保存到: {out_dir}...")
 
 # 获取所有CSV文件
 csv_files = glob.glob(os.path.join(data_dir, '*.csv'))
@@ -16,10 +19,12 @@ if not csv_files:
     print(f"错误：在 {data_dir} 中没有找到任何CSV文件。")
     exit()
 
+os.makedirs(out_dir, exist_ok=True)
+
 for csv_file in csv_files:
     # 根据CSV文件名生成对应的H5AD文件名
     base_name = os.path.basename(csv_file)
-    h5ad_file = os.path.join(data_dir, base_name.replace('.csv', '.h5ad'))
+    h5ad_file = os.path.join(out_dir, base_name.replace('.csv', '.h5ad'))
 
     print(f"\n--- 正在处理文件: {csv_file} ---")
 

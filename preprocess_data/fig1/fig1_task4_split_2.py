@@ -3,12 +3,17 @@ import os
 import anndata as ad
 import pandas as pd
 
+# 与 create_global_gene_list.py、fig1_task4_merge.sh 一致
+DATA_DIR = "/data/ppnm/data/PertDiffBench/data/fig1_task4"
+GLOBAL_GENE_LIST_PATH = os.path.join(DATA_DIR, "global_gene_list.txt")
+
 # --- 先加载全局基因列表 ---
 try:
-    with open('data/fig1/task4/global_gene_list.txt', 'r') as f:
+    with open(GLOBAL_GENE_LIST_PATH, "r") as f:
         GLOBAL_GENE_LIST = [line.strip() for line in f.readlines()]
 except FileNotFoundError:
-    print("❌ 错误: 'global_gene_list.txt' 未找到。请先运行步骤1的脚本。")
+    print(f"❌ 错误: 未找到全局基因列表: {GLOBAL_GENE_LIST_PATH}")
+    print("   请先运行: python preprocess_data/fig1/create_global_gene_list.py")
     sys.exit(1)
 
 

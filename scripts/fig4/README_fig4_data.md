@@ -2,8 +2,10 @@
 
 ## 1. 原始数据
 
-- **表达矩阵**: `data/fig4/GSM3770930_A549_lognorm_scale_hvg3000.csv`（细胞×基因，已 log2 标准化，3000 HVG）
-- **元数据**: `data/fig4/GSM3770930_A549_cell_annotate.txt`，列含 `sample`, `treatment_time`, `doublet_score` 等
+目录：`/data/ppnm/data/PertDiffBench/data_ori/fig4/`（与仓库内 `data_ori/fig4` 对应）
+
+- **表达矩阵**: `GSM3770930_A549_lognorm_scale_hvg3000.csv`（细胞×基因，已 log2 标准化，3000 HVG）
+- **元数据**: `GSM3770930_A549_cell_annotate.txt`，列含 `sample`, `treatment_time`, `doublet_score` 等
 - **时间点**: 0h, 2h, 4h, 6h, 8h, 10h（各时间点细胞数约 1k–1.4k）
 
 ## 2. 是否用 perturbation_status，以及如何设
@@ -31,6 +33,8 @@
 **不必**在 0h/2h/8h/10h 中再拆一份做“验证集”，除非你希望做 early stopping；若做，可从训练时间点中随机留约 10% 作为 valid。
 
 ## 4. 建议的 h5ad 产出
+
+输出目录：`/data/ppnm/data/PertDiffBench/data/fig4_task1/`（由 `preprocess_data/fig4/prepare_fig4_h5ad.py` 生成）
 
 | 文件 | 内容 | 用途 |
 |------|------|------|
@@ -62,7 +66,7 @@
 
 ## 7. 脚本与评估（scripts/fig4）
 
-- **数据处理**：`data/fig4/prepare_fig4_h5ad.py` 生成 `fig4_train.h5ad` 与 `fig4_test.h5ad`。  
+- **数据处理**：`preprocess_data/fig4/prepare_fig4_h5ad.py` 从 `data_ori/fig4` 读入 CSV/元数据，生成上述 `fig4_train.h5ad` 与 `fig4_test.h5ad`。  
 - **时间条件评估**：`scripts/fig4/eval_fig4_time_conditioned.py` 按 `treatment_time` 分组计算 11 项指标（与 fig1 一致），需 `--test-h5ad`、`--generated-h5ad`，可选 `--train-h5ad`（0h 作 control 算 delta 类指标）。  
 - **baseline 脚本**：`fig4_task1_scdiffusion.sh`、`fig4_task1_ddpm.sh`、`fig4_task1_ddpm_mlp.sh`、`fig4_task1_scdiff.sh`、`fig4_task1_squidiff.sh` 仿 fig1 逻辑：对 fig4 数据做多轮训练+测评并汇总 CSV。  
 - **无 Control/IFN 的 test**：fig4_test 仅含 4h/6h，无 Control。若 baseline 的 eval 要求 test 中同时有 Control 与 IFN，则使用 **时间条件模式**：`--time-conditioned` + `--generated-h5ad`，由 `eval_fig4_time_conditioned.py` 按时间分组评估。

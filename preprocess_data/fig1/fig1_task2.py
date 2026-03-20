@@ -4,16 +4,25 @@ import numpy as np
 import os
 import glob
 
-data_dir = 'data/fig1/task2/'
+# Directory containing the input CSV files (parallel to fig1_task1: data_ori/fig1/...)
+data_dir = '/data/ppnm/data/PertDiffBench/data_ori/fig1/task2/'
+# Directory for processed H5AD outputs
+out_dir = '/data/ppnm/data/PertDiffBench/data/fig1_task2'
+
+print(f"Processing CSV files in directory: {data_dir}...")
+print(f"Writing H5AD files to: {out_dir}...")
+
 csv_files = glob.glob(os.path.join(data_dir, '*.csv'))
 
 if not csv_files:
     print(f"Error: No CSV files found in {data_dir}.")
     exit()
 
+os.makedirs(out_dir, exist_ok=True)
+
 for csv_file in csv_files:
     base_name = os.path.basename(csv_file)
-    h5ad_file = os.path.join(data_dir, base_name.replace('.csv', '.h5ad'))
+    h5ad_file = os.path.join(out_dir, base_name.replace('.csv', '.h5ad'))
 
     print(f"\n--- Processing file: {csv_file} ---")
 

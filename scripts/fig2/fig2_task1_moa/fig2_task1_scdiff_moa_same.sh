@@ -13,6 +13,9 @@ export WANDB_MODE="${WANDB_MODE:-offline}"
 export OFFLINE_SETTINGS="--wandb f"
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scDiff}"
+BATCH_SIZE="${BATCH_SIZE:-3072}"
+# 断点续跑：只运行从该 dataset 开始的实验（含）；留空则全部运行。恢复全量时改为 START_FROM_DATASET=
+START_FROM_DATASET="${START_FROM_DATASET:-PKCsignaling}"
 
 # -------------------- Project Root ---------------------
 SCRIPT_PATH="$0"
@@ -52,6 +55,8 @@ echo "Config: runs=${NUM_RUNS} | name=${NAME}"
 echo
 
 # -------------------- Main Loop ------------------------
+# 断点续跑：未到达 START_FROM_DATASET 前均跳过
+_resume_reached=false
 for train_path in "${TRAIN_FILES[@]}"; do
   train_fname="$(basename "${train_path}")"
   if [[ "${FILE_PATTERN}" == "same_moa" ]]; then
@@ -65,6 +70,18 @@ for train_path in "${TRAIN_FILES[@]}"; do
     train_ds="${dataset_base}_control_train"
     test_ds="${dataset_base}_control_test"
   fi
+
+  if [[ -n "${START_FROM_DATASET:-}" ]]; then
+    if [[ "${_resume_reached}" == "false" ]]; then
+      if [[ "${dataset_base}" == "${START_FROM_DATASET}" ]]; then
+        _resume_reached=true
+      else
+        echo "[SKIP] Skipping ${train_ds} (resuming from ${START_FROM_DATASET})"
+        continue
+      fi
+    fi
+  fi
+
   test_path="${DATA_ROOT}/${test_fname}"
 
   if [[ ! -f "${test_path}" ]]; then
@@ -109,6 +126,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
           data.params.test.target=scdiff.data.perturbation_drug.PerturbationDrugTest \
           data.params.train.params.datadir="${DATA_ROOT}" \
           data.params.test.params.datadir="${DATA_ROOT}" \
+          data.params.batch_size=${BATCH_SIZE} \
           data.params.train.params.dataset=${dataset_base} \
           data.params.train.params.fname=${train_fname} \
           data.params.test.params.dataset=${dataset_base} \

@@ -1,10 +1,13 @@
+import os
 import anndata as ad
-import numpy as np
+
+# 与 fig1_task4_merge.sh 一致：合并后的 H5AD 位于 data/fig1_task4
+DATA_DIR = "/data/ppnm/data/PertDiffBench/data/fig1_task4"
 
 # --- 加载所有最原始的 h5ad 文件 ---
-control_file = 'data/fig1/task4/task4_ACTA2_control.h5ad'
-coculture_file = 'data/fig1/task4/task4_ACTA2_coculture.h5ad'
-ifn_file = 'data/fig1/task4/task4_ACTA2_ifn.h5ad'
+control_file = os.path.join(DATA_DIR, "task4_ACTA2_control.h5ad")
+coculture_file = os.path.join(DATA_DIR, "task4_ACTA2_coculture.h5ad")
+ifn_file = os.path.join(DATA_DIR, "task4_ACTA2_ifn.h5ad")
 
 adata_ctrl = ad.read_h5ad(control_file)
 adata_cocul = ad.read_h5ad(coculture_file)
@@ -22,10 +25,10 @@ global_gene_set = genes_ctrl.union(genes_cocul).union(genes_ifn)
 global_gene_list = sorted(list(global_gene_set))
 
 # --- 保存这个全局列表以备后用 ---
-global_list_path = 'data/fig1/task4/global_gene_list.txt'
-with open(global_list_path, 'w') as f:
+global_list_path = os.path.join(DATA_DIR, "global_gene_list.txt")
+with open(global_list_path, "w") as f:
     for gene in global_gene_list:
         f.write(f"{gene}\n")
 
-print(f"✅ 全局基因列表已创建并保存。")
+print(f"✅ 全局基因列表已创建并保存: {global_list_path}")
 print(f"总基因数量: {len(global_gene_list)}")

@@ -79,6 +79,12 @@ nohup bash scripts/fig1/fig1_task1/fig1_task1_squidff.sh > fig1_task1_squidff.lo
 
 #### Task 2
 
+**Get the data**
+
+```bash
+python preprocess_data/fig1/fig1_task2.py
+```
+
 **Run the evaluation**
 
 ```bash
@@ -91,6 +97,12 @@ nohup bash scripts/fig1/fig1_task2_squidff.sh > fig1_task2_squidff.log 2>&1 &
 ```
 
 #### Task 3
+
+**Get the data**
+
+```bash
+python preprocess_data/fig1/fig1_task3.py
+```
 
 **Run the evaluation**
 
@@ -112,7 +124,7 @@ nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1 &
    Run the following script:
 
    ```bash
-   bash preprocess_data/fig1_task4_merge.sh
+   bash preprocess_data/fig1/fig1_task4_merge.sh
    ```
 
    This will generate the following `.h5ad` files: `task4_ACTA2_control.h5ad`, `task4_ACTA2_coculture.h5ad`, `task4_ACTA2_IFN.h5ad`, `task4_B2M_control.h5ad`, `task4_B2M_coculture.h5ad`, `task4_B2M_IFN.h5ad`.
@@ -125,7 +137,7 @@ nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1 &
    Run:
 
    ```bash
-   bash preprocess_data/fig1_task4_split_1.sh
+   bash preprocess_data/fig1/fig1_task4_split_1.sh
    ```
 
    This will generate eight `.h5ad` files, including: `task4_B2M_control_coculture_train.h5ad`, `task4_B2M_control_coculture_test.h5ad` (and corresponding files for other gene groups).
@@ -141,7 +153,7 @@ nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1 &
    First, unify the gene space:
 
    ```bash
-   python preprocess_data/create_global_gene_list.py
+   python preprocess_data/fig1/create_global_gene_list.py
    ```
 
    This produces a unified gene list containing **5,737 genes**.
@@ -149,7 +161,7 @@ nohup bash scripts/fig1/fig1_task3_squidff.sh > fig1_task3_squidff.log 2>&1 &
    Then run:
 
    ```bash
-   bash preprocess_data/fig1_task4_split_2.sh
+   bash preprocess_data/fig1/fig1_task4_split_2.sh
    ```
 
    This will generate four `.h5ad` files: `task4_ACTA2_control_to_coculture.h5ad`, `task4_ACTA2_control_to_ifn.h5ad`, `task4_B2M_control_to_coculture.h5ad`, `task4_B2M_control_to_ifn.h5ad`.
@@ -186,7 +198,7 @@ Merge `exp.csv` and `meta.csv` into `.h5ad` format and generate the correspondin
 Run:
 
 ```bash
-bash preprocess_data/fig2_task1_merge.sh
+bash preprocess_data/fig2/task1_unseenPert/fig2_task1_merge.sh
 ```
 
 This will produce datasets such as: `seed123_control_train.h5ad`, `seed123_control_test.h5ad` (and other datasets generated with the same random seed).
@@ -252,17 +264,15 @@ After preprocessing, all resulting `.h5ad` files are ready for training and eval
 Run from the project root (e.g. after `conda activate pertdiffbench && export PYTHONPATH=./`):
 
 ```bash
+
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_same.sh > fig2_task1_squidiff_moa_same.log 2>&1 &
-nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiff_moa_same.sh > fig2_task1_scdiff_moa_same.log 2>&1 &
+nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_diff.sh > fig2_task1_squidiff_moa_diff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiffusion_moa_same.sh > fig2_task1_scdiffusion_moa_same.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_moa_same.sh > fig2_task1_ddpm_moa_same.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_mlp_moa_same.sh > fig2_task1_ddpm_mlp_moa_same.log 2>&1 &
 
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_squidiff_moa_diff.sh > fig2_task1_squidiff_moa_diff.log 2>&1 &
-
-conda activate pertdiffbench && export PYTHONPATH=./ && cd /home/szj/PertDiffBench && export CUDA_VISIBLE_DEVICES=4
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiff_moa_diff.sh > fig2_task1_scdiff_moa_diff.log 2>&1 &
-
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_scdiffusion_moa_diff.sh > fig2_task1_scdiffusion_moa_diff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_moa_diff.sh > fig2_task1_ddpm_moa_diff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task1_moa/fig2_task1_ddpm_mlp_moa_diff.sh > fig2_task1_ddpm_mlp_moa_diff.log 2>&1 &
@@ -339,54 +349,65 @@ nohup bash scripts/fig2/fig2_task3_extend/fig2_task3_extend_ddpm_mlp.sh > fig2_t
 
 ### Fig 4
 
-#### Task 1（时间条件生成）
+#### Task 1 — Time-conditioned generation
 
-**Data Preparation**
+**Data preparation**
 
-将 fig4 的表达矩阵 CSV 与元数据合并为 `.h5ad`，并按时间点划分训练集（0h, 2h, 8h, 10h）与测试集（4h, 6h）。
+Merge the Fig 4 expression matrix (CSV) with cell metadata into `.h5ad` files, then split by time point: **training** at 0h, 2h, 8h, and 10h; **test** at 4h and 6h.
 
-Run:
+From the repository root, run:
 
 ```bash
-python data/fig4/prepare_fig4_h5ad.py
+python preprocess_data/fig4/prepare_fig4_h5ad.py
 ```
 
-默认会读取同目录下的 `GSM3770930_A549_lognorm_scale_hvg3000.csv` 与 `GSM3770930_A549_cell_annotate.txt`，并生成：
+By default the script reads `GSM3770930_A549_lognorm_scale_hvg3000.csv` and `GSM3770930_A549_cell_annotate.txt` from `data_ori/fig4/` (on this setup the absolute root is `/data/ppnm/data/PertDiffBench/data_ori/fig4/`) and writes:
 
-- `data/fig4/fig4_train.h5ad`（训练集，含 `treatment_time` 与兼容用 `perturbation_status`）
-- `data/fig4/fig4_test.h5ad`（测试集，用于与生成结果 4h/6h 比较）
+- `/data/ppnm/data/PertDiffBench/data/fig4_task1/fig4_train.h5ad` — training cells, with `treatment_time` and a compatibility `perturbation_status` column
+- `/data/ppnm/data/PertDiffBench/data/fig4_task1/fig4_test.h5ad` — held-out 4h/6h cells for comparing generated vs. real profiles at those time points
 
-**Run the evaluation**
+**Running evaluation**
 
 ```bash
-conda activate pertbench && export PYTHONPATH=./ && cd /share/PertBench
+conda activate pertdiffbench && export PYTHONPATH=./ && cd /path/to/PertDiffBench
 nohup bash scripts/fig4/fig4_task1_scdiffusion.sh > fig4_task1_scdiffusion.log 2>&1 &
 nohup bash scripts/fig4/fig4_task1_squidiff.sh > fig4_task1_squidiff.log 2>&1 &
 nohup bash scripts/fig4/fig4_task1_ddpm.sh > fig4_task1_ddpm.log 2>&1 &
 nohup bash scripts/fig4/fig4_task1_ddpm_mlp.sh > fig4_task1_ddpm_mlp.log 2>&1 &
 ```
 
-各脚本会对 fig4 数据做多轮训练与时间条件评估，并将汇总结果写入 `samples/fig4/<method>/metrics_*_fig4*.csv`。合并所有 baseline 的 CSV：`python scripts/fig4/aggregate_fig4_metrics.py`，输出为 `samples/fig4/fig4_metrics_merged.csv`。scDiff 当前未接入 fig4 时间条件评估。
+Each launcher runs multiple training/evaluation rounds with time conditioning and writes per-method metrics under `samples/fig4/<method>/metrics_*_fig4*.csv`. To merge all baseline CSVs:
 
-**Fig4 各 baseline 设定说明**
-
-- **scDiffusion**：训练集训练 VAE + diffusion + classifier（`treatment_time` 为条件）。测试集 4h/6h 由 classifier **梯度插值**（2h–8h 方向）生成后评估。
-- **DDPM**：训练集用 fig4_train 训练原始表达空间的 DDPM；并为 fig4 **单独训练一个 VAE**（仅 encoder+decoder，与 DDPM+MLP 同结构，脚本 `train_fig4_ae_for_ddpm.py`）。测试集：用该 VAE 做 2h/8h latent 线性插值 → decoder 得到 4h/6h，再与真实 4h/6h 评估。
-- **DDPM+MLP**：训练集训练 encoder + 潜空间扩散 + decoder。测试集仅用本模型 encoder/decoder 做 2h/8h 线性插值生成 4h/6h，不跑 diffusion。
-- **Squidiff**：训练集训练 Squidiff；测试集在 Squidiff latent 空间对 2h/8h 线性插值得到 4h/6h latent，再经 diffusion 解码为表达后评估。
-
-## 噪声扰动数据
-### 高斯噪声扰动
-运行
+```bash
+python scripts/fig4/aggregate_fig4_metrics.py
 ```
-conda activate pertbench && export PYTHONPATH=./
+
+which produces `samples/fig4/fig4_metrics_merged.csv`. **scDiff** is not yet wired into the Fig 4 time-conditioned evaluation loop.
+
+**Baseline settings (Fig 4 Task 1)**
+
+- **scDiffusion** — Train VAE, diffusion, and classifier on the training set with `treatment_time` as the condition. At test time, synthesize 4h/6h cells via **classifier gradient interpolation** along the 2h→8h direction, then evaluate.
+- **DDPM** — Train a DDPM in raw expression space on `fig4_train`, and train a **Fig 4–specific VAE** (encoder–decoder only, same architecture family as DDPM+MLP) using `train_fig4_ae_for_ddpm.py`. At test time, linearly interpolate 2h/8h in latent space, decode to 4h/6h, and compare to real 4h/6h cells.
+- **DDPM+MLP** — Train encoder, latent diffusion, and decoder on the training set. At test time, use only this model’s encoder/decoder with **linear** 2h/8h interpolation to obtain 4h/6h (no diffusion sampling at inference).
+- **Squidiff** — Train Squidiff on the training set. At test time, linearly interpolate 2h/8h in Squidiff latent space to get 4h/6h latents, then decode through the diffusion decoder to expression for evaluation.
+
+## Noise-perturbed data
+
+### Gaussian noise
+
+From the repository root:
+
+```bash
+conda activate pertdiffbench && export PYTHONPATH=./
 cd preprocess_data/noise_perturbation_exp
 python cd4t_gaus.py
 ```
-你会得到高斯噪声扰动后的数据在 `data/add_gaussian_noise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
 
-然后运行
-```
+Perturbed data are written under `data/add_gaussian_noise_output`. **Run the script twice** if you need separate **train** and **validation** splits (as produced by your preprocessing configuration).
+
+Then return to the repo root and launch the baselines:
+
+```bash
 cd ../../..
 nohup bash scripts/noise_exp/gaussian_perturbed_data/ddpm_mlp.sh > gausnoise_ddpm_mlp.log 2>&1 &
 nohup bash scripts/noise_exp/gaussian_perturbed_data/ddpm.sh > gausnoise_ddpm.log 2>&1 &
@@ -396,17 +417,17 @@ nohup bash scripts/noise_exp/gaussian_perturbed_data/scgen.sh > gausnoise_scgen.
 nohup bash scripts/noise_exp/gaussian_perturbed_data/squidiff.sh > gausnoise_squidiff.log 2>&1 &
 ```
 
-### 生物噪声（对数正态分布）
-运行
-```
-conda activate pertbench && export PYTHONPATH=./
+### Biological noise (log-normal)
+
+```bash
+conda activate pertdiffbench && export PYTHONPATH=./
 cd preprocess_data/noise_perturbation_exp
 python cd4t_log_norm.py
 ```
-你会得到生物噪声扰动后的数据在 `data/add_lognormal_bionoise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
 
-然后运行
-```
+Outputs go to `data/add_lognormal_bionoise_output`. **Run twice** if you need both train and validation data.
+
+```bash
 cd ../../..
 nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/ddpm_mlp.sh > lognormal_ddpm_mlp.log 2>&1 &
 nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/ddpm.sh > lognormal_ddpm.log 2>&1 &
@@ -416,19 +437,19 @@ nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/scgen.sh > lognor
 nohup bash scripts/noise_exp/lognormal_bionoise_perturbed_data/squidiff.sh > lognormal_squidiff.log 2>&1 &
 ```
 
-### 技术噪声
-#### 泊松分布
+### Technical noise
 
-运行
-```
-conda activate pertbench && export PYTHONPATH=./
+#### Poisson
+
+```bash
+conda activate pertdiffbench && export PYTHONPATH=./
 cd preprocess_data/noise_perturbation_exp
 python cd4t_poisson.py
 ```
-你会得到技术噪声扰动后的数据在 `data/add_poisson_technoise_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
 
-然后运行
-```
+Outputs go to `data/add_poisson_technoise_output`. **Run twice** if you need both train and validation data.
+
+```bash
 cd ../../..
 nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/ddpm_mlp.sh > poisson_ddpm_mlp.log 2>&1 &
 nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/ddpm.sh > poisson_ddpm.log 2>&1 &
@@ -438,17 +459,17 @@ nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/scgen.sh > poisson
 nohup bash scripts/noise_exp/poisson_technoise_perturbed_data/squidiff.sh > poisson_squidiff.log 2>&1 &
 ```
 
-#### 零膨胀模型
-运行
-```
-conda activate pertbench && export PYTHONPATH=./
+#### Zero inflation
+
+```bash
+conda activate pertdiffbench && export PYTHONPATH=./
 cd preprocess_data/noise_perturbation_exp
 python cd4t_zero_inflation.py
 ```
-你会得到技术噪声扰动后的数据在 `data/add_zero_inflation_output` 路径下。（你可能需要运行两次，以获得 train 数据和 valid 数据）
 
-然后运行
-```
+Outputs go to `data/add_zero_inflation_output`. **Run twice** if you need both train and validation data.
+
+```bash
 cd ../../..
 nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/ddpm_mlp.sh > zero_inflation_ddpm_mlp.log 2>&1 &
 nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/ddpm.sh > zero_inflation_ddpm.log 2>&1 &
@@ -458,16 +479,18 @@ nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/scgen.sh > 
 nohup bash scripts/noise_exp/zero_inflation_technoise_perturbed_data/squidiff.sh > zero_inflation_squidiff.log 2>&1 &
 ```
 
+## Encoder experiments
 
-## 编码器实验
+From the repository root (adjust conda env names to match your install):
+
 ```bash
-conda activate pertbench && export PYTHONPATH=./
+conda activate pertdiffbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scvi_ddpm.sh > encoder_scvi_ddpm.log 2>&1 &
-conda activate pertbench && export PYTHONPATH=./
+conda activate pertdiffbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scimilarity_ddpm.sh > encoder_scimilarity_ddpm.log 2>&1 &
-conda activate pertbench && export PYTHONPATH=./
+conda activate pertdiffbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scvi_ddpm.sh > encoder_scvi_ddpm.log 2>&1 &
-conda activate pertbench && export PYTHONPATH=./
+conda activate pertdiffbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scfoundation_ddpm.sh > encoder_scfoundation_ddpm.log 2>&1 &
 conda activate scgpt && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/scgpt_ddpm.sh > encoder_scgpt_ddpm.log 2>&1 &
@@ -477,40 +500,40 @@ nohup bash scripts/encoder_exp/geneformer_ddpm.sh > encoder_geneformer_ddpm.log 
 
 ### CellFM
 
-MindSpore 2.6 GPU 需要 **CUDA 11**（libcublas.so.11）与 **cuDNN 8**。请用 **conda-forge** 的 `cudatoolkit`（勿用 nvidia 的 `cuda-toolkit`，易被解析成 CUDA 13）：
+MindSpore 2.6 on GPU expects **CUDA 11** (`libcublas.so.11`) and **cuDNN 8**. Install CUDA with **`cudatoolkit` from conda-forge**; avoid NVIDIA’s `cuda-toolkit` metapackage here, which may pull in CUDA 13 and break the stack.
 
 ```bash
-# 推荐：新建环境并用 conda-forge 装 CUDA 11 + cuDNN 8
+# Recommended: fresh env with conda-forge CUDA 11 + cuDNN 8
 conda create -n cellfm_cuda11 python=3.10 -y
 conda activate cellfm_cuda11
 conda install -y -c conda-forge cudatoolkit=11.7.1 cudnn=8.4.1.50
 pip install mindspore==2.6.0 -i https://pypi.org/simple
 pip install huggingface_hub scanpy anndata
-# 检查（应有输出）
+# Sanity check (should list matching libraries)
 ls $CONDA_PREFIX/lib/libcublas.so.11* $CONDA_PREFIX/lib/libcudnn.so.8* 2>/dev/null
 ```
 
-或仅用 CPU 环境（不装 cudatoolkit/cudnn）时无法跑 CellFM 编码，需换带 GPU 的机器。
+A CPU-only setup (no `cudatoolkit` / cuDNN) cannot run CellFM encoding on GPU; use a GPU machine or a properly configured CUDA 11 environment.
 
 ```bash
-conda activate cellfm_cuda11 && export PYTHONPATH=./   # 或 cellfm
+conda activate cellfm_cuda11 && export PYTHONPATH=./   # or your `cellfm` env
 nohup bash scripts/encoder_exp/cellfm/cellfm_ddpm.sh > encoder_cellfm_ddpm.log 2>&1 &
 ```
 
-### tahoe-x1
+### Tahoe-X1
 
 ```bash
 conda create -n tahoe-x1 python=3.10 -y && conda activate tahoe-x1
 
 pip install torch scanpy omegaconf anndata "numpy<2"
-pip install mosaicml-streaming   
-pip install composer              
-pip install boto3 transformers datasets  
+pip install mosaicml-streaming
+pip install composer
+pip install boto3 transformers datasets
 pip install llm-foundry
 ```
 
 ```bash
-cd /share/PertBench && conda activate tahoe-x1 && export PYTHONPATH=./
+cd /path/to/PertDiffBench && conda activate tahoe-x1 && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/tahoe-x1/tx1_ddpm.sh > encoder_tx1_ddpm.log 2>&1 &
 ```
 
@@ -523,6 +546,6 @@ uv tool install arc-state
 ```
 
 ```bash
-cd /share/PertBench && conda activate pertbench && export PYTHONPATH=./
+cd /path/to/PertDiffBench && conda activate pertdiffbench && export PYTHONPATH=./
 nohup bash scripts/encoder_exp/state/state_ddpm.sh > encoder_state_ddpm.log 2>&1 &
 ```

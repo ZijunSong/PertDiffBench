@@ -23,7 +23,11 @@ echo "Current working directory: $(pwd)"
 
 mkdir -p "$DATA_ROOT"
 
-for test_species in "mouse" "pig" "rabbit" "rat"; do
+# 默认跑全套；也可通过环境变量只跑指定物种：
+#   TARGET_SPECIES="rabbit rat" nohup bash ... &
+TARGET_SPECIES="${TARGET_SPECIES:-mouse pig rabbit rat}"
+
+for test_species in ${TARGET_SPECIES}; do
   train_species_list=()
   for s in mouse pig rabbit rat; do
     [[ "$s" != "$test_species" ]] && train_species_list+=( "$s" )
@@ -65,6 +69,12 @@ for test_species in "mouse" "pig" "rabbit" "rat"; do
   LOG_ROOT="logs/fig2/task3_extend/scdiff/${test_species}"
   METRICS_CSV="${OUT_ROOT}/metrics_leave1out_${test_species}.csv"
   mkdir -p "$OUT_ROOT" "$LOG_ROOT"
+
+  # 如果 metrics 已经存在，认为该物种 fold 已完成，自动跳过（避免重复计算）
+  if [[ -s "${METRICS_CSV}" ]]; then
+    echo "### Skip leave1out_${test_species}: metrics already exists at ${METRICS_CSV}"
+    continue
+  fi
 
   ALL_OUTPUTS=""
 

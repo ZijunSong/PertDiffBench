@@ -6,18 +6,24 @@ trap 'echo "[ERROR] command failed" >&2; exit 1' ERR
 export LC_ALL=C LC_NUMERIC=C
 
 # =================== Config ===================
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 NUM_RUNS="${NUM_RUNS:-3}"
 GENE_SIZE="${GENE_SIZE:-3000}"
 OUTPUT_DIM="${OUTPUT_DIM:-3000}"
 N_SAMPLES="${N_SAMPLES:-100}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
+BATCH_SIZE="${BATCH_SIZE:-3072}"
+# 断点续跑：只运行从该 MOA 开始的实验（含）；留空则全部运行。例: START_FROM_MOA=Antioxidant
+START_FROM_MOA="${START_FROM_MOA:-}"
 
-DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA}"
+DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA/control_plus_ifn_with_smiles}"
 SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
 CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
-DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn_with_smiles/unseen_same_moa}"
-CONTROL_DATA_PATH="${CONTROL_DATA_PATH:-${DATA_BASE}/control_merged.h5ad}"
+DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn/unseen_same_moa}"
+# 控制样本由 merge_control_with_each_ifn.py 写到 DATA_OUT/control_merged.h5ad
+# DATA_OUT = /data/ppnm/data/PertDiffBench/data/fig2/task1_unseenMOA
+CONTROL_DATA_PATH="${CONTROL_DATA_PATH:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA/control_merged.h5ad}"
 [[ -f "${CONTROL_DATA_PATH}" ]] || { echo "[ERROR] Control file not found: ${CONTROL_DATA_PATH}" >&2; exit 1; }
 
 LOGROOT="${LOGROOT:-logs/squidiff}"
@@ -37,10 +43,22 @@ echo "Config: runs=${NUM_RUNS} | genes=${GENE_SIZE} | output_dim=${OUTPUT_DIM} |
 echo
 
 # ========================= Main Loop =========================
+_resume_reached=false
 for train_path in "${TRAIN_FILES[@]}"; do
   train_file="$(basename "${train_path}")"
   moa="${train_file%_train__plus_control.h5ad}"
   test_path="${DATA_ROOT}/${moa}_test__plus_control.h5ad"
+
+  if [[ -n "${START_FROM_MOA:-}" ]]; then
+    if [[ "${_resume_reached}" == "false" ]]; then
+      if [[ "${moa}" == "${START_FROM_MOA}" ]]; then
+        _resume_reached=true
+      else
+        echo "[SKIP] Skipping MOA ${moa} (resuming from ${START_FROM_MOA})"
+        continue
+      fi
+    fi
+  fi
 
   [[ -f "${test_path}" ]] || { echo "[ERROR] Missing test file for MOA=${moa}: ${test_path}" >&2; exit 1; }
 
@@ -74,6 +92,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
       --logger_path "${LOGROOT}/fig2_task1_unseenMOA_${moa}_run${i}" \
       --data_path "${train_path}" \
       --resume_checkpoint "${RUN_CKPT_DIR}" \
+      --batch_size "${BATCH_SIZE}" \
       --gene_size "${GENE_SIZE}" \
       --output_dim "${OUTPUT_DIM}" \
       --use_drug_structure True
