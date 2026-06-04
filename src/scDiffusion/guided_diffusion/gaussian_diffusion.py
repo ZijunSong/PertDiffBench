@@ -794,8 +794,8 @@ class GaussianDiffusion:
             if self.loss_type == LossType.RESCALED_KL:
                 terms["loss"] *= self.num_timesteps
         elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
-            model_output = model(x_t, self._scale_timesteps(t).unsqueeze(1), **model_kwargs)  #MLP用这个
-            # model_output = model(x_t.unsqueeze(1).float(), self._scale_timesteps(t), **model_kwargs)  #Unet用这两个
+            model_output = model(x_t, self._scale_timesteps(t).unsqueeze(1), **model_kwargs)  # MLP path
+            # model_output = model(x_t.unsqueeze(1).float(), self._scale_timesteps(t), **model_kwargs)  # UNet path
             # model_output = model_output.squeeze(1)
             if self.model_var_type in [
                 ModelVarType.LEARNED,

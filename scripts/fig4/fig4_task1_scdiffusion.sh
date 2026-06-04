@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fig4 时间条件生成 — scDiffusion（设定一：训练 0h/2h/8h/10h，生成 4h/6h 与真实比较）
+# Fig4 time-conditioned generation - scDiffusion ( : train 0h/2h/8h/10h, 4h/6h and )
 
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
@@ -14,7 +14,7 @@ N_SAMPLES="${N_SAMPLES:-500}"
 DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
 TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
 TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
-# 预训练 VAE（encoder.ckpt / decoder.ckpt / gene_order.tsv），与 fig2 一致
+# pretrain VAE (encoder.ckpt / decoder.ckpt / gene_order.tsv), and fig2 
 VAE_STATE_DICT="${VAE_STATE_DICT:-checkpoints/annotation_model_v1}"
 
 mkdir -p "${LOGDIR}/fig4_task1"
@@ -64,7 +64,7 @@ LABEL_ENC="${CLS_DIR}/label_encoder.npz"
     python classifier_train.py --data_dir "../../${TRAIN_H5}" --vae_path "../../${vae_ckpt}" --model_path "../../${cls_dir}" --label_key treatment_time || true
     popd >/dev/null
 
-    # Step 4: Generate 4h and 6h via classifier gradient interpolation (2h–8h → 4h/6h, 图2); then eval
+    # Step 4: Generate 4h and 6h via classifier gradient interpolation (2h–8h → 4h/6h, fig2); then eval
     echo "--- Step 4: Sampling 4h & 6h (gradient interp) + Eval [run ${i}] ---"
     pushd src/scDiffusion >/dev/null
     # 4h: interp 2h(1) and 8h(2) with weight 5,5

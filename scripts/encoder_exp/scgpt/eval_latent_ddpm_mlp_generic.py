@@ -98,7 +98,7 @@ def main():
     X = adata.X
     Z = adata.obsm[args.latent_key]
 
-    # 2.5) 这里和训练脚本保持一致：根据数据 override latent_dim 和 input_dim
+    # 2.5) here train stay consistent: based ondata override latent_dim input_dim
     n_latent = Z.shape[1]
     n_genes = adata.n_vars
 
@@ -116,7 +116,7 @@ def main():
         )
         cfg.model.ae.input_dim = n_genes
 
-    # 3) 现在再根据 cfg 构建模型，就和训练时结构一致了
+    # 3) in based on cfg , trainwhenstructure 
     model = ScviLatentDDPMMLP(cfg).to(device)
 
     ckpt = torch.load(args.ckpt, map_location=device, weights_only=False)

@@ -39,12 +39,12 @@ def main():
 
     cfg = OmegaConf.load(args.config)
 
-    # 确保 trainer 知道保存目录
+    # Ensure trainer directory
     if "train" not in cfg:
         raise ValueError("Config must have a 'train' section.")
     cfg.train.save_weight_dir = args.save_dir
 
-    # ========= 构建 dataset & dataloader =========
+    # ========= dataset & dataloader =========
     train_ds = PairedGeneformerLatentDataset(args.train_h5ad, split="train")
 
     latent_dim = train_ds.latent.shape[1]
@@ -67,11 +67,11 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[train] Using device: {device}")
 
-    # ========= 构建模型 =========
-    # 你的 MLPDDPMMLP 是通过 cfg 初始化的 (包含 ae.input_dim / latent_dim / diffusion 等)
+    # ========= =========
+    # MLPDDPMMLP via cfg init (contain ae.input_dim / latent_dim / diffusion )
     model = MLPDDPMMLP(cfg).to(device)
 
-    # ========= 优化器 & scheduler =========
+    # ========= & scheduler =========
     optimizer = AdamW(
         model.parameters(),
         lr=cfg.train.lr,
@@ -85,7 +85,7 @@ def main():
     # ========= Trainer =========
     trainer = ScRNATrainer(
         model=model,
-        diffusion=model.diffusion_trainer,      # 你的 forward 用的是内部的 diffusion_trainer
+        diffusion=model.diffusion_trainer, # forward using inside diffusion_trainer
         optimizer=optimizer,
         scheduler=scheduler,
         data_loader=train_loader,
@@ -93,7 +93,7 @@ def main():
         cfg=cfg,
     )
 
-    # ========= Resume（如果需要） =========
+    # ========= Resume ( must) =========
     if args.resume:
         latest = find_latest_ckpt(args.save_dir)
         if latest is not None:
@@ -102,7 +102,7 @@ def main():
             model.load_state_dict(ckpt["model_state_dict"])
             optimizer.load_state_dict(ckpt["optimizer_state_dict"])
             scheduler.load_state_dict(ckpt["scheduler_state_dict"])
-            # 注意：ckpt['epoch'] 是 0-based；你的文件名是 model_epoch_{epoch+1}.pth
+            # : ckpt['epoch'] 0-based; filename model_epoch_{epoch+1}.pth
             trainer.current_epoch = ckpt["epoch"] + 1
             trainer.current_step = ckpt.get("step", 0)
         else:
@@ -110,7 +110,7 @@ def main():
     else:
         print("[train] Starting training from scratch.")
 
-    # ========= 开始训练 =========
+    # ========= Starttrain =========
     trainer.train()
 
 

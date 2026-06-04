@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fig4 时间条件生成 — DDPM+MLP（训练后用 VAE encoder → 2h/8h 线性插值 → decoder 生成 4h/6h）
+# Fig4 time-conditioned generation - DDPM+MLP (trainafterusing VAE encoder → 2h/8h linear interpolation → decoder 4h/6h)
 
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
@@ -11,7 +11,7 @@ NUM_RUNS=${NUM_RUNS:-3}
 METHOD_NAME="${METHOD_NAME:-DDPM+MLP}"
 N_SAMPLES="${N_SAMPLES:-500}"
 CONFIG_FILE="configs/baselines/mlp_ddpm_mlp.yaml"
-# 与 train_mlp_ddpm_mlp / mlp_ddpm_mlp_trainer 保存名一致
+# and train_mlp_ddpm_mlp / mlp_ddpm_mlp_trainer name 
 CKPT_NAME="model_epoch_1000.pth"
 
 DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"

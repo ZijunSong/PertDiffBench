@@ -7,37 +7,37 @@ CELL_TYPE="CD4T"
 NUM_RUNS=3
 METHOD_NAME="scgpt_ddpm"
 
-########################## 基础路径设置 ##########################
+########################## path ##########################
 
-# PertBench data（相对路径是相对你运行脚本时的工作目录）
+# PertBench data (relative path for when directory)
 TRAIN_H5="data/fig1/raw_task1/task1_train_${CELL_TYPE}_exp.h5ad"
 VALID_H5="data/fig1/raw_task1/task1_valid_${CELL_TYPE}_exp.h5ad"
 
-########################## scGPT 相关路径 ##########################
-# 你下载好的 scGPT checkpoint 根目录（包含权重、vocab 等）
-SCGPT_CKPT_DIR="/share/PertBench/checkpoints/scgpt"   # TODO: 改成你自己的路径
+########################## scGPT path ##########################
+# under good scGPT checkpoint directory (contain , vocab )
+SCGPT_CKPT_DIR="/share/PertBench/checkpoints/scgpt" # TODO: ownpath
 
-# 回写到 PertBench 用的 h5ad（直接带 X_scgpt latent）
+# write to PertBench using h5ad (directly X_scgpt latent)
 SCGPT_TRAIN_WITH_LATENT="samples/encoder_exp/scgpt_ddpm/task1_train_${CELL_TYPE}_with_scgpt_latent.h5ad"
 SCGPT_VALID_WITH_LATENT="samples/encoder_exp/scgpt_ddpm/task1_valid_${CELL_TYPE}_with_scgpt_latent.h5ad"
 
-########################## DDPM & 评估路径 ##########################
+########################## DDPM & evalpath ##########################
 
-# DDPM checkpoint & eval 输出（具体 run 子目录在循环内定义）
+# DDPM checkpoint & eval output ( run subdirin insidedefine)
 LATENT_DDPM_CKPT_BASE="checkpoints/scgpt_ddpm/latent_ddpm"
 EVAL_OUT_PREFIX="samples/encoder_exp/scgpt_ddpm/scgpt_latent_ddpm_mlp_task1_${CELL_TYPE}_preds"
 CSV_PATH="samples/encoder_exp/scgpt_ddpm/metrics_${CELL_TYPE}.csv"
 
-# 通用 DDPM MLP 配置（结构要和 ScviLatentDDPMMLP 对上）
+# using DDPM MLP (structuremust ScviLatentDDPMMLP foron)
 CONFIG_PATH="configs/baselines/scvi_ddpm_mlp.yaml"
 
-# 对齐 gene space 后的文件（真正给 DDPM 用的）
+# align gene space afterfile (actual DDPM using)
 ALIGNED_TRAIN_H5="samples/encoder_exp/scgpt_ddpm/task1_train_${CELL_TYPE}_scgpt_aligned.h5ad"
 ALIGNED_VALID_H5="samples/encoder_exp/scgpt_ddpm/task1_valid_${CELL_TYPE}_scgpt_aligned.h5ad"
 
 LOG_DIR="logs/scgpt_ddpm"
 
-########################## 创建目录 ##########################
+########################## directory ##########################
 
 echo "[INFO] Creating directories for scGPT+DDPM pipeline..."
 
@@ -64,7 +64,7 @@ echo "######################################################################"
 ALL_OUTPUTS=""
 
 ########################################################################
-# 0) 用 scGPT 对 train/valid 编码，并写入带 X_scgpt 的 h5ad（一次性，带 resume）
+# 0) using scGPT for train/valid , and X_scgpt h5ad (one-time, resume)
 ########################################################################
 
 echo
@@ -111,7 +111,7 @@ else
 fi
 
 ########################################################################
-# 0.5) 对齐 train/valid 的 gene space
+# 0.5) align train/valid  gene space
 ########################################################################
 
 echo
@@ -134,7 +134,7 @@ else
 fi
 
 ########################################################################
-# 1) 多 run：每个 run 单独的 DDPM checkpoint 子目录 + 评估输出
+# 1) multi-run: each run separate DDPM checkpoint subdir + evaloutput
 ########################################################################
 
 for (( run=1; run<=NUM_RUNS; run++ )); do
@@ -143,13 +143,13 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo ">>> Run ${run}/${NUM_RUNS} for ${CELL_TYPE}"
   echo "======================================================================"
 
-  # 为本次 run 定义子目录
+  # as run definesubdir
   RUN_CKPT_DIR="${LATENT_DDPM_CKPT_BASE}/run_${run}"
   mkdir -p "${RUN_CKPT_DIR}"
   echo "[RUN ${run}] RUN_CKPT_DIR = ${RUN_CKPT_DIR}"
 
   ########################################
-  # 1) 训练 latent DDPM+decoder（每个 run 自己的子目录，支持 resume）
+  # 1) train latent DDPM+decoder (each run ownsubdir, support resume)
   ########################################
   echo -e "\n--- [1/2] Train scGPT-latent DDPM+decoder for ${CELL_TYPE} (run ${run}) ---"
 
@@ -179,7 +179,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   fi
 
   ########################################
-  # 2) 评测
+  # 2) eval
   ########################################
   echo -e "\n--- [2/2] Evaluate scGPT-latent model on valid_${CELL_TYPE} (run ${run}) ---"
 
@@ -209,13 +209,13 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   ALL_OUTPUTS+="${OUTPUT}"$'\n'
 done
 
-########################## 聚合 metrics 到 CSV（仿照 scFoundation 版本） ##########################
+########################## metrics to CSV ( scFoundation ) ##########################
 
 echo -e "\n--- Aggregating metrics to CSV: ${CSV_PATH} ---\n"
 
 echo "${ALL_OUTPUTS}" | awk -v dataset="${CELL_TYPE}" -v num_runs="${NUM_RUNS}" \
                        -v method="${METHOD_NAME}" -v csv_path="${CSV_PATH}" '
-  # 这里的 pattern 要匹配 eval_latent_ddpm_mlp_generic.py 输出
+  # here pattern must eval_latent_ddpm_mlp_generic.py output
   /^PDS:/                               { pds[c_pds++] = $NF }
   /^MAE:/                               { mae[c_mae++] = $NF }
   /^DES:/                               { des[c_des++] = $NF }

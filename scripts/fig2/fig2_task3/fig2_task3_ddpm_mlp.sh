@@ -67,7 +67,7 @@ for species in "${TARGET_SPECIES[@]}"; do
     fi
 
     printf "%s\n" "$EVAL_OUTPUT"
-    # 仅抽取可解析指标行，避免噪声
+    # only canparse , avoid noise
     run_tmp="$(mktemp)"
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
     grep -E "$pattern_re" <<< "$EVAL_OUTPUT" > "$run_tmp" || true
@@ -76,7 +76,7 @@ for species in "${TARGET_SPECIES[@]}"; do
     rm -f "$run_tmp"
   done
 
-  # -------------------- 聚合并写 CSV --------------------
+  # -------------------- and CSV --------------------
   awk -v ds="Evaluate_on_${species}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
 BEGIN{
   c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=c_p_all=c_pd_all=c_pd20=c_pd50=c_pd100=0
@@ -149,7 +149,7 @@ END {
   for(i=1;i<=11;i++) row=row "," mean_std(i);
   for(r=0;r<num_runs;r++) for(i=1;i<=11;i++) row=row sprintf(",%.6f", val(i,r)+0);
 
-  # 首次写入表头，随后追加一行
+  # header, after 
   print header > csv_path;
   print row    >> csv_path;
   close(csv_path);

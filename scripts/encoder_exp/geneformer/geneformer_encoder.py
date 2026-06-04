@@ -59,10 +59,10 @@ class GeneformerEncoder:
         """
         Tokenize raw counts h5ad into Geneformer .dataset format.
 
-        为了兼容老版本 Geneformer 的目录扫描逻辑，这里做了这样几件事：
-        1) 不再直接把原始目录丢给 Geneformer；
-        2) 在 output_dir 下创建一个临时子目录，只拷贝当前这一个 h5ad 进去；
-        3) 把这个临时子目录作为 data_directory 传给 tokenize_data，这样它只会处理这一个文件。
+        as Geneformer directory logic, here : 
+        1) no longerdirectlyoriginaldirectorypass to Geneformer; 
+        2) in output_dir under tempsubdir, copycurrentthis one h5ad into; 
+        3) tempsubdir as data_directory tokenize_data, willhandlethis onefile.
         """
         output_dir = pathlib.Path(output_dir)
         self._ensure_dir(output_dir)
@@ -74,13 +74,13 @@ class GeneformerEncoder:
 
         print(f"[GeneformerEncoder] Tokenizing {input_h5ad} -> {dataset_path}")
 
-        # 1) 准备 TranscriptomeTokenizer
+        # 1) prepare TranscriptomeTokenizer
         tk = TranscriptomeTokenizer(
             custom_attr_name_dict if custom_attr_name_dict is not None else {},
             nproc=self.nproc,
         )
 
-        # 2) 构造一个临时目录，只放这一份 h5ad
+        # 2) build tempdirectory, h5ad
         import shutil
         input_path = pathlib.Path(input_h5ad)
         if not input_path.exists():
@@ -90,13 +90,13 @@ class GeneformerEncoder:
         self._ensure_dir(tmp_dir)
 
         tmp_h5ad = tmp_dir / input_path.name
-        # 为了安全，统一覆盖一下，保证是最新 prepare 过的版本
+        # as , under, prepare 
         shutil.copy2(input_path, tmp_h5ad)
 
         data_directory = str(tmp_dir)
         print(f"[GeneformerEncoder] Using temporary data_directory={data_directory} for tokenize_data")
 
-        # 3) 根据 Geneformer 版本决定是否传 model_version
+        # 3) based on Geneformer whether model_version
         sig = inspect.signature(tk.tokenize_data)
         kwargs = dict(
             data_directory=data_directory,
@@ -111,7 +111,7 @@ class GeneformerEncoder:
             print("[GeneformerEncoder] tokenize_data does NOT support 'model_version'; "
                   "calling without it (older Geneformer version).")
 
-        # 4) 真正调用 Geneformer 的 tokenize_data
+        # 4) actualcall Geneformer  tokenize_data
         tk.tokenize_data(**kwargs)
 
         if not dataset_path.exists():
@@ -121,7 +121,7 @@ class GeneformerEncoder:
             )
 
         print(f"[GeneformerEncoder] Tokenized dataset saved at: {dataset_path}")
-        # 临时目录先不删，方便你 debug；要清理的话可以手动删或加一行 shutil.rmtree(tmp_dir)
+        # tempdirectory , debug; must canto or shutil.rmtree(tmp_dir)
         return str(dataset_path)
 
 
@@ -171,7 +171,7 @@ class GeneformerEncoder:
 
         print(f"[GeneformerEncoder] Extracting embeddings from {dataset_path} using model at {model_dir}")
 
-        # --- 兼容不同版本的 EmbExtractor 签名 ---
+        # --- EmbExtractor name ---
         emb_sig = inspect.signature(EmbExtractor.__init__)
         emb_kwargs = dict(
             model_type="Pretrained",
@@ -203,7 +203,7 @@ class GeneformerEncoder:
         embs_df.to_csv(emb_csv, index=False)
         try:
             import torch
-            # 直接把 df 转成 numpy 保存，后面如果需要 .pt 也方便加载
+            # directly df numpy , after must .pt 
             torch.save(embs_df.to_numpy(), emb_pt)
         except ImportError:
             print("[GeneformerEncoder] torch not available, skip saving .pt file")
@@ -212,7 +212,7 @@ class GeneformerEncoder:
         return str(emb_csv)
 
     # ------------------------------------------------------------------
-    # 3) 写回 h5ad.obsm
+    # 3) h5ad.obsm
     # ------------------------------------------------------------------
     def write_embeddings_to_h5ad(
         self,

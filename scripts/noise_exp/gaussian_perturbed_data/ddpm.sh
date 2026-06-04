@@ -10,7 +10,7 @@ NOISE_LEVELS=('0.1' '0.25' '0.5' '1.0' '1.5')
 NUM_GENES="${NUM_GENES:-6998}"
 NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
-BASE_DATA_DIR="${BASE_DATA_DIR:-data/add_gaussian_noise_output}"   # 新数据集根目录
+BASE_DATA_DIR="${BASE_DATA_DIR:-data/add_gaussian_noise_output}"   # noisy dataset root
 METHOD_NAME="${METHOD_NAME:-scRNA-DDPM-scRNA}"
 
 # ================= Main Processing Loop =================
@@ -51,7 +51,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
     for (( i=1; i<=NUM_RUNS; i++ )); do
       echo -e "\n--- Eval run ${i}/${NUM_RUNS} ---"
-      # 捕获完整输出；失败则原样打印 Traceback 并退出
+      # capture full output; on failure print Traceback and exit
       EVAL_OUTPUT="$(
         python scripts/baseline/eval_scrna_ddpm_scrna.py \
           --config "$CONFIG_FILE" \
@@ -71,7 +71,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         exit $status
       fi
 
-      # 仅收集可解析指标行，避免噪声
+      # keep parseable metric lines only, avoid noise
       run_tmp="$(mktemp)"
       pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
       grep -E "$pattern_re" <<< "$EVAL_OUTPUT" > "$run_tmp" || true
@@ -154,7 +154,7 @@ END {
   for(i=1;i<=11;i++) row=row "," mean_std(i);
   for(r=0;r<num_runs;r++) for(i=1;i<=11;i++) row=row sprintf(",%.6f", val(i,r)+0);
 
-  # 覆盖写表头，仅当前 (cell,noise) 一行
+  # header, onlycurrent (cell,noise) 
   print header > csv_path;
   print row    >> csv_path;
   close(csv_path);

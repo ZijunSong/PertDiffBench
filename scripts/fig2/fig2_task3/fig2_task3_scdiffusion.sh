@@ -9,8 +9,8 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 export WANDB_DISABLED=true
 export WANDB_MODE=disabled
 
-NUM_GENES="${NUM_GENES:-6619}"     # 按你的原始设置
-NUM_RUNS="${NUM_RUNS:-3}"          # 三次（训练+测评）
+NUM_GENES="${NUM_GENES:-6619}" # original 
+NUM_RUNS="${NUM_RUNS:-3}" # (train+eval)
 TARGET_SPECIES=( "pig" "rabbit" "rat" )
 
 # ---------------- Project Root ------------------
@@ -21,12 +21,12 @@ echo "PWD: $(pwd)"
 # ---------------- Datasets ----------------------
 TRAIN_H5="data/fig2/task3_cross_species/mouse_control_ifn.h5ad"
 
-# 全局 CSV（聚合所有物种）
+# CSV ( all types)
 GLOBAL_DIR="samples/fig2/task3_cross_species/scDiffusion_${NUM_GENES}"
 mkdir -p "${GLOBAL_DIR}"
 GLOBAL_CSV="${GLOBAL_DIR}/metrics_all.csv"
 
-# 首次建表头
+# header
 if [[ ! -f "${GLOBAL_CSV}" ]]; then
   {
     printf "Dataset,Species,Method"
@@ -50,7 +50,7 @@ for species in "${TARGET_SPECIES[@]}"; do
   echo "###   Full pipeline for ${species} (${NUM_RUNS} runs, ${NUM_GENES} HVG)"
   echo "######################################################################"
 
-  # 各阶段的基准目录（按物种/基因数组织）
+  # directory ( types/genearray )
   vae_base="checkpoints/scdiffusion/vae_checkpoint/task3/${species}_${NUM_GENES}"
   diff_base="checkpoints/scdiffusion/diffusion_checkpoint/task3/${species}_${NUM_GENES}"
   cls_base="checkpoints/scdiffusion/classifier_checkpoint/2-classifier/task3/${species}_${NUM_GENES}"
@@ -59,26 +59,26 @@ for species in "${TARGET_SPECIES[@]}"; do
 
   ALL_OUTPUTS=""
 
-  # ============ 三次（训练+评测） ============
+  # ============ (train+eval) ============
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo
     echo "======================"
     echo " Run ${i}/${NUM_RUNS} for ${species}"
     echo "======================"
 
-    # 每次 run 独立子目录，避免覆盖
+    # each run run standalonesubdir, 
     vae_dir="${vae_base}/run${i}"
     diff_dir="${diff_base}/run${i}"
     cls_dir="${cls_base}/run${i}"
     run_sample_dir="${sample_base}/run${i}"
     mkdir -p "${vae_dir}" "${diff_dir}/my_diffusion" "${cls_dir}" "${run_sample_dir}"
 
-    # 期望的 checkpoint 文件名（与你原始脚本一致）
+    # expects checkpoint filename (and original )
     vae_ckpt="${vae_dir}/model_seed=0_step=9999.pt"
     diff_ckpt="${diff_dir}/my_diffusion/model010000.pt"
     cls_ckpt="${cls_dir}/model009999.pt"
 
-    # ---- Step 1: VAE 训练 ----
+    # ---- Step 1: VAE train ----
     echo "--- Step 1: Training VAE ..."
     pushd src/scDiffusion/VAE >/dev/null
     python VAE_train.py \
@@ -88,7 +88,7 @@ for species in "${TARGET_SPECIES[@]}"; do
       --save_dir "../../../${vae_dir}"
     popd >/dev/null
 
-    # ---- Step 2: Diffusion 训练 ----
+    # ---- Step 2: Diffusion train ----
     echo "--- Step 2: Training Diffusion ..."
     pushd src/scDiffusion >/dev/null
     python cell_train.py \
@@ -97,7 +97,7 @@ for species in "${TARGET_SPECIES[@]}"; do
       --save_dir "../../${diff_dir}"
     popd >/dev/null
 
-    # ---- Step 3: Classifier 训练 ----
+    # ---- Step 3: Classifier train ----
     echo "--- Step 3: Training Classifier ..."
     pushd src/scDiffusion >/dev/null
     python classifier_train.py \
@@ -106,7 +106,7 @@ for species in "${TARGET_SPECIES[@]}"; do
       --model_path "../../${cls_dir}"
     popd >/dev/null
 
-    # ---- Step 4: 采样与评测 ----
+    # ---- Step 4: andeval ----
     echo "--- Step 4: Sampling & Evaluation ..."
     pushd src/scDiffusion >/dev/null
     run_out="$(
@@ -125,7 +125,7 @@ for species in "${TARGET_SPECIES[@]}"; do
     popd >/dev/null
 
     echo "${run_out}"
-    # 仅提取可解析的指标行，避免把别的日志混入统计
+    # only canparse , stats
     ALL_OUTPUTS+="$(
       printf "%s\n" "${run_out}" | grep -E \
         "Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)" \
@@ -134,7 +134,7 @@ for species in "${TARGET_SPECIES[@]}"; do
     ALL_OUTPUTS+=$'\n'
   done
 
-  # ============ 追加一行到全局 CSV ============
+  # ============ to CSV ============
   printf "%s\n" "${ALL_OUTPUTS}" | awk -v ds="${species}_control_ifn" -v sp="${species}" -v num_runs="${NUM_RUNS}" -v method="scDiffusion(${NUM_GENES})" -v csv_path="${GLOBAL_CSV}" '
     function to_num(x){ gsub(/[^0-9eE+\-\.]/,"",x); return x+0 }
 
@@ -165,7 +165,7 @@ for species in "${TARGET_SPECIES[@]}"; do
       else if(idx==9){ n=c_pd20;   mu=mean(pd20,n);   sd=std(pd20,n) }
       else if(idx==10){n=c_pd50;   mu=mean(pd50,n);   sd=std(pd50,n) }
       else if(idx==11){n=c_pd100;  mu=mean(pd100,n);  sd=std(pd100,n) }
-      # 支持缺失：空集返回 0±0
+      # support : empty return 0±0
       return sprintf("%.6f±%.6f", (n?mu:0), (n?sd:0))
     }
 

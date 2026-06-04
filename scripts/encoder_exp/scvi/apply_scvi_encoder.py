@@ -55,7 +55,7 @@ def main():
     device = "cuda" if use_gpu else "cpu"
     print(f"[apply_scvi] Using device: {device}")
 
-    # 这里用 SCVI.load 会自动从保存的模型中恢复 anndata setup 信息
+    # hereusing SCVI.load will from anndata setup batch info
     print(f"[apply_scvi] Loading scVI model from: {os.path.abspath(args.model_dir)}")
     model = scvi.model.SCVI.load(args.model_dir, adata=adata)
 

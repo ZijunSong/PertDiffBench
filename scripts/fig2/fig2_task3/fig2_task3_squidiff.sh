@@ -2,14 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
-# 让 Python 立刻刷新 stdout/stderr（防止缓冲导致错误延迟打印）
+# Python stdout/stderr ( )
 export PYTHONUNBUFFERED=1
 
 # -------------------- Config --------------------
 TARGET_SPECIES=( "pig" "rabbit" "rat" )
 GENE_SIZE="${GENE_SIZE:-6619}"
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-100}"   # sample_squidiff.py 的 --n_samples
+N_SAMPLES="${N_SAMPLES:-100}"   # sample_squidiff.py  --n_samples
 
 echo "Changing directory to src/Squidiff..."
 pushd src/Squidiff >/dev/null
@@ -18,7 +18,7 @@ pushd src/Squidiff >/dev/null
 echo "######################################################################"
 echo "###   Running training on mouse_control_ifn data..."
 echo "######################################################################"
-# 训练阶段：直接把 stdout/stderr 打到终端；不写任何日志文件
+# train : directly stdout/stderr to ; file
 stdbuf -oL -eL python train_squidiff.py \
   --logger_path "../../logs/squidiff/task3/" \
   --data_path "../../data/fig2/task3_cross_species/mouse_control_ifn.h5ad" \
@@ -50,8 +50,8 @@ for species in "${TARGET_SPECIES[@]}"; do
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo -e "\n--- Running sampling iteration ${i}/${NUM_RUNS} for ${species} ---"
 
-    # 评估阶段：一边实时打印到终端，一边把同一份输出留在内存变量用于后续解析
-    # 关键技巧：先保留一个指向终端的 FD 3，再把 tee 的副本写到 FD 3；tee 的主输出进入命令替换被捕获到变量。
+    # eval : when to , output ininside amountfor after parse
+    # key : keep to FD 3, tee copywrite to FD 3; tee output to amount.
     exec 3>&1
     if ! EVAL_OUTPUT="$(
       stdbuf -oL -eL python sample_squidiff.py \
@@ -65,15 +65,15 @@ for species in "${TARGET_SPECIES[@]}"; do
         --data_path "../../data/fig2/task3_cross_species/${species}_control_ifn.h5ad" \
         2>&1 | tee /dev/fd/3
     )"; then
-      # 失败时：Traceback 已经被实时打到终端了；此处仅给出简短定位信息，并退出。
+      # when: Traceback already when to ; only batch info, and exit.
       echo "[ERROR] evaluation failed for species=${species} run=${i}" >&2
       popd >/dev/null
       exit 1
     fi
     exec 3>&-
 
-    # EVAL_OUTPUT 里是本次 run 的完整标准输出（仅内存，不落盘）
-    # ——严格只抽取可解析指标行——
+    # EVAL_OUTPUT run output (onlyinside , )
+    # -- canparse --
     run_tmp="$(mktemp)"
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
     grep -E "$pattern_re" <<< "${EVAL_OUTPUT}" > "${run_tmp}" || true
@@ -82,7 +82,7 @@ for species in "${TARGET_SPECIES[@]}"; do
     rm -f "${run_tmp}"
   done
 
-  # -------------------- Step 3: 聚合并写 CSV --------------------
+  # -------------------- Step 3: and CSV --------------------
   METRICS_CSV="${OUT_DIR}/metrics_${descriptive_name}.csv"
   awk -v ds="${descriptive_name}" -v num_runs="${NUM_RUNS}" -v method="Squidiff" -v csv_path="${METRICS_CSV}" '
 BEGIN{

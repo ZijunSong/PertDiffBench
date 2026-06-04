@@ -17,7 +17,7 @@ def prepare_h5ad_for_geneformer(h5ad_path: str):
     1) adata.var["ensembl_id"]
     2) adata.obs["n_counts"]
 
-    只有在发生实际修改时才写回文件，避免 HDF5 文件锁问题。
+     inoccurred when file, HDF5 file .
     """
 
     print(f"[prepare_h5ad_for_geneformer] Checking {h5ad_path}")
@@ -97,7 +97,7 @@ def main():
 
     os.makedirs(args.out_dir, exist_ok=True)
 
-    # 先保证 input h5ad 满足 Geneformer 的基本字段要求
+    # input h5ad Geneformer requires
     prepare_h5ad_for_geneformer(args.input_h5ad)
 
     encoder = GeneformerEncoder(
@@ -111,7 +111,7 @@ def main():
         input_h5ad=args.input_h5ad,
         output_dir=os.path.join(args.out_dir, "datasets"),
         output_prefix=args.prefix,
-        custom_attr_name_dict={},  # 若需要保留 obs label，可在这里加
+        custom_attr_name_dict={}, # mustkeep obs label, caninhere 
         resume=args.resume,
     )
 

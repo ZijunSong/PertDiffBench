@@ -12,7 +12,7 @@ OUTPUT_DIM="${OUTPUT_DIM:-3000}"
 N_SAMPLES="${N_SAMPLES:-100}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 
-LOGROOT="${LOGROOT:-logs/squidiff}"          # 仅传给 Python 内部，如其自行写日志与本脚本无关
+LOGROOT="${LOGROOT:-logs/squidiff}" # only Python inside , and 
 CKPT_ROOT="${CKPT_ROOT:-checkpoints/squidiff}"
 SAMPLES_ROOT="${SAMPLES_ROOT:-samples/fig2/task1}"
 
@@ -27,16 +27,16 @@ for seed in "${SEEDS[@]}"; do
   TRAIN_DATA="data/fig2/task1_unseen_pert/${dataset_name}_control_train.h5ad"
   TEST_DATA="data/fig2/task1_unseen_pert/${dataset_name}_control_test.h5ad"
 
-  # 用于统计评测输出
+  # for statsevaloutput
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
-    # ---- 目录（本次 run）----
+    # ---- directory ( run)----
     RUN_CKPT_DIR="${CKPT_ROOT}/${dataset_name}/run${i}"
     RUN_OUT_DIR="${SAMPLES_ROOT}/${dataset_name}/squidiff/run${i}"
     mkdir -p "${RUN_CKPT_DIR}" "${RUN_OUT_DIR}"
 
-    # ---- Step 1: Train（只打印到终端，不写额外日志文件）----
+    # ---- Step 1: Train ( to , outside file)----
     echo -e "\n--- Training model for ${dataset_name} (run ${i}) ---"
     python src/Squidiff/train_squidiff.py \
       --logger_path "${LOGROOT}/fig2_task2_${dataset_name}_run${i}" \
@@ -47,14 +47,14 @@ for seed in "${SEEDS[@]}"; do
 
     echo "--- Training for ${dataset_name} (run ${i}) complete. ---"
 
-    # ---- Step 2: Evaluate（实时把 stdout/stderr 打到终端，同时收集文本用于统计）----
+    # ---- Step 2: Evaluate ( when stdout/stderr to , when for stats)----
     echo -e "\n--- Evaluating (sampling) for ${dataset_name} (run ${i}) ---"
 
     PRED_H5AD="${RUN_OUT_DIR}/synthetic_ifn_run_${i}.h5ad"
     UMAP_PNG="${RUN_OUT_DIR}/umap_comparison_${i}.png"
     MODEL_PT="${RUN_CKPT_DIR}/model.pt"
 
-    # 若评估脚本报错，Traceback 会直接在终端显示；同时继续后续 run（保留原有容错语义）
+    # eval , Traceback willdirectlyin ; when after run (keep )
     output="$(
       python src/Squidiff/sample_squidiff.py \
         --model_path "${MODEL_PT}" \
@@ -67,11 +67,11 @@ for seed in "${SEEDS[@]}"; do
         --data_path "${TEST_DATA}" 2>&1 | { if [ -t 1 ]; then tee /dev/tty; else cat; fi; }
     )" || true
 
-    # 终端已实时打印，这里仅用于统计
+    # when , hereonlyfor stats
     all_outputs+="${output}\n"
   done
 
-  # ---- Step 3: 统计 + CSV 输出（均值±方差 以及 单次值）----
+  # ---- Step 3: stats + CSV output ( value± toand value)----
   CSV_FILE="${SAMPLES_ROOT}/${dataset_name}/squidiff/metrics_squidiff_${dataset_name}.csv"
   mkdir -p "$(dirname "${CSV_FILE}")"
 

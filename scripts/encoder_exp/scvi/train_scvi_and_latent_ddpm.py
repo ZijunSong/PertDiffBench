@@ -72,7 +72,7 @@ def train_scvi_phase(
 ):
     """
     Phase 1: Train (or load) scVI on input AnnData and export latent representations.
-    如果 model_dir 中已有训练完毕的模型，则直接 load 而不是重新训练。
+     model_dir train , directly load train.
 
     Returns:
         adata (with obsm["X_scvi"] filled),
@@ -112,7 +112,7 @@ def train_scvi_phase(
     model = None
 
     if os.path.isdir(model_dir):
-        # 简单检查一下目录是否像是一个 scVI 模型目录
+        # check underdirectorywhether scVI directory
         has_ckpt = any(
             fname.endswith(".pt") or fname.endswith(".pth")
             for fname in os.listdir(model_dir)
@@ -122,13 +122,13 @@ def train_scvi_phase(
                 f"[scVI] Detected existing trained model in '{model_dir}'. "
                 f"Loading model instead of training from scratch."
             )
-            # SCVI.load 会根据传入的 adata 重新绑定 AnnData
+            # SCVI.load willbased on adata AnnData
             model = scvi.model.SCVI.load(
                 model_dir,
                 adata=adata
             )
 
-    # 如果上面没能成功找到/加载模型，则正常初始化 + 训练
+    # on found/ , init + train
     if model is None:
         print(
             f"[scVI] No existing model found in '{model_dir}'. "
@@ -154,14 +154,14 @@ def train_scvi_phase(
             devices=devices,
         )
 
-        # 保存训练好的模型，方便下次直接 load
+        # trained , under directly load
         os.makedirs(model_dir, exist_ok=True)
         model.save(model_dir, overwrite=True)
         print(f"[scVI] ✔ Saved trained scVI model to directory: {model_dir}")
     else:
         print("[scVI] Using loaded SCVI model. Skipping training step.")
 
-    # 无论是 load 还是新训练的，都需要算 latent
+    # load train, must latent
     print("[scVI] Computing latent representation with model.get_latent_representation()...")
     latent = model.get_latent_representation()
     print(f"[scVI] Latent shape: {latent.shape}")
@@ -171,7 +171,7 @@ def train_scvi_phase(
     if out_dir and not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
 
-    # 保存原始表达 + latent（X 不改）
+    # originalexpressed + latent (X )
     adata.write_h5ad(out_h5ad)
     print(f"[scVI] ✔ Saved AnnData with 'X_scvi' in .obsm to: {out_h5ad}")
 
@@ -377,7 +377,7 @@ def main():
     #     print("No --ddpm-config provided. Skipping Phase 2 (DDPM in latent space).")
     #     return
 
-    # # 构造一个“latent 版本”的 h5ad：把 X 换成 X_scvi，用于 DDPM 训练
+    # # build "latent " h5ad: X X_scvi, for DDPM train
     # if args.latent_h5ad is not None:
     #     latent_h5ad_path = args.latent_h5ad
     # else:
@@ -388,7 +388,7 @@ def main():
     #     f"[DDPM-LATENT] Preparing latent-space h5ad for DDPM training: {latent_h5ad_path}"
     # )
     # adata_latent = adata.copy()
-    # adata_latent.X = latent  # 关键一步：用 scVI latent 替换表达矩阵
+    # adata_latent.X = latent # key : using scVI latent expressedmatrix
     # os.makedirs(os.path.dirname(latent_h5ad_path) or ".", exist_ok=True)
     # adata_latent.write_h5ad(latent_h5ad_path)
     # print(f"[DDPM-LATENT] ✔ Saved latent-space AnnData to: {latent_h5ad_path}")

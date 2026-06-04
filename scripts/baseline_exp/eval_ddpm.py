@@ -19,20 +19,20 @@ def main():
     cfg = OmegaConf.load(args.config)
     device = torch.device(cfg.train.device)
 
-    # 1) 重建模型结构
+    # 1) rebuild structure
     model = DDPM(cfg).to(device)
 
-    # 2) 加载 checkpoint，并只取 model_state
+    # 2) checkpoint, andtake only model_state
     ckpt_path = os.path.join(
         cfg.train.save_weight_dir,
         f"ckpt_{cfg.train.epoch}.pt"
     )
     ckpt = torch.load(ckpt_path, map_location=device)
-    # 注意这里取 "model_state"
+    # here "model_state"
     model.load_state_dict(ckpt["model_state"])
     model.eval()
 
-    # 3) 构造 sampler
+    # 3) build sampler
     sampler = GaussianDiffusionSampler(
         model.unet, 
         cfg.model.beta_1,
@@ -40,17 +40,17 @@ def main():
         cfg.model.unet.T
     ).to(device)
 
-    # 4) 从噪声采样
+    # 4) fromnoise 
     n = cfg.sample.batch_size
     noise = torch.randn(n, 3, 32, 32, device=device)
     with torch.no_grad():
         samples = sampler(noise)
     samples = samples * 0.5 + 0.5
 
-    # 5) 保存图片
+    # 5) fig 
     os.makedirs(cfg.sample.sampled_dir, exist_ok=True)
     for idx, img in enumerate(samples):
-        # img 是 [3, H, W]，在 [0,1] 区间
+        # img [3, H, W], in [0,1] 
         save_image(
             img,
             os.path.join(cfg.sample.sampled_dir, f"sample_{idx:03d}.png")

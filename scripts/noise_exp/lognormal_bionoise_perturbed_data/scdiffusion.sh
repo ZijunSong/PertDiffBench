@@ -9,13 +9,13 @@ export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 LOGDIR=${LOGDIR:-logs}
 NUM_GENES="${NUM_GENES:-6998}"
 NUM_RUNS=${NUM_RUNS:-3}
-METHOD_NAME=${METHOD_NAME:-scDiffusion}   # 仅作标注
+METHOD_NAME=${METHOD_NAME:-scDiffusion} # only 
 # -------------------------------------------------------
 
-# 细胞类型（可扩展）
+# celltype (can )
 CELL_TYPES=( 'CD4T' )
 
-# 噪声标准差
+# noise std
 NOISE_LEVELS=(0.1 0.25 0.5 1.0 1.5)
 
 mkdir -p "${LOGDIR}/add_lognormal_bionoise_output"
@@ -26,24 +26,24 @@ for cell_type in "${CELL_TYPES[@]}"; do
     echo "###   Starting pipeline: cell=${cell_type} | noise=${noise_level}"
     echo "######################################################################"
 
-    # -------------------- 数据路径（与你现有数据保持一致） --------------------
+    # -------------------- data path (and datastay consistent) --------------------
     train_h5="data/add_lognormal_bionoise_output/task1_train_${cell_type}_exp_lognorm_cv_${noise_level}.h5ad"
     valid_h5="data/add_lognormal_bionoise_output/task1_valid_${cell_type}_exp_lognorm_cv_${noise_level}.h5ad"
 
-    # 缺失则跳过
+    # skip
     if [ ! -f "$train_h5" ]; then
-      echo "警告: 未找到训练数据文件 '$train_h5'，跳过该组合。"
+      echo " : Training data file not found '$train_h5', skip ."
       continue
     fi
 
-    # -------------------- 输出根目录（与范例目录风格一致） --------------------
+    # -------------------- output directory (and directory ) --------------------
     vae_base="checkpoints/scdiffusion/vae_checkpoint/lognormal_bionoise/${cell_type}_${NUM_GENES}_noise_${noise_level}"
     diff_base="checkpoints/scdiffusion/diffusion_checkpoint/lognormal_bionoise/${cell_type}_${NUM_GENES}_noise_${noise_level}"
     cls_base="checkpoints/scdiffusion/classifier_checkpoint/2-classifier/lognormal_bionoise/${cell_type}_${NUM_GENES}_noise_${noise_level}"
     sample_base="samples/lognormal_bionoise/${cell_type}/scDiffusion_${NUM_GENES}_noise_${noise_level}"
     mkdir -p "${vae_base}" "${diff_base}" "${cls_base}" "${sample_base}"
 
-    # CSV 与日志（每 cell/noise 一份 CSV，便于横向比较）
+    # CSV and ( cell/noise CSV, to )
     csv_path="${sample_base}/metrics_${METHOD_NAME}_${cell_type}_noise_${noise_level}_hvg_${NUM_GENES}.csv"
     log_file="${LOGDIR}/add_lognormal_bionoise_output/scdiffusion_${cell_type}_hvg_${NUM_GENES}_noise_${noise_level}.log"
 
@@ -52,26 +52,26 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
       all_outputs=""
 
-      # -------------------- 3x（训练+测评） --------------------
+      # -------------------- 3x (train+eval) --------------------
       for (( i=1; i<=NUM_RUNS; i++ )); do
         echo
         echo "======================"
         echo " Run ${i}/${NUM_RUNS} | ${cell_type} | noise=${noise_level}"
         echo "======================"
 
-        # 分 run 的目录
+        # run directory
         vae_dir="${vae_base}/run${i}"
         diff_dir="${diff_base}/run${i}"
         cls_dir="${cls_base}/run${i}"
         run_sample_dir="${sample_base}/run${i}"
         mkdir -p "${vae_dir}" "${diff_dir}" "${cls_dir}" "${run_sample_dir}"
 
-        # 约定的权重文件名（与范例一致）
+        # filename (and )
         vae_ckpt="${vae_dir}/model_seed=0_step=9999.pt"
         diff_ckpt="${diff_dir}/my_diffusion/model010000.pt"
         cls_ckpt="${cls_dir}/model009999.pt"
 
-        # --- Step 1: 训练 VAE ---
+        # --- Step 1: train VAE ---
         echo
         echo "--- Step 1: Training VAE ---"
         pushd src/scDiffusion/VAE >/dev/null
@@ -82,7 +82,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           --save_dir "../../../${vae_dir}"
         popd >/dev/null
 
-        # --- Step 2: 训练 Diffusion ---
+        # --- Step 2: train Diffusion ---
         echo
         echo "--- Step 2: Training Diffusion ---"
         pushd src/scDiffusion >/dev/null
@@ -92,7 +92,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           --save_dir "../../${diff_dir}"
         popd >/dev/null
 
-        # --- Step 3: 训练分类器 ---
+        # --- Step 3: train ---
         echo
         echo "--- Step 3: Training Classifier ---"
         pushd src/scDiffusion >/dev/null
@@ -102,7 +102,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           --model_path "../../${cls_dir}"
         popd >/dev/null
 
-        # --- Step 4: 采样与评估 ---
+        # --- Step 4: andeval ---
         echo
         echo "--- Step 4: Sampling & Evaluation ---"
         pushd src/scDiffusion >/dev/null
@@ -125,10 +125,10 @@ for cell_type in "${CELL_TYPES[@]}"; do
         all_outputs+="$output\n"
       done
 
-      # -------------------- 统计 + 写 CSV（与范例一致） --------------------
+      # -------------------- stats + CSV (and ) --------------------
       echo
       echo -e "$all_outputs" | awk -v dataset="$cell_type" -v noise="$noise_level" -v num_runs="$NUM_RUNS" -v method="${METHOD_NAME}" -v csv_path="${csv_path}" '
-        # 捕获 11 个指标
+        # 11 
         /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
         /Mean Absolute Error \(MAE\):/               { mae[c_mae++] = $NF }
         /Differential Expression Score \(DES\):/     { des[c_des++] = $NF }
@@ -141,7 +141,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         /Pearson Delta \(top 50 DE genes\):/         { pearson_delta_de50[c_pearson_delta_de50++] = $NF }
         /Pearson Delta \(top 100 DE genes\):/        { pearson_delta_de100[c_pearson_delta_de100++] = $NF }
 
-        # mean|std 计算（按范例）
+        # mean|std ( )
         function mean_std(idx,    i,n,s,mu,ss,v) {
           if (idx==1)  { n=c_pds;                  for(i=0;i<n;i++){v=pds[i];                 s+=v} }
           else if(idx==2){ n=c_mae;                for(i=0;i<n;i++){v=mae[i];                 s+=v} }
@@ -172,7 +172,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
         }
 
-        # 取第 j 次 run 的原始值（0-based）
+        # j run originalvalue (0-based)
         function val(idx, j,    v){
           if (idx==1) v=pds[j];
           else if(idx==2) v=mae[j];
@@ -219,7 +219,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
           print "==================================================================\n";
 
-          # -------- 写 CSV：Method + 11(mean±std) + 每次 run 的 11 个原始值 --------
+          # -------- CSV: Method + 11(mean±std) + each run run 11 originalvalue --------
           metric_names[1]="PDS";
           metric_names[2]="MAE";
           metric_names[3]="DES";

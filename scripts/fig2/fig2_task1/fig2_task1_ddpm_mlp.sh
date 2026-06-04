@@ -43,7 +43,7 @@ for seed in "${SEEDS[@]}"; do
       --save-weight-dir "${run_ckpt_dir}" \
       --gene-nums "$NUM_GENES"
 
-    # ddpm+mlp 的默认权重文件名
+    # ddpm+mlp default filename
     ckpt="${run_ckpt_dir}/model_epoch_1000.pth"
     if [[ ! -f "$ckpt" ]]; then
       echo "[ERROR] checkpoint not found: $ckpt" >&2
@@ -69,7 +69,7 @@ for seed in "${SEEDS[@]}"; do
     fi
     printf "%s\n" "$EVAL_OUTPUT"
 
-    # ——严格只抽取可解析指标行——
+    # -- canparse --
     run_tmp="$(mktemp)"
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
     grep -E "$pattern_re" <<< "$EVAL_OUTPUT" > "$run_tmp" || true
@@ -78,7 +78,7 @@ for seed in "${SEEDS[@]}"; do
     rm -f "$run_tmp"
   done
 
-  # ——把聚合后的指标喂给 awk，计算 mean±std 与逐次取值，并落 CSV——
+  # -- after awk, mean±std and value, and CSV--
   awk -v ds="${eval_dataset_name}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
 BEGIN{
   c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=c_p_all=c_pd_all=c_pd20=c_pd50=c_pd100=0

@@ -51,7 +51,7 @@ def select_model(config):
 
 def get_sub_config(config, target):
     """
-    获取 包含 target 的 config
+    Return config entries whose keys contain the target substring.
     """
     sub_config = {}
     for k in config.keys():

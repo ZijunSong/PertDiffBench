@@ -6,8 +6,8 @@ model:
     hidden_dim: 512
 
   ae:
-    input_dim: 6998   # 基因数 (train/valid h5ad 的 n_vars)，运行时会被数据覆盖
-    latent_dim: 32    # CellFM 潜空间维度，运行时根据 X_cellfm 自动覆盖
+ input_dim: 6998 # number of genes (train/valid h5ad n_vars); overridden at runtime by data
+ latent_dim: 32 # CellFM latent dim; auto-overridden at runtime per X_cellfm
     hidden_dim: 1024
 
 train:

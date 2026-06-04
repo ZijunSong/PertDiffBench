@@ -19,7 +19,7 @@ def main():
     cfg = OmegaConf.load(args.config)
     device = torch.device(cfg.train.device)
 
-    # 1) 数据加载，返回 (x0, x1) 对
+    # 1) data , return (x0, x1) for
     dataset = PairedScrnaDataset(cfg.data.path)
     loader = DataLoader(
         dataset,
@@ -29,10 +29,10 @@ def main():
         pin_memory=True  # Use pinned memory for faster GPU transfers
     )
 
-    # 2) 模型
+    # 2) 
     model  = ScviDdpmMlp(cfg).to(device)
 
-    # 3) 优化器 & Scheduler
+    # 3) & Scheduler
     optim   = AdamW(model.parameters(), lr=cfg.train.lr, weight_decay=cfg.train.weight_decay)
     cosine  = CosineAnnealingLR(optim, T_max=cfg.train.epoch, eta_min=0)
     sched   = GradualWarmupScheduler(optim,

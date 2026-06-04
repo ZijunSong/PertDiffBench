@@ -5,13 +5,13 @@ set -e
 # ================= Configuration =================
 LOGDIR=${LOGDIR:-logs}
 NUM_RUNS=${NUM_RUNS:-3}
-METHOD_NAME=${METHOD_NAME:-scGen}   # CSV 第一列方法名
+METHOD_NAME=${METHOD_NAME:-scGen}   # CSV method column name
 N_SAMPLES=${N_SAMPLES:-6}
 
 # ================= Datasets ======================
 DATASETS=('random1' 'random2' 'random3')
 
-# 日志根目录
+# log root
 RUNLOG_ROOT="${LOGDIR}/scgen"
 mkdir -p "${RUNLOG_ROOT}"
 

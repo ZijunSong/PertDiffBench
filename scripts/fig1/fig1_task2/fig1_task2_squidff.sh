@@ -24,7 +24,7 @@ for random_type in "${RANDOM_TYPES[@]}"; do
   TRAIN_DATA="data/fig1/task2/task2_train_${random_type}_bulkRNAseq_exp.h5ad"
   TEST_DATA="data/fig1/task2/task2_test_${random_type}_bulkRNAseq_exp.h5ad"
 
-  # 统计所需的累计评测输出
+  # statsrequired evaloutput
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
@@ -32,12 +32,12 @@ for random_type in "${RANDOM_TYPES[@]}"; do
     echo -e " Run ${i}/${NUM_RUNS} : ${random_type}" | tee -a "${DATASET_LOG}"
     echo -e "======================="           | tee -a "${DATASET_LOG}"
 
-    # ---- 目录（本次 run）----
+    # ---- directory ( run)----
     RUN_CKPT_DIR="${CKPT_ROOT}/${random_type}/run${i}"
     RUN_OUT_DIR="${SAMPLES_ROOT}/${random_type}/squidiff/run${i}"
     mkdir -p "${RUN_CKPT_DIR}" "${RUN_OUT_DIR}"
 
-    # ---- Step 1: Train (该 run 独立训练，权重入 RUN_CKPT_DIR) ----
+    # ---- Step 1: Train ( run standalonetrain, RUN_CKPT_DIR) ----
     echo -e "\n--- Training model for ${random_type} (run ${i}) ---" | tee -a "${DATASET_LOG}"
     python src/Squidiff/train_squidiff.py \
       --logger_path "${LOGROOT}/task2_train_${random_type}_run${i}" \
@@ -48,14 +48,14 @@ for random_type in "${RANDOM_TYPES[@]}"; do
 
     echo "--- Training for ${random_type} (run ${i}) complete. ---" | tee -a "${DATASET_LOG}"
 
-    # ---- Step 2: Evaluate (本 run 使用对应权重) ----
+    # ---- Step 2: Evaluate ( run usingforshould ) ----
     echo -e "\n--- Evaluating (sampling) for ${random_type} (run ${i}) ---" | tee -a "${DATASET_LOG}"
 
     PRED_H5AD="${RUN_OUT_DIR}/synthetic_ifn_run_${i}.h5ad"
     UMAP_PNG="${RUN_OUT_DIR}/umap_comparison_${i}.png"
     MODEL_PT="${RUN_CKPT_DIR}/model.pt"
 
-    # 评测输出既打印也写入日志，同时并入 all_outputs 做统计
+    # evaloutput , whenand all_outputs stats
     output=$(
       python src/Squidiff/sample_squidiff.py \
         --model_path "${MODEL_PT}" \
@@ -72,7 +72,7 @@ for random_type in "${RANDOM_TYPES[@]}"; do
     all_outputs+="${output}\n"
   done
 
-  # ---- Step 3: 统计 + CSV 输出（均值±方差 以及 单次值）----
+  # ---- Step 3: stats + CSV output ( value± toand value)----
   CSV_FILE="${SAMPLES_ROOT}/${random_type}/squidiff/metrics_squidiff_${random_type}.csv"
   mkdir -p "$(dirname "${CSV_FILE}")"
 

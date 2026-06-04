@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scGen setting: 训练 = 训练集 (Control+IFN) + 测试集 Control；仅在 train 上做一一配对。
+# scGen setting: train = train set (Control+IFN) + test set Control; onlyin train on for.
 set -euo pipefail
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR

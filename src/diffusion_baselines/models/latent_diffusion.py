@@ -3,8 +3,8 @@
 import torch
 import torch.nn as nn
 from .base import DiffusionModel
-from .vae import VAE               # 假设 VAE 类里有 .encoder/.decoder 属性
-from .ddpm_model import UNet       # 使用同一套 U-Net 结构
+from .vae import VAE  # VAE exposes .encoder/.decoder
+from .ddpm_model import UNet  # same U-Net architecture as DDPM
 from .gaussian_diffusion import (
     GaussianDiffusionTrainer,
     GaussianDiffusionSampler
@@ -28,7 +28,7 @@ class LatentDiffusion(DiffusionModel):
         super().__init__()
 
         # 1) Build VAE encoder & decoder
-        #    Assume VAE(cfg.model.vae) 返回一个有 .encoder/.decoder 属性的实例
+        # VAE(cfg.model.vae) returns an instance with .encoder/.decoder
         vae_cfg = cfg.model.vae
         self.vae = VAE(vae_cfg)
         self.encoder = self.vae.encoder

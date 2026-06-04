@@ -224,7 +224,8 @@ def perturbation_eval(
         return scores
 
     import sys
-    # --- 1) 先算不依赖 DEG 的指标并立即打印，OOM 发生在 DEG/绘图时也能在 log 里留下这部分 ---
+    # --- 1) compute metrics that do not need DEG first and print immediately ---
+    # (so these remain in the log if OOM happens during DEG/plotting)
     true_np = true.detach().cpu().numpy()
     pred_np = pred.detach().cpu().numpy()
     control_np = control.detach().cpu().numpy()
@@ -262,7 +263,7 @@ def perturbation_eval(
     print(f"Pearson Delta (top 100 DE genes): {pd_de100:.4f}", flush=True)
     sys.stdout.flush()
 
-    # --- 2) DEG 与 DES（仅 DES 依赖 scanpy；此处若 OOM，上面 10 项已写入 log）---
+    # --- 2) DEG and DES (only DES needs scanpy; if OOM here, the 10 metrics above are already logged) ---
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         adata_pred = ad.AnnData(pred_np, obs={'condition': ["pred"] * len(pred)})

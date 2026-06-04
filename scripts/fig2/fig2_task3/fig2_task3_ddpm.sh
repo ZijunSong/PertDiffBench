@@ -18,7 +18,7 @@ CKPT_FILE="${CKPT_ROOT}/scrna_ddpm_epoch1000.pt"
 
 mkdir -p "$CKPT_ROOT"
 
-# ---------------- Step 1: 训练（一次） ----------------
+# ---------------- Step 1: train (once) ----------------
 echo "######################################################################"
 echo "###   Step 1: Training model on mouse_control_ifn data"
 echo "######################################################################"
@@ -33,7 +33,7 @@ if [[ ! -f "$CKPT_FILE" ]]; then
   exit 1
 fi
 
-# ---------------- Step 2: 各物种评测 ----------------
+# ---------------- Step 2: per-species eval ----------------
 for species in "${TARGET_SPECIES[@]}"; do
   echo -e "\n######################################################################"
   echo "###   Step 2: Evaluating model on target: ${species} (${NUM_RUNS} runs)"
@@ -66,7 +66,7 @@ for species in "${TARGET_SPECIES[@]}"; do
 
     printf "%s\n" "$EVAL_OUTPUT"
 
-    # ——严格只抽取可解析指标行，避免噪声——
+    # -- canparse , avoid noise--
     run_tmp="$(mktemp)"
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
     grep -E "$pattern_re" <<< "$EVAL_OUTPUT" > "$run_tmp" || true
@@ -75,7 +75,7 @@ for species in "${TARGET_SPECIES[@]}"; do
     rm -f "$run_tmp"
   done
 
-  # ---------------- 统计（AWK）并写 CSV ----------------
+  # ---------------- stats (AWK)and CSV ----------------
   awk -v ds="Evaluate_on_${species}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
 BEGIN{
   c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=c_p_all=c_pd_all=c_pd20=c_pd50=c_pd100=0

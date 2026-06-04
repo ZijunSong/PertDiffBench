@@ -1,39 +1,39 @@
 #!/bin/bash
-# 三次（训练+测评），聚合评测结果→写入 CSV
+# 3 train+eval runs; aggregate to CSV
 
-# 如果任何命令以非零状态退出，则立即退出脚本并打印错误。
+# Exit immediately on command failure.
 trap "echo ERROR && exit 1" ERR
 set -e
 
 # --------------------
-# 配置（仅路径相关最小改动）
+# (onlypath )
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 LOGDIR=${LOGDIR:-logs}
 NAME=${NAME:-v7.5}
 OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 NUM_RUNS=${NUM_RUNS:-3}
-METHOD_NAME="${METHOD_NAME:-scDiff}"          # 写到 CSV 里的方法名
-METHOD_DIR="${METHOD_DIR:-scdiff}"            # 用在 samples 目录最后一级
+METHOD_NAME="${METHOD_NAME:-scDiff}"          # write to CSV method name in
+METHOD_DIR="${METHOD_DIR:-scdiff}" # usingin samples directory after level
 # --------------------
 
-# 数据根目录（统一入口）
+# data root ( )
 DATA_ROOT="data/add_poisson_technoise_output"
 
-# 将 HOMEDIR 设置为项目根目录，假设脚本位于子目录中。
+# HOMEDIR asrepo root, Assume subdir .
 HOMEDIR="$(dirname "$(dirname "$(realpath "$0")")")/.."
 cd "$HOMEDIR"
-echo "当前工作目录: $(pwd)"
+echo "current directory: $(pwd)"
 
-# 日志根目录（按组合分别记录）
+# log root ( log)
 RUNLOG_ROOT="${LOGDIR}/perturbation_${NAME}"
 mkdir -p "${RUNLOG_ROOT}"
 
-# 定义要处理的所有细胞类型的数组
+# definemusthandleallcelltypearray
 CELL_TYPES=(
   'CD4T'
 )
 
-# 要评估的噪声等级
+# mustevalnoise level
 NOISE_LEVELS=(
   '0.25'
   '0.5'
@@ -42,50 +42,50 @@ NOISE_LEVELS=(
   '4.0'
 )
 
-# 外层循环：遍历每种细胞类型
+# outer loop: loop cell types
 for cell_type in "${CELL_TYPES[@]}"; do
-  # 中层循环：遍历每个噪声等级
+  # middle loop: loop noise levels
   for noise_level in "${NOISE_LEVELS[@]}"; do
     echo "######################################################################"
-    echo "###  处理细胞类型: $cell_type | 噪声等级: $noise_level"
+    echo "###  Processing: $cell_type | noise: $noise_level"
     echo "######################################################################"
 
-    # 动态构建带噪声的训练/验证数据文件名（路径统一到 DATA_ROOT）
+    # build noisy train path/validatedatafilename (path to DATA_ROOT)
     train_fname="task1_train_${cell_type}_exp_poisson_depth_${noise_level}.h5ad"
     valid_fname="task1_valid_${cell_type}_exp_poisson_depth_${noise_level}.h5ad"
 
-    # 检查训练文件是否存在
+    # checktrainfilewhetherexist
     if [ ! -f "${DATA_ROOT}/${train_fname}" ]; then
-      echo "警告: 未找到训练数据文件 '${DATA_ROOT}/${train_fname}'。跳过此组合。"
+      echo " : Training data file not found '${DATA_ROOT}/${train_fname}'.skip ."
       continue
     fi
 
-    # 数据设置字符串（仅路径名一致性）
+    # data (onlypathname )
     dataset_name="fig1_task1_${cell_type}_noise_${noise_level}"
     data_settings="data.params.train.params.dataset=${dataset_name} data.params.train.params.fname=${train_fname}"
     data_settings+=" data.params.test.params.dataset=${dataset_name} data.params.test.params.fname=${valid_fname}"
 
-    # 组合级别日志与输出目录
+    # level andoutput dir
     COMBO_TAG="${cell_type}_noise_${noise_level}"
     DATASET_LOG="${RUNLOG_ROOT}/${COMBO_TAG}.log"
     output_suffix="${cell_type}_noise_${noise_level}"
 
-    # 注意：samples 路径的最后一级目录名用 METHOD_DIR 控制
+    # : samples path after leveldirectorynameusing METHOD_DIR 
     OUTDIR_BASE="samples/poisson_technoise/${output_suffix}/${METHOD_DIR}"
     mkdir -p "${OUTDIR_BASE}"
 
     echo -e "\n==== $(date '+%F %T') | Begin ${COMBO_TAG} ====\n" | tee -a "${DATASET_LOG}"
 
-    # 收集多次评测输出
+    # evaloutput
     all_outputs=""
 
-    # 内层循环：多次运行脚本（每次调用 main.py = 一次训练+评测）
+    # inside : (each runcall main.py = train+eval)
     for (( i=1; i<=NUM_RUNS; i++ )); do
       echo -e "\n======================"                 | tee -a "${DATASET_LOG}"
       echo -e " Run ${i}/${NUM_RUNS} : ${COMBO_TAG}"    | tee -a "${DATASET_LOG}"
       echo -e "======================"                 | tee -a "${DATASET_LOG}"
 
-      # 仅修改 --custom_data_path 指向 DATA_ROOT；其余参数保持你的调用习惯
+      # only --custom_data_path to DATA_ROOT; args call 
       output=$(python src/scDiff/main.py \
         --custom_data_path "${DATA_ROOT}" \
         --base configs/scdiff/eval_perturbation.yaml \
@@ -95,14 +95,14 @@ for cell_type in "${CELL_TYPES[@]}"; do
         ${OFFLINE_SETTINGS} \
         ${data_settings} 2>&1) || true
 
-      # 打印并写入日志
+      # print and log
       echo "${output}" | tee -a "${DATASET_LOG}"
 
-      # 累积到统计文本（保留换行）
+      # append to stats text (keep )
       all_outputs+="${output}"$'\n'
     done
 
-    # ==== 统计到控制台 + 写入 CSV ====
+    # ==== statsto + CSV ====
     CSV_FILE="${OUTDIR_BASE}/metrics_${METHOD_DIR}_${COMBO_TAG}.csv"
     mkdir -p "$(dirname "${CSV_FILE}")"
 
@@ -119,7 +119,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
       }
       function to_num(x){ gsub(/[^0-9eE+\-\.]/,"",x); return x+0 }
 
-      # -------- 捕获 11 个指标（从日志中抽取数值）--------
+      # -------- 11 (from countvalue)--------
       /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++]                   = to_num($NF); next }
       /Mean Absolute Error \(MAE\):/              { mae[c_mae++]                   = to_num($NF); next }
       /Differential Expression Score \(DES\):/    { des[c_des++]                   = to_num($NF); next }
@@ -173,13 +173,13 @@ for cell_type in "${CELL_TYPES[@]}"; do
           std_val=(count>1)?sqrt(ss/(count-1)):0;
           printf "%-40s: %.4f ± %.4f\n", name, mu, std_val;
         } else {
-          printf "%-40s: N/A (未收集到数据)\n", name;
+          printf "%-40s: N/A (no data collected)\n", name;
         }
       }
 
       END {
         print "==================================================================";
-        printf " 最终统计：%s（%d 次运行）\n", combo, num_runs;
+        printf " stats: %s (%d )\n", combo, num_runs;
         print "==================================================================";
 
         print_stat("Perturbation Discrimination (PDS)", pds, c_pds);
@@ -197,7 +197,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
         print "==================================================================\n";
 
-        # ---------- CSV：Dataset, Noise, Method + mean±std + 每次运行 ----------
+        # ---------- CSV: Dataset, Noise, Method + mean±std + per run ----------
         metric_names[1]="PDS"; metric_names[2]="MAE"; metric_names[3]="DES";
         metric_names[4]="E-Distance"; metric_names[5]="MMD"; metric_names[6]="R2";
         metric_names[7]="Pearson (all genes)";
@@ -224,10 +224,10 @@ for cell_type in "${CELL_TYPES[@]}"; do
       }
     ' | tee -a "${DATASET_LOG}"
 
-    echo -e "\n--- 完成组合: ${COMBO_TAG} ---\n" | tee -a "${DATASET_LOG}"
+    echo -e "\n--- done : ${COMBO_TAG} ---\n" | tee -a "${DATASET_LOG}"
   done
 done
 
 echo "######################################################################"
-echo "###   所有细胞类型和噪声等级的处理已全部完成！                 ###"
+echo "###   All cell types and noise levels finished!                 ###"
 echo "######################################################################"

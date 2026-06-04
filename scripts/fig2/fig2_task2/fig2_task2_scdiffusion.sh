@@ -7,10 +7,10 @@ export LC_ALL=C LC_NUMERIC=C
 TARGET_SPECIES=( "pig" "rabbit" "rat" )
 NUM_GENES="${NUM_GENES:-6619}"
 NUM_RUNS="${NUM_RUNS:-3}"
-NUM_SAMPLES="${NUM_SAMPLES:-100}"     # 对应 classifier_sample.py 的 --num_samples
+NUM_SAMPLES="${NUM_SAMPLES:-100}"     # forshould classifier_sample.py  --num_samples
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
 
-# -------------------- Step 1: VAE 训练（一次） --------------------
+# -------------------- Step 1: VAE train (once) --------------------
 echo "######################################################################"
 echo "###   Step 1: Training VAE on mouse_control_ifn data"
 echo "######################################################################"
@@ -22,7 +22,7 @@ python VAE_train.py \
   --save_dir ../../../checkpoints/scdiffusion/vae_checkpoint/mouse_control_ifn
 popd >/dev/null
 
-# -------------------- Step 2: Diffusion 训练（一次） --------------------
+# -------------------- Step 2: Diffusion train (once) --------------------
 echo -e "\n######################################################################"
 echo "###   Step 2: Training Diffusion model on mouse_control_ifn data"
 echo "######################################################################"
@@ -33,7 +33,7 @@ python cell_train.py \
   --save_dir ../../checkpoints/scdiffusion/diffusion_checkpoint/mouse_control_ifn
 popd >/dev/null
 
-# -------------------- Step 3: Classifier 训练（一次） --------------------
+# -------------------- Step 3: Classifier train (once) --------------------
 echo -e "\n######################################################################"
 echo "###   Step 3: Training Classifier on mouse_control_ifn data"
 echo "######################################################################"
@@ -44,7 +44,7 @@ python classifier_train.py \
   --model_path ../../checkpoints/scdiffusion/classifier_checkpoint/2-classifier/mouse_control_ifn
 popd >/dev/null
 
-# 检查关键权重是否存在
+# checkkey whetherexist
 VAE_CKPT="checkpoints/scdiffusion/vae_checkpoint/mouse_control_ifn/model_seed=0_step=9999.pt"
 DIFF_CKPT="checkpoints/scdiffusion/diffusion_checkpoint/mouse_control_ifn/my_diffusion/model010000.pt"
 CLS_CKPT="checkpoints/scdiffusion/classifier_checkpoint/2-classifier/mouse_control_ifn/model009999.pt"
@@ -52,7 +52,7 @@ for f in "$VAE_CKPT" "$DIFF_CKPT" "$CLS_CKPT"; do
   [[ -f "$f" ]] || { echo "[ERROR] checkpoint not found: $f" >&2; exit 1; }
 done
 
-# -------------------- Step 4: 逐物种采样+评测（多次运行） --------------------
+# -------------------- Step 4: types +eval ( ) --------------------
 for species in "${TARGET_SPECIES[@]}"; do
   descriptive_name="Sample_on_${species}"
   echo -e "\n######################################################################"
@@ -92,7 +92,7 @@ for species in "${TARGET_SPECIES[@]}"; do
 
     printf "%s\n" "${EVAL_OUTPUT}"
 
-    # 仅抽取可解析指标行，避免噪声
+    # only canparse , avoid noise
     run_tmp="$(mktemp)"
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
     grep -E "$pattern_re" <<< "${EVAL_OUTPUT}" > "$run_tmp" || true
@@ -101,7 +101,7 @@ for species in "${TARGET_SPECIES[@]}"; do
     rm -f "$run_tmp"
   done
 
-  # -------------------- 统计并写 CSV（每物种一个文件） --------------------
+  # -------------------- statsand CSV ( types file) --------------------
   METRICS_CSV="${OUT_DIR}/metrics_${descriptive_name}.csv"
   awk -v ds="${descriptive_name}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
 BEGIN{

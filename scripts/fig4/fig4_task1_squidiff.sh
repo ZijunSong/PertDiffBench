@@ -1,10 +1,10 @@
 #!/bin/bash
-# Fig4 时间条件生成 — Squidiff（原文 addition：Δz_sem + DDIM 条件解码，生成 4h/6h）
+# Fig4 time-conditioned generation - Squidiff ( addition: Δz_sem + DDIM conditional decode, 4h/6h)
 
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
-# 进入项目根目录，保证 python 与相对路径一致（nohup 时 cwd 可能不是项目根）
+# cd to repo root for python paths (cwd may differ under nohup)
 HOMEDIR="$(cd "$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")" && pwd)"
 cd "$HOMEDIR"
 

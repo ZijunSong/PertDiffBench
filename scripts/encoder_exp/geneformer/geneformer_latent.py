@@ -9,14 +9,14 @@ from torch.utils.data import Dataset
 
 class PairedGeneformerLatentDataset(Dataset):
     """
-    Paired dataset in Geneformer latent space, 控制组 vs 处理组。
+    Paired dataset in Geneformer latent space, vs handle .
 
-    设计原则：
-      - 优先利用 obs['condition'] 来区分 ctrl vs treated。
-      - 自动根据 condition 猜 control label（'ctrl', 'control', 'unperturbed', 'DMSO' 等）。
-      - 如果没有 condition 列，就退化成“前半做 ctrl，后半做 treated”的简单划分。
+     : 
+      - using obs['condition'] ctrl vs treated.
+      - based on condition control label ('ctrl', 'control', 'unperturbed', 'DMSO' ).
+      - no condition cols, "before ctrl, after treated" .
 
-    不再强制要求 'is_control' 和 'pair_id' 列。
+    no longer requires 'is_control' 'pair_id' cols.
     """
 
     def __init__(self, h5ad_path: str, split: str = "train",
@@ -30,7 +30,7 @@ class PairedGeneformerLatentDataset(Dataset):
 
         obs = self.adata.obs
 
-        # --------- 1. split 过滤（如果存在的话） ----------
+        # --------- 1. split filter ( exist ) ----------
         if "split" in obs.columns:
             mask = (obs["split"] == split).to_numpy()
             print(f"[PairedGeneformerLatentDataset] Using obs['split'] == '{split}', "
@@ -52,13 +52,13 @@ class PairedGeneformerLatentDataset(Dataset):
 
         self.obs = obs[mask].copy()
 
-        # --------- 2. 根据 condition 构造 ctrl / treated 配对 ----------
+        # --------- 2. based on condition build ctrl / treated for ----------
         if cond_key in self.obs.columns:
             cond = self.obs[cond_key].astype(str)
             uniq = cond.unique().tolist()
             print(f"[PairedGeneformerLatentDataset] Found obs['{cond_key}'] with {len(uniq)} unique values.")
 
-            # 自动猜 control label
+            # control label
             if ctrl_label is None:
                 candidates = ["ctrl", "control", "unperturbed", "DMSO", "dmso", "vehicle"]
                 ctrl_label = None
@@ -67,7 +67,7 @@ class PairedGeneformerLatentDataset(Dataset):
                         ctrl_label = cand
                         break
                 if ctrl_label is None:
-                    # 兜底：使用出现次数最多的 condition 作为 control
+                    # : using count condition as control
                     value_counts = cond.value_counts()
                     ctrl_label = value_counts.index[0]
                 print(f"[PairedGeneformerLatentDataset] Inferred ctrl_label = '{ctrl_label}'")
@@ -93,7 +93,7 @@ class PairedGeneformerLatentDataset(Dataset):
             self._build_pairs_half_half()
 
     def _build_pairs_half_half(self):
-        """如果没有 condition 信息，就简单地把前半当 ctrl，后半当 treated。"""
+        """ no condition batch info, before ctrl, after treated."""
         n = self.latent.shape[0]
         if n < 2:
             raise ValueError("Not enough cells to build pairs.")

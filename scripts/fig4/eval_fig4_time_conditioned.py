@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Fig4 时间条件生成 — 通用评估脚本。
-输入：测试集 h5ad（含 treatment_time 4h/6h）、生成结果 h5ad（含 treatment_time）、
-     可选训练集 h5ad（用于 0h 作为 control 计算 delta 类指标）。
-按 treatment_time 分组，对每个时间点计算 11 项指标，再取平均并打印/写 CSV。
+Fig4 time-conditioned generation - usingeval .
+input: test set h5ad (with treatment_time 4h/6h), results h5ad (with treatment_time), 
+     optionaltrain set h5ad (for 0h as control delta ).
+ treatment_time , foreachwhen 11 items , and / CSV.
 """
 
 import argparse
@@ -14,7 +14,7 @@ import scanpy as sc
 import sys
 import os
 
-# 项目根目录
+# repo root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from utils.metrics import (
     compute_mae,

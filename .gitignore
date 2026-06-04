@@ -1,8 +1,8 @@
 # =============================================================================
-# PertDiffBench — 投稿/公开仓库：忽略大文件、实验产物与本地临时文件
+# PertDiffBench — public release: ignore large artifacts and local temp files
 # =============================================================================
 
-# --- 实验输出目录 ---
+# --- Experiment outputs ---
 checkpoints/
 data/
 !src/scDiff/scdiff/data/
@@ -12,25 +12,25 @@ output/
 samples/
 **/results/
 
-# --- 稿件草稿、内部试验、结果打包（勿上传 GitHub）---
+# --- Manuscript drafts, internal experiments, result bundles ---
 writing/
 new_method/
 fig4_time_imputation_bundle*/
 fig4_time_imputation_bundle*.zip
 *.zip
 
-# --- 补充实验（supp）：仅保留脚本，忽略运行产物 ---
+# --- Supplementary runs (supp): keep scripts only, ignore run artifacts ---
 supp/logs/
 supp/**/*.pt
 supp/**/*.ckpt
 
-# --- Encoder / 表征中间结果（体积极大）---
+# --- Encoder / representation intermediates (very large) ---
 scripts/encoder_exp/collected_encoder_latent_npy/
 **/collected_encoder_latent_npy/
 **/encoder_input_*_latent.npy
 src/scFoundation/enhancement/*_embedding.npy
 
-# --- 数据文件（GitHub 单文件限 100MB）---
+# --- Data files (GitHub 100MB per-file limit) ---
 *.h5ad
 **/preprocessing/*.h5ad
 **/encoder_exp/**/*.h5ad
@@ -39,7 +39,7 @@ src/scFoundation/enhancement/*_embedding.npy
 **/preprocessing/data/
 **/preprocessed_task2_*_exp_info.xlsx
 
-# --- 预训练权重与打包资源（用 README / Drive / Zenodo 分发）---
+# --- Pretrained weights and archives (distribute via README / Drive / Zenodo) ---
 *.safetensors
 *.tar.gz
 *.tar
@@ -58,12 +58,12 @@ optimizer.pt
 *.pth
 training_args.bin
 
-# --- 其它大二进制 / 缓存表 ---
+# --- Other large binaries / caches ---
 *.parquet
 **/chembl_smiles_cache.json
 
 # =============================================================================
-# Python / IDE / 工具链
+# Python / IDE / tooling
 # =============================================================================
 __pycache__/
 *.py[cod]
@@ -93,12 +93,12 @@ wandb/
 **/outputs/
 **/multirun/
 
-# Numba 等本地 cache（若误拷进仓库根）
+# Numba cache (if copied into repo root by mistake)
 cache/
 .numba_cache/
 
 # =============================================================================
-# 日志与并行运行临时文件
+# Logs and parallel-run temp files
 # =============================================================================
 *.log
 *.nohup.log
@@ -118,7 +118,7 @@ scripts/fig2/fig2_task2_plus/.squidiff_*.pid
 scripts/fig2/fig2_task2_plus/.squidiff_split_tmp/
 scripts/fig2/fig2_task2_plus/.parallel_holdout_split/
 
-# 临时出图
+# Temporary figures
 *_temp.png
 *_temp.svg
 

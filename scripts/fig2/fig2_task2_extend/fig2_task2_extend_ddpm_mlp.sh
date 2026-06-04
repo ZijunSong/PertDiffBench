@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scGen setting: 训练数据 = 训练集 (Control+IFN) + 测试集 Control；仅在 train 上做一一配对（分布到分布）。
+# scGen setting: traindata = train set (Control+IFN) + test set Control; onlyin train on for ( to ).
 set -euo pipefail
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR
@@ -16,7 +16,7 @@ METHOD_NAME="${METHOD_NAME:-mlp_ddpm_mlp}"
 export WANDB_DISABLED=true
 export WANDB_MODE=disabled
 
-# 项目根目录（本脚本在 scripts/fig2/fig2_task2_extend 下）
+# repo root ( in scripts/fig2/fig2_task2_extend under)
 HOMEDIR="$(cd "$(dirname "$(realpath "$0")")/../../.." && pwd)"
 cd "$HOMEDIR"
 echo "PWD: $(pwd)"
@@ -27,7 +27,7 @@ CKPT_ROOT="checkpoints/fig2/task2_extend_scgen/pretrain_CD4T/${METHOD_NAME}"
 OUT_ROOT="samples/fig2/task2_extend_scgen/pretrain_CD4T/${METHOD_NAME}"
 mkdir -p "${CKPT_ROOT}" "${OUT_ROOT}"
 
-# 构建 scGen 合并 h5ad（训练集 + 测试集 Control）
+# scGen and h5ad (train set + test set Control)
 if [[ ! -f "${COMBINED_H5}" ]]; then
   echo "### Building scGen combined train + test_control h5ad..."
   python scripts/fig2/fig2_task2_extend/build_scgen_combined_h5ad.py --data-dir "${DATA_DIR}"

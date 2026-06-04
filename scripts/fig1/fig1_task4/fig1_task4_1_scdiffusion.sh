@@ -23,12 +23,12 @@ NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 
-# 项目根目录（脚本位于子目录时自动回到根）
+# repo root ( subdirwhen to )
 HOMEDIR="$(dirname "$(dirname "$(realpath "$0")")")/.."
 cd "${HOMEDIR}"
 echo "Current working directory: $(pwd)"
 
-# 评估脚本需要在日志里打印如下 11 行（末尾为数值）：
+# eval mustin under 11 ( ascountvalue): 
 # Perturbation Discrimination Score (PDS): <num>
 # Mean Absolute Error (MAE): <num>
 # Differential Expression Score (DES): <num>
@@ -57,29 +57,29 @@ for dataset in "${!DATASETS[@]}"; do
   train_h5ad="data/fig1/task4/task4_${dataset}_train.h5ad"
   test_h5ad="data/fig1/task4/task4_${dataset}_test.h5ad"
 
-  # 单一 CSV：包含 mean±std + 每次 run 的原始值
+  # CSV: contain mean±std + each run run originalvalue
   METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv"
 
-  # 累积所有评估输出文本（仅评估阶段标准输出）
+  # allevaloutput (onlyeval output)
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
     run_tag="run${i}"
     echo -e "\n=== [${dataset}] ${run_tag}: Train(VAE+Diffusion+Classifier) + Sample/Eval ==="
 
-    # 所有输出目录（按 run 隔离）
+    # alloutput dir ( run )
     VAE_DIR="checkpoints/scdiffusion/vae_checkpoint/task4_1/${dataset}/${run_tag}"
     DIFF_DIR="checkpoints/scdiffusion/diffusion_checkpoint/task4_1/${dataset}/${run_tag}"
     CLS_DIR="checkpoints/scdiffusion/classifier_checkpoint/2-classifier/task4_1/${dataset}/${run_tag}"
     SAMP_DIR="${CSV_ROOT}/${run_tag}"
     mkdir -p "${VAE_DIR}" "${DIFF_DIR}" "${CLS_DIR}" "${SAMP_DIR}"
 
-    # 约定文件名
+    # filename
     VAE_WEIGHTS="${VAE_DIR}/model_seed=0_step=9999.pt"
     DIFF_WEIGHTS="${DIFF_DIR}/my_diffusion/model010000.pt"
     CLS_WEIGHTS="${CLS_DIR}/model009999.pt"
 
-    # 日志文件
+    # file
     log_file="${LOG_ROOT}/${dataset}_${run_tag}.log"
     echo "[INFO] Log -> ${log_file}"
 
@@ -109,7 +109,7 @@ for dataset in "${!DATASETS[@]}"; do
       echo "[$(date '+%F %T')] >>> Step 4: Sampling & Evaluation (${dataset}, ${run_tag})"
     } 2>&1 | tee "${log_file}"
 
-    # 只捕获评估阶段标准输出到变量（同时追加到日志）
+    # eval outputto amount ( when to )
     eval_output="$(
       ( cd src/scDiffusion && \
         python classifier_sample.py \
@@ -131,7 +131,7 @@ for dataset in "${!DATASETS[@]}"; do
     echo "[$(date '+%F %T')] >>> Finished (${dataset}, ${run_tag})" | tee -a "${log_file}"
   done
 
-  # 解析所有 run 的评估输出，生成 CSV（格式与范例一致）
+  # parseall run evaloutput, CSV ( and )
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
     /Mean Absolute Error \(MAE\):/               { mae[c_mae++] = $NF }
@@ -217,8 +217,8 @@ for dataset in "${!DATASETS[@]}"; do
         for (i=1;i<=11;i++) row = row sprintf(",%.6f", val(i, r));
       }
 
-      print header > csv_path;     # 每个数据集写自己的表头
-      print row    >> csv_path;    # 并追加数据行
+      print header > csv_path; # eachdata ownheader
+      print row >> csv_path; # and data 
       close(csv_path);
       printf("CSV written: %s\n", csv_path);
     }

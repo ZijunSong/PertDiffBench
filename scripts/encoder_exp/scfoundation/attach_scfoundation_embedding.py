@@ -44,14 +44,14 @@ def main():
     emb = np.load(args.embedding_npy)
     print(f"[attach_scf] Embedding shape: {emb.shape}")
 
-    # 基本 sanity check：cell 数量要一致
+    # sanity check: cell countamountmust 
     if adata_pre.n_obs != emb.shape[0]:
         raise ValueError(
             f"Mismatch between preprocessed AnnData cells ({adata_pre.n_obs}) "
             f"and embedding rows ({emb.shape[0]})."
         )
 
-    # 再确保 cell 名称是一一对应的，如果不对应就按名称对齐
+    # Ensure cell name forshould, forshould name align
     if np.array_equal(adata_orig.obs_names.values, adata_pre.obs_names.values):
         print("[attach_scf] obs_names are aligned between orig and preprocessed AnnData.")
         emb_aligned = emb
@@ -63,7 +63,7 @@ def main():
             raise ValueError("No overlapping cells between orig and preprocessed AnnData.")
 
         # build name -> row index mapping in preprocessed AnnData
-        # BEFORE any subsetting，embedding 的行顺序与 adata_pre.obs_names 一致
+        # BEFORE any subsetting, embedding and adata_pre.obs_names 
         cell_to_row = {cell: i for i, cell in enumerate(adata_pre.obs_names)}
 
         # determine embedding row indices in the order of `common_cells`
@@ -71,10 +71,10 @@ def main():
 
         emb_aligned = emb[idx, :]
 
-        # subset original AnnData to these cells，顺序与 common_cells 一致
+        # subset original AnnData to these cells, and common_cells 
         adata_orig = adata_orig[common_cells].copy()
 
-    # 把 embedding 塞到 obsm 里
+    # embedding to obsm 
     adata_orig.obsm[args.obsm_key] = emb_aligned
 
     out_dir = os.path.dirname(args.out_h5ad)

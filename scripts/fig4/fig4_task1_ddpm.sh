@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fig4 时间条件生成 — DDPM（训练 DDPM + 单独为 DDPM 训练 VAE，用该 VAE 做 2h/8h 线性插值生成 4h/6h）
+# Fig4 time-conditioned generation - DDPM (train DDPM + separateas DDPM train VAE, using VAE 2h/8h linear interpolation 4h/6h)
 
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
@@ -18,7 +18,7 @@ TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
 TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 
 ckpt_base="checkpoints/ddpm/fig4_${NUM_GENES}"
-# DDPM 专用 VAE（仅 encoder+decoder），与 DDPM+MLP 独立
+# DDPM using VAE (only encoder+decoder), and DDPM+MLP standalone
 FIG4_AE_DDPM_BASE="checkpoints/fig4_ae_ddpm/fig4_${NUM_GENES}"
 FIG4_AE_DDPM_NAME="ae_epoch_1000.pth"
 sample_base="samples/fig4/scrna_ddpm_scrna_${NUM_GENES}"
@@ -52,7 +52,7 @@ mkdir -p "${ckpt_base}" "${sample_base}" "${LOGDIR}/fig4_task1"
       --save-weight-dir "${save_dir_run}" \
       --gene-nums "${NUM_GENES}" || true
 
-    echo "--- Sampling 4h/6h (VAE linear interp, DDPM 专用 AE) [run ${run_idx}] ---"
+    echo "--- Sampling 4h/6h (VAE linear interp, DDPM using AE) [run ${run_idx}] ---"
     ae_ckpt="${FIG4_AE_DDPM_BASE}/run${run_idx}/${FIG4_AE_DDPM_NAME}"
     if [ -f "${ae_ckpt}" ]; then
       python scripts/fig4/sample_fig4_vae_linear_interp.py \

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# 如果任何命令以非零状态退出，则立即退出脚本。
+# Exit immediately if any command fails.
 set -e
 
-# 定义要评估的所有细胞类型的数组
+# definemustevalallcelltypearray
 CELL_TYPES=(
     # 'B'
     'CD4T'
@@ -14,38 +14,38 @@ CELL_TYPES=(
     # 'NK'
 )
 
-# 新增：定义要评估的所有噪声等级（标准差）的数组
+# : definemustevalallnoise level ( )array
 NOISE_LEVELS=(0.1 0.25 0.5 1.0 1.5)
 
-# 定义通用参数
+# define usingargs
 GENE_SIZE="6998"
 NUM_RUNS=3
 
-# 外层循环：遍历每种细胞类型
+# outer loop: loop cell types
 for cell_type in "${CELL_TYPES[@]}"; do
-    # 中层循环：遍历每个噪声等级
+    # middle loop: loop noise levels
     for noise_level in "${NOISE_LEVELS[@]}"; do
         echo "######################################################################"
-        echo "###  处理细胞类型: $cell_type | 噪声等级: $noise_level"
+        echo "###  Processing: $cell_type | noise: $noise_level"
         echo "######################################################################"
 
-        # 动态构建带噪声的训练数据文件路径
+        # build noisy train pathdatafilepath
         train_data_file="data/add_gaussian_noise_output/task1_train_CD4T_exp_noise_std_${noise_level}.h5ad"
 
-        # 检查带噪声的训练文件是否存在，如果不存在则跳过
+        # check noisetrainfilewhetherexist, exist skip
         if [ ! -f "$train_data_file" ]; then
-            echo "警告: 未找到训练数据文件 '$train_data_file'。将跳过此组合。"
+            echo " : Training data file not found '$train_data_file'.skip this combo."
             continue
         fi
 
-        # --- 第 1 步: 为当前细胞类型和噪声等级训练模型 (运行一次) ---
-        echo -e "\n--- 正在为 $cell_type (噪声: $noise_level) 训练模型 ---"
+        # --- 1 : ascurrentcelltype noise leveltrain ( ) ---
+        echo -e "\n--- Running $cell_type (noise: $noise_level) train ---"
         
-        # 动态定义检查点目录
+        # definecheck directory
         checkpoint_dir="checkpoints/fig1/task1/${cell_type}/squidiff_${GENE_SIZE}_noise_${noise_level}"
         mkdir -p "$checkpoint_dir"
 
-        # 运行训练脚本
+        # train 
         python src/Squidiff/train_squidiff.py \
             --logger_path "logs/squidiff/${cell_type}_train_HVG_${GENE_SIZE}_noise_${noise_level}" \
             --data_path "$train_data_file" \
@@ -53,17 +53,17 @@ for cell_type in "${CELL_TYPES[@]}"; do
             --gene_size "$GENE_SIZE" \
             --output_dim "$GENE_SIZE" 2>&1 | tee "logs/train_${cell_type}_noise_${noise_level}.log"
 
-        echo "--- 为 $cell_type (噪声: $noise_level) 的训练已完成。 ---"
+        echo "--- as $cell_type (noise: $noise_level) train done. ---"
 
-        # 用于存储所有推断运行的累积输出的变量
+        # for all output amount
         all_outputs=""
 
-        # --- 第 2 步: 为当前细胞类型和噪声等级多次运行推断 ---
-        echo -e "\n--- 正在为 $cell_type (噪声: $noise_level) 开始推断 ($NUM_RUNS 次运行) ---"
+        # --- 2 : ascurrentcelltype noise level ---
+        echo -e "\n--- Running $cell_type (noise: $noise_level) Start ($NUM_RUNS ) ---"
         for (( i=1; i<=NUM_RUNS; i++ )); do
-            echo -e "\n--- 正在为 $cell_type (噪声: $noise_level) 运行第 $i/$NUM_RUNS 次推断迭代 ---"
+            echo -e "\n--- Running $cell_type (noise: $noise_level) run $i/$NUM_RUNS  inference iterations ---"
             
-            # 运行 sample_squidiff.py 脚本
+            # sample_squidiff.py 
             output=$(python src/Squidiff/sample_squidiff.py \
                 --model_path "${checkpoint_dir}/model.pt" \
                 --gene_size "$GENE_SIZE" \
@@ -73,17 +73,17 @@ for cell_type in "${CELL_TYPES[@]}"; do
                 --umap_plot "samples/fig1/task1/${cell_type}/squidiff_${GENE_SIZE}_noise_${noise_level}/umap_comparison_${i}.png" \
                 --data_path "data/add_gaussian_noise_output/task1_valid_CD4T_exp_noise_std_${noise_level}.h5ad" 2>&1) || true
             
-            # 打印当前运行的输出
+            # current output
             echo "$output"
             
-            # 将当前输出附加到累积变量，用换行符分隔
+            # currentoutput to amount, using 
             all_outputs+="$output\n"
         done
 
-        # --- 第 3 步: 使用 AWK 进行统计计算和打印 ---
+        # --- 3 : using AWK runstats ---
         echo -e "\n"
         echo "$all_outputs" | awk -v dataset="$cell_type" -v noise="$noise_level" -v num_runs="$NUM_RUNS" '
-            # AWK 脚本开始：从新的评估脚本输出中捕获所有指标
+            # AWK Start: from eval output all 
             /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
             /Mean Absolute Error \(MAE\):/ { mae[c_mae++] = $NF }
             /Differential Expression Score \(DES\):/ { des[c_des++] = $NF }
@@ -96,7 +96,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
             /Pearson Delta \(top 50 DE genes\):/ { pearson_delta_de50[c_pearson_delta_de50++] = $NF }
             /Pearson Delta \(top 100 DE genes\):/ { pearson_delta_de100[c_pearson_delta_de100++] = $NF }
 
-            # 可重用函数，用于计算和打印均值/标准差
+            # can using count, for value/ 
             function print_stat(name, data, count) {
                 if (count > 0) {
                     sum = 0;
@@ -113,13 +113,13 @@ for cell_type in "${CELL_TYPES[@]}"; do
                     
                     printf "%-40s: %.4f ± %.4f\n", name, mean, std_dev;
                 } else {
-                    printf "%-40s: N/A (未收集到数据)\n", name;
+                    printf "%-40s: N/A (no data collected)\n", name;
                 }
             }
 
             END {
                 print "==================================================================";
-                printf " %s (噪声: %s) 的最终统计结果 (%d 次运行)\n", dataset, noise, num_runs;
+                printf " %s (noise: %s) final stats (%d )\n", dataset, noise, num_runs;
                 print "==================================================================";
                 
                 print_stat("Perturbation Discrimination (PDS)", pds, c_pds);
@@ -140,10 +140,10 @@ for cell_type in "${CELL_TYPES[@]}"; do
             }
         '
         
-        echo -e "\n--- 完成细胞类型: $cell_type | 噪声等级: $noise_level 的流程 ---\n"
-    done # 噪声等级循环结束
-done # 细胞类型循环结束
+        echo -e "\n--- Done: $cell_type | noise: $noise_level ---\n"
+    done # noise level 
+done # celltype 
 
 echo "######################################################################"
-echo "###   所有细胞类型和噪声等级的处理已全部完成！                 ###"
+echo "###   All cell types and noise levels finished.                 ###"
 echo "######################################################################"

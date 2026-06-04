@@ -60,7 +60,7 @@ RAW_FILE_NAME_DICT = {
     "seed567": "seed567_control_train.h5ad",
     "task2_B": "task2_test_B_exp.h5ad",
     "task2_NK": "task2_test_NK_exp.h5ad",
-    # fig2 task2+ leave-one-out：train/test 均为同目录下固定文件名，由 custom_data_path 指向各 loo_<CT>/<p*>/
+    # fig2 task2+ leave-one-out: fixed train/test filenames per loo_<CT>/<p*> via custom_data_path
     "task2_loo_B": "task2_test_exp.h5ad",
     "task2_loo_CD4T": "task2_test_exp.h5ad",
     "task2_loo_CD8T": "task2_test_exp.h5ad",
@@ -370,7 +370,7 @@ class PerturbationBase(ABC):
         print("### Keys:")
         print(self.pert_key)
         print(self.stim_key)
-        # 当 splits['test'] > 0 时（如独立 test 文件），将所有刺激细胞标为 test，保证评估有样本
+        # when splits['test'] > 0 (e.g. separate test file), mark all stimulated cells as test for eval
         use_test_ratio = splits.get('test', 0) > 0
         if use_test_ratio:
             self.adata.obs.loc[

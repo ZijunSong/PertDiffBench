@@ -10,7 +10,7 @@ NAME="${NAME:-v7.5}"
 OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 NUM_RUNS="${NUM_RUNS:-3}"
 N_SAMPLES="${N_SAMPLES:-1000}"
-# 与 fig2_task1_scdiff_moa_diff.sh 保持一致，避免评测时 OOM（E-Distance/MMD 已在 utils/metrics.py 做子采样）
+# and fig2_task1_scdiff_moa_diff.sh stay consistent, evalwhen OOM (E-Distance/MMD in utils/metrics.py )
 BATCH_SIZE="${BATCH_SIZE:-3072}"
 NUM_WORKERS="${NUM_WORKERS:-0}"
 T_SAMPLE="${T_SAMPLE:-1000}"
@@ -23,7 +23,7 @@ echo "Current working directory: $(pwd)"
 
 mkdir -p "$DATA_ROOT"
 
-# 默认跑全套；也可通过环境变量只跑指定物种：
+# default ; canvia amount specify types: 
 #   TARGET_SPECIES="rabbit rat" nohup bash ... &
 TARGET_SPECIES="${TARGET_SPECIES:-mouse pig rabbit rat}"
 
@@ -70,7 +70,7 @@ for test_species in ${TARGET_SPECIES}; do
   METRICS_CSV="${OUT_ROOT}/metrics_leave1out_${test_species}.csv"
   mkdir -p "$OUT_ROOT" "$LOG_ROOT"
 
-  # 如果 metrics 已经存在，认为该物种 fold 已完成，自动跳过（避免重复计算）
+  # metrics alreadyexist, as types fold done, skip ( )
   if [[ -s "${METRICS_CSV}" ]]; then
     echo "### Skip leave1out_${test_species}: metrics already exists at ${METRICS_CSV}"
     continue

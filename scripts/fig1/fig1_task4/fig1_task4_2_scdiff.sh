@@ -11,7 +11,7 @@ LOGDIR=${LOGDIR:-logs}
 NAME=${NAME:-v7.5}
 OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 NUM_RUNS=${NUM_RUNS:-3}
-METHOD_NAME=${METHOD_NAME:-scDiff}   # CSV 第一列方法名
+METHOD_NAME=${METHOD_NAME:-scDiff}   # CSV method column name
 # --------------------
 
 # Project root
@@ -31,7 +31,7 @@ for prefix in "${PREFIXES[@]}"; do
   echo "###   Starting pipeline for dataset: ${dataset_name}"
   echo "######################################################################"
 
-  # scDiff 的 hydra 参数
+  # scDiff  hydra args
   data_settings=(
     "data.params.train.params.dataset=${dataset_name}"
     "data.params.train.params.fname=${train_fname}"
@@ -39,17 +39,17 @@ for prefix in "${PREFIXES[@]}"; do
     "data.params.test.params.fname=${test_fname}"
   )
 
-  # 仅保留 CSV 产物目录
+  # onlykeep CSV directory
   CSV_DIR="samples/fig1/task4_2/${prefix}/scdiff"
   SUMMARY_CSV="${CSV_DIR}/${dataset_name}.csv"
   mkdir -p "${CSV_DIR}"
 
-  # 聚合所有 run 的原始输出，供 AWK 解析
+  # all run originaloutput, AWK parse
   ALL_OUT_TMP="$(mktemp)"
 
   for ((i=1; i<=NUM_RUNS; i++)); do
     echo -e "\n--- Running iteration ${i}/${NUM_RUNS} for ${dataset_name} ---"
-    # 关键点：用 tee 既把输出打到 stdout（让 nohup 接走），又写入聚合临时文件
+    # key : using tee output to stdout ( nohup ), tempfile
     if python src/scDiff/main.py \
         --custom_data_path data/fig1/task4 \
         --base configs/scdiff/eval_perturbation.yaml \
@@ -60,17 +60,17 @@ for prefix in "${PREFIXES[@]}"; do
         "${data_settings[@]}" \
         2>&1 | tee -a "${ALL_OUT_TMP}"
     then
-      # run 之间加空行，便于正则稳健
+      # run empty , 
       echo >> "${ALL_OUT_TMP}"
     else
       echo "[ERROR] Run ${i} failed." >&2
-      exit 1   # 想遇错继续可改成 continue
+      exit 1 # can continue
     fi
   done
 
   echo -e "\n===== Final statistics for ${dataset_name} (${NUM_RUNS} runs) ====="
 
-  # 依赖评估脚本打印以下 11 行标签：
+  # eval tounder 11 : 
   # 1) Perturbation Discrimination Score (PDS): <num>
   # 2) Mean Absolute Error (MAE): <num>
   # 3) Differential Expression Score (DES): <num>
@@ -144,7 +144,7 @@ for prefix in "${PREFIXES[@]}"; do
       metric_names[10]="Pearson Delta (top 50 DE genes)";
       metric_names[11]="Pearson Delta (top 100 DE genes)";
 
-      # Header（覆盖写入）
+      # Header ( )
       header="Dataset,Method";
       for(i=1;i<=11;i++) header=header "," metric_names[i] " (mean±std)";
       for(r=1;r<=num_runs;r++) for(i=1;i<=11;i++) header=header ",Run" r " " metric_names[i];
@@ -153,13 +153,13 @@ for prefix in "${PREFIXES[@]}"; do
       row=ds "," method;
       for(i=1;i<=11;i++) row=row "," mean_std(i);
 
-      # runs（按 0..num_runs-1）
+      # runs ( 0..num_runs-1)
       for(r=0;r<num_runs;r++) for(i=1;i<=11;i++) row=row sprintf(",%.6f", val(i,r)+0);
 
       print header > csv_path;
       print row    >> csv_path;
 
-      # 打印可读汇总到 stdout（由 nohup 接管）
+      # can to stdout ( nohup )
       printf "%-40s: %s\n", "Perturbation Discrimination (PDS)", mean_std(1);
       printf "%-40s: %s\n", "Mean Absolute Error (MAE)",        mean_std(2);
       printf "%-40s: %s\n", "Differential Expression Score (DES)", mean_std(3);

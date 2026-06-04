@@ -10,7 +10,7 @@ from typing import Optional
 import pandas as pd
 import anndata as ad
 
-# 原始数据与处理后数据的根路径（可从项目根目录运行脚本）
+# Raw and processed data roots (script can be run from repo root)
 DATA_ORI = Path("/data/ppnm/data/PertDiffBench/data_ori/fig2/task1_unseenMOA")
 DATA_OUT = Path("/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA")
 
@@ -88,7 +88,7 @@ def merge_control_with_ifn(control: ad.AnnData, ifn: ad.AnnData, ifn_tag: str) -
     c.obs["perturbation_status"] = "Control"
     c.obs["source_dataset"] = "Control"
 
-    # 你的 IFN 数据之前已经写了 perturbation_status=IFN；这里强制一遍也无妨
+ # IFN data may already have perturbation_status=IFN; re-assigning is harmless
     i.obs["perturbation_status"] = "IFN"
     i.obs["source_dataset"] = ifn_tag
 
@@ -99,20 +99,20 @@ def merge_control_with_ifn(control: ad.AnnData, ifn: ad.AnnData, ifn_tag: str) -
     c = _ensure_sparse(c)
     i = _ensure_sparse(i)
 
-    # ✅ 关键修复：不要同时“用 dict 的 key”又传 keys=
-    # 这里改用 list + keys 的方式（更直观也更兼容）
+ # Fix: do not pass both dict keys and keys= at once
+ # Use list + keys mode (clearer and more compatible)
     try:
         merged = ad.concat(
             [c, i],
             axis=0,
             join="outer",
-            keys=["control", "ifn"],   # 只在这里指定类别一次
+ keys=["control", "ifn"],  # specify batch keys once here
             label="concat_batch",
             fill_value=0,
             index_unique=None,
         )
     except TypeError:
-        # 兼容旧版 anndata：可能不支持 fill_value
+ # Older anndata may not support fill_value
         merged = ad.concat(
             [c, i],
             axis=0,

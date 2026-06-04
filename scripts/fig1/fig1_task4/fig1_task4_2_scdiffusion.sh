@@ -16,7 +16,7 @@ NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 
-# 评估阶段需在标准输出打印以下 11 行（末尾为数值）：
+# eval needin output tounder 11 ( ascountvalue): 
 # Perturbation Discrimination Score (PDS): <num>
 # Mean Absolute Error (MAE): <num>
 # Differential Expression Score (DES): <num>
@@ -55,29 +55,29 @@ for prefix in "${PREFIXES[@]}"; do
   [[ -f "${train_h5ad}" ]] || { echo "[ERR] Not found: ${train_h5ad}" >&2; exit 1; }
   [[ -f "${test_h5ad}"  ]] || { echo "[ERR] Not found: ${test_h5ad}"  >&2; exit 1; }
 
-  # 单一 CSV：包含 mean±std + 每次 run 的原始值
+  # CSV: contain mean±std + each run run originalvalue
   METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv"
 
-  # 累积评估阶段标准输出
+  # eval output
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
     run_tag="run${i}"
     echo -e "\n=== [${dataset}] ${run_tag}: Train(VAE+Diffusion+Classifier) + Sample/Eval ==="
 
-    # 输出目录（按 run 隔离）
+    # output dir ( run )
     VAE_DIR="checkpoints/scdiffusion/vae_checkpoint/task4_2/${dataset}/${run_tag}"
     DIFF_DIR="checkpoints/scdiffusion/diffusion_checkpoint/task4_2/${dataset}/${run_tag}"
     CLS_DIR="checkpoints/scdiffusion/classifier_checkpoint/2-classifier/task4_2/${dataset}/${run_tag}"
     SAMP_DIR="${CSV_ROOT}/${run_tag}"
     mkdir -p "${VAE_DIR}" "${DIFF_DIR}" "${CLS_DIR}" "${SAMP_DIR}"
 
-    # 约定文件名
+    # filename
     VAE_WEIGHTS="${VAE_DIR}/model_seed=0_step=9999.pt"
     DIFF_WEIGHTS="${DIFF_DIR}/my_diffusion/model010000.pt"
     CLS_WEIGHTS="${CLS_DIR}/model009999.pt"
 
-    # 日志文件
+    # file
     log_file="${LOG_ROOT}/${dataset}_${run_tag}.log"
     echo "[INFO] Log -> ${log_file}"
 
@@ -107,7 +107,7 @@ for prefix in "${PREFIXES[@]}"; do
       echo "[$(date '+%F %T')] >>> Step 4: Sampling & Evaluation (${dataset}, ${run_tag})"
     } 2>&1 | tee "${log_file}"
 
-    # 仅捕获评估阶段标准输出（同时写入日志）；即使报错也保留输出
+    # only eval output ( when ); keepoutput
     eval_output="$(
       ( cd src/scDiffusion && \
         python classifier_sample.py \
@@ -128,7 +128,7 @@ for prefix in "${PREFIXES[@]}"; do
     echo "[$(date '+%F %T')] >>> Finished (${dataset}, ${run_tag})" | tee -a "${log_file}"
   done
 
-  # 解析所有 run 的评估输出 -> 生成单表 CSV（与范例一致）
+  # parseall run evaloutput -> CSV (and )
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
     function num(x){ gsub(/[^0-9eE+\-\.]/,"",x); return x+0 }
 
@@ -216,8 +216,8 @@ for prefix in "${PREFIXES[@]}"; do
         for (i=1;i<=11;i++) row = row sprintf(",%.6f", val(i, r));
       }
 
-      print header > csv_path;   # 每个数据集写自己的表头
-      print row    >> csv_path;  # 并追加数据行
+      print header > csv_path; # eachdata ownheader
+      print row >> csv_path; # and data 
       close(csv_path);
       printf("CSV written: %s\n", csv_path);
     }

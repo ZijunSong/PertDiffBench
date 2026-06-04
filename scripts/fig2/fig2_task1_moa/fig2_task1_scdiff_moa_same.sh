@@ -14,7 +14,7 @@ export OFFLINE_SETTINGS="--wandb f"
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scDiff}"
 BATCH_SIZE="${BATCH_SIZE:-3072}"
-# 断点续跑：只运行从该 dataset 开始的实验（含）；留空则全部运行。恢复全量时改为 START_FROM_DATASET=
+# Resume datasets from START_FROM_DATASET (inclusive); empty=all. Clear START_FROM_DATASET for full rerun
 START_FROM_DATASET="${START_FROM_DATASET:-PKCsignaling}"
 
 # -------------------- Project Root ---------------------
@@ -55,7 +55,7 @@ echo "Config: runs=${NUM_RUNS} | name=${NAME}"
 echo
 
 # -------------------- Main Loop ------------------------
-# 断点续跑：未到达 START_FROM_DATASET 前均跳过
+# Skip until START_FROM_DATASET
 _resume_reached=false
 for train_path in "${TRAIN_FILES[@]}"; do
   train_fname="$(basename "${train_path}")"

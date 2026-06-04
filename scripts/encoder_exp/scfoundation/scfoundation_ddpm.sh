@@ -6,9 +6,9 @@ CELL_TYPE="CD4T"
 NUM_RUNS=3
 METHOD_NAME="scfoundation_ddpm"
 
-########################## 基础路径设置 ##########################
+########################## path ##########################
 
-# PertBench data（相对路径是相对你运行脚本时的工作目录）
+# PertBench data (relative path for when directory)
 TRAIN_H5="data/fig1/raw_task1/task1_train_${CELL_TYPE}_exp.h5ad"
 VALID_H5="data/fig1/raw_task1/task1_valid_${CELL_TYPE}_exp.h5ad"
 
@@ -20,24 +20,24 @@ SCF_PREPROC_DIR="${SCF_ROOT}/preprocessing"
 SCF_PREPROC_SCRIPT="${SCF_PREPROC_DIR}/scRNAseq_h5ad_preprocessing_under_scfoundation.py"
 SCF_MODEL_DIR="${SCF_ROOT}/model"
 
-# 预处理输出 h5ad（注意：你的预处理脚本要写到这个路径）
+# preprocessoutput h5ad ( : preprocess mustwrite to path)
 SCF_TRAIN_PRE_H5="${SCF_PREPROC_DIR}/preprocessed_task1_train_${CELL_TYPE}_exp.h5ad"
 SCF_VALID_PRE_H5="${SCF_PREPROC_DIR}/preprocessed_task1_valid_${CELL_TYPE}_exp.h5ad"
 
-# get_embedding.py 会在 model 目录下读写
+# get_embedding.py willin model directoryunder 
 SCF_GET_EMB="${SCF_MODEL_DIR}/get_embedding.py"
 SCF_EXAMPLE_DIR="${SCF_MODEL_DIR}/examples/single_cell_data"
 SCF_OUTPUT_DIR="${SCF_MODEL_DIR}/output/single_cell_data"
 
-# 我们统一 rename 成这两个 .npy，方便下游使用
+# we rename .npy, under using
 SCF_TRAIN_EMB_NPY="${SCF_OUTPUT_DIR}/task1_train_${CELL_TYPE}_exp_cell_embedding.npy"
 SCF_VALID_EMB_NPY="${SCF_OUTPUT_DIR}/task1_valid_${CELL_TYPE}_exp_cell_embedding.npy"
 
-# 回写到 PertBench 用的 h5ad
+# write to PertBench using h5ad
 SCF_TRAIN_WITH_LATENT="samples/encoder_exp/scfoundation_ddpm/task1_train_${CELL_TYPE}_with_scf_latent.h5ad"
 SCF_VALID_WITH_LATENT="samples/encoder_exp/scfoundation_ddpm/task1_valid_${CELL_TYPE}_with_scf_latent.h5ad"
 
-# DDPM checkpoint & eval 输出（注意：具体 run 子目录在循环内定义）
+# DDPM checkpoint & eval output ( : run subdirin insidedefine)
 LATENT_DDPM_CKPT_BASE="checkpoints/scfoundation_ddpm/latent_ddpm"
 EVAL_OUT_PREFIX="samples/encoder_exp/scfoundation_ddpm/scf_latent_ddpm_mlp_task1_${CELL_TYPE}_preds"
 CSV_PATH="samples/encoder_exp/scfoundation_ddpm/metrics_${CELL_TYPE}.csv"
@@ -45,7 +45,7 @@ CSV_PATH="samples/encoder_exp/scfoundation_ddpm/metrics_${CELL_TYPE}.csv"
 CONFIG_PATH="configs/baselines/scvi_ddpm_mlp.yaml"
 LOG_DIR="logs/scfoundation_ddpm"
 
-########################## 创建目录 ##########################
+########################## directory ##########################
 
 echo "[INFO] Creating directories..."
 
@@ -84,7 +84,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo ">>> Run ${run}/${NUM_RUNS} for ${CELL_TYPE}"
   echo "======================================================================"
 
-  # 为本次 run 定义子目录
+  # as run definesubdir
   RUN_CKPT_DIR="${LATENT_DDPM_CKPT_BASE}/run_${run}"
   mkdir -p "${RUN_CKPT_DIR}"
   echo "[RUN ${run}] RUN_CKPT_DIR = ${RUN_CKPT_DIR}"
@@ -97,7 +97,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "[STEP 1.1] Preprocess TRAIN with scFoundation"
   echo "[STEP 1.1] Copying ${TRAIN_H5} -> ${SCF_PREPROC_DIR}/data/task1_train_${CELL_TYPE}_exp.h5ad"
 
-  # 拷贝原始 train h5ad 到 scFoundation 的 data 目录（覆盖无所谓）
+  # copyoriginal train h5ad to scFoundation data directory ( )
   cp "${TRAIN_H5}" "${SCF_PREPROC_DIR}/data/task1_train_${CELL_TYPE}_exp.h5ad"
 
   if [ -f "${SCF_TRAIN_PRE_H5}" ]; then
@@ -141,7 +141,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
       --save_path "${SCF_OUTPUT_DIR}" \
       --tgthighres f1 2>&1 | tee "${LOG_DIR}/scf_getemb_train_${CELL_TYPE}_run_${run}.log"
 
-    # 注意：这里用的是你真实运行时看到的输出文件名
+    # : hereusing when tooutputfilename
     RAW_TRAIN_NPY="${SCF_OUTPUT_DIR}/task1_train_CD4T_01B-resolution_singlecell_cell_embedding_f1_resolution.npy"
     echo "[SCFoundation] Moving raw TRAIN embedding:"
     echo "  ${RAW_TRAIN_NPY} -> ${SCF_TRAIN_EMB_NPY}"
@@ -232,7 +232,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
     --obsm-key "X_scfoundation" 2>&1 | tee "${LOG_DIR}/attach_scf_valid_${CELL_TYPE}_run_${run}.log"
 
   #########################################
-  # 3) 训练 latent DDPM+decoder（每个 run 自己的子目录）
+  # 3) train latent DDPM+decoder (each run ownsubdir)
   #########################################
   echo -e "\n--- [3/4] Train scFoundation-latent DDPM+decoder for ${CELL_TYPE} (run ${run}) ---"
 
@@ -255,7 +255,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   fi
 
   ########################################
-  # 4) 评测
+  # 4) eval
   ########################################
   echo -e "\n--- [4/4] Evaluate scFoundation-latent model on valid_${CELL_TYPE} (run ${run}) ---"
 

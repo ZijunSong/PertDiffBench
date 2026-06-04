@@ -15,7 +15,7 @@ def main():
     p.add_argument("-c","--config",default="configs/baselines/scfoundation_ddpm_mlp.yaml", help="Path to the config file.")
     p.add_argument("-k","--ckpt",default="checkpoints/scfoundation/ckpt_100.pt", help="Path to the model checkpoint file.")
     p.add_argument("-o","--out_h5ad",default="results/scfoundation_ddpm_mlp.h5ad", help="Path to save the output .h5ad file.")
-    # 1. *** 主要修改：将 default 修改为 None ***
+    # 1. *** main : default change to None ***
     p.add_argument("-n", "--num_samples", type=int, default=None, help="Number of samples to generate. If not provided, defaults to the number of cells in the reference data.")
     args = p.parse_args()
 

@@ -14,7 +14,7 @@ NUM_RUNS=3
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
 METHOD_NAME="${METHOD_NAME:-scrna_ddpm_scrna}"
 
-# 彻底关闭 W&B
+# W&B
 export WANDB_DISABLED=true
 export WANDB_MODE=disabled
 
@@ -29,7 +29,7 @@ CKPT_ROOT="checkpoints/fig2/task2/pretrain_CD4T/${METHOD_NAME}"
 OUT_ROOT="samples/fig2/task2_unseen_celltype/pretrain_CD4T/${METHOD_NAME}"
 mkdir -p "${CKPT_ROOT}" "${OUT_ROOT}"
 
-# 全局 CSV（聚合所有 target 的 3 次评测）
+# CSV ( all target 3 eval)
 GLOBAL_CSV="${OUT_ROOT}/metrics_all.csv"
 if [[ ! -f "${GLOBAL_CSV}" ]]; then
   {
@@ -46,7 +46,7 @@ if [[ ! -f "${GLOBAL_CSV}" ]]; then
   } > "${GLOBAL_CSV}"
 fi
 
-# ================== 3x（训练+测评） ==================
+# ================== 3x (train+eval) ==================
 for (( run=1; run<=NUM_RUNS; run++ )); do
   echo
   echo "======================"
@@ -57,9 +57,9 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   RUN_OUT_DIR="${OUT_ROOT}/run${run}"
   mkdir -p "${RUN_CKPT_DIR}" "${RUN_OUT_DIR}"
 
-  CKPT_PATH="${RUN_CKPT_DIR}/scrna_ddpm_epoch1000.pt"   # 按你给的 ckpt 命名
+  CKPT_PATH="${RUN_CKPT_DIR}/scrna_ddpm_epoch1000.pt" # ckpt name
 
-  # ---- Step 1: 训练（CD4T 预训练）----
+  # ---- Step 1: train (CD4T pretrain)----
   echo "######################################################################"
   echo "###   Step 1 (Run ${run}): Training on pretrain_CD4T"
   echo "######################################################################"
@@ -69,7 +69,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
     --save-weight-dir "${RUN_CKPT_DIR}" \
     --gene-nums "${NUM_GENES}"
 
-  # ---- Step 2: 对所有目标 cell 做评测（使用本 run 的 ckpt）----
+  # ---- Step 2: forall cell eval ( using run ckpt)----
   for cell_type in "${TARGET_CELL_TYPES[@]}"; do
     VALID_H5="data/fig1/raw_task1/task1_valid_${cell_type}_exp.h5ad"
     CELL_OUT_DIR="${OUT_ROOT}/${cell_type}/run${run}"
@@ -93,7 +93,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
 
     echo "${run_output}"
 
-    # 仅抓取指标行，缓存在该 cell 的聚合缓冲文件
+    # only , exist cell file
     CELL_BUF="${OUT_ROOT}/${cell_type}/_agg_buffer.txt"
     mkdir -p "$(dirname "${CELL_BUF}")"
     {
@@ -105,7 +105,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   done
 done
 
-# ================== 聚合到全局 CSV ==================
+# ================== to CSV ==================
 for cell_type in "${TARGET_CELL_TYPES[@]}"; do
   CELL_BUF="${OUT_ROOT}/${cell_type}/_agg_buffer.txt"
   [[ -f "${CELL_BUF}" ]] || { echo "[WARN] No outputs for ${cell_type}, skip."; continue; }

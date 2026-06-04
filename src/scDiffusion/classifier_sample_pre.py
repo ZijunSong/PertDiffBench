@@ -183,37 +183,37 @@ def main(cell_type=[0], multi=False, inter=False, weight=[10,10]):
 
         if inter:
 
-            # 1. 定义 Scimilarity 模型和基因顺序文件的路径
-            scimilarity_model_dir = "../../checkpoints/scimilarity/model_v1.1" # 确保这个路径正确
+            # 1. Scimilarity model and gene-order file paths
+            scimilarity_model_dir = "../../checkpoints/scimilarity/model_v1.1"  # ensure this path is correct
             gene_order_path = os.path.join(scimilarity_model_dir, "gene_order.tsv")
 
             if not os.path.exists(gene_order_path):
                 raise FileNotFoundError(f"Gene order file not found at: {gene_order_path}")
                 
-            # 2. 读取1958个基因的列表
+            # 2. read gene-order table (1958 genes)
             with open(gene_order_path, "r") as f:
                 gene_order = [line.strip() for line in f]
 
             logger.log(f"Loading initial cells from: {args.init_cell_path}")
             ori_adata = sc.read_h5ad(args.init_cell_path)
             
-            # 3. 在预处理前，根据加载的基因顺序过滤您的 AnnData 对象
-            # 确保您的 AnnData 对象的 .var_names 是基因名
+            # 3. subset AnnData to pretrained gene order before preprocessing
+            # ensure .var_names are gene symbols
             logger.log(f"Subsetting data from {ori_adata.n_vars} genes to {len(gene_order)} genes.")
             
-            # 检查您的数据中存在多少个预训练的基因
+            # check how many pretrained genes are present in the data
             available_genes = [gene for gene in gene_order if gene in ori_adata.var_names]
             if len(available_genes) < len(gene_order):
                 print(f"Warning: Only {len(available_genes)} out of {len(gene_order)} pretrained genes were found in your data.")
             
-            # 使用 .reindex() 来对齐基因，缺失的基因会用 0 填充
+            # align genes with reindex; missing genes are zero-filled
             ori_adata_sub = ori_adata[:, available_genes].copy()
 
             if scipy.sparse.issparse(ori_adata_sub.X):
-                # 如果是稀疏矩阵，则转换为密集数组
+                # sparse matrix -> dense array
                 data_for_df = ori_adata_sub.X.toarray()
             else:
-                # 如果已经是密集数组，则直接使用
+                # already dense
                 data_for_df = ori_adata_sub.X
 
             df = pd.DataFrame(
@@ -222,27 +222,26 @@ def main(cell_type=[0], multi=False, inter=False, weight=[10,10]):
                 columns=ori_adata_sub.var_names
             )
 
-            # 使用 Pandas 强大的 reindex 功能来对齐基因。
-            # 这会自动添加 gene_order 中有但 df 中没有的基因作为全零列
+            # pandas reindex aligns columns; missing genes become zero columns
             df_reindexed = df.reindex(columns=gene_order, fill_value=0.0)
 
-            # 从 reindexed DataFrame 创建最终的 AnnData 对象，保留原始的 obs 信息
+            # build final AnnData from reindexed DataFrame, keep original obs
             ori_adata = sc.AnnData(df_reindexed, obs=ori_adata.obs)
 
-            # 确认基因数量现在与 gene_order 列表的长度一致
+            # gene count must match gene_order length
             assert ori_adata.n_vars == len(gene_order)
 
             sc.pp.normalize_total(ori_adata, target_sum=1e4)
             sc.pp.log1p(ori_adata)
 
-            # 定义标签映射关系，0 -> Control, 1 -> IFN
+            # label map: 0 -> Control, 1 -> IFN
             label_map = {0: 'Control', 1: 'IFN'}
             
-            # 根据输入的cell_type[0]（即起始状态的标签）获取其字符串名称
+            # starting status label from cell_type[0]
             start_condition_str = label_map[cell_type[0]]
             logger.log(f"Selecting starting cells with 'perturbation_status' == '{start_condition_str}'")
 
-            # 使用 'perturbation_status' 列进行筛选，获取所有 'Control' 细胞
+            # filter by perturbation_status column
             adata = ori_adata[ori_adata.obs['perturbation_status'] == start_condition_str].copy()
             
             if adata.n_obs == 0:
@@ -252,17 +251,17 @@ def main(cell_type=[0], multi=False, inter=False, weight=[10,10]):
 
             start_x = adata.X.toarray() if isinstance(adata.X, np.memmap) or 'sparse' in str(type(adata.X)) else adata.X
             autoencoder = load_VAE(args.ae_dir, args.num_gene)
-            autoencoder.eval() # 确保 VAE 在评估模式
-            with th.no_grad(): # 推理时不需要计算梯度
+            autoencoder.eval()  # VAE in eval mode
+            with th.no_grad():  # no gradients during inference
                 start_x = autoencoder(th.tensor(start_x, device=dist_util.dev(), dtype=th.float32), return_latent=True).detach().cpu().numpy()
 
             n, m = start_x.shape
             if n >= args.batch_size:
-                # 如果起始细胞数足够，则取 batch_size 个
+                # enough starting cells: sample batch_size without replacement
                 indices = np.random.choice(n, args.batch_size, replace=False)
                 start_x = start_x[indices, :]
             else:
-                # 如果不够，则重复采样以凑够 batch_size
+                # not enough cells: sample with replacement to reach batch_size
                 indices = np.random.choice(n, args.batch_size, replace=True)
                 start_x = start_x[indices, :]
             
@@ -377,15 +376,14 @@ def create_argparser(celltype=[0], weight=[10,10]):
 
 
 if __name__ == "__main__":
-    # --- 1. 定义您的类别标签 ---
-    # 确保这与您训练分类器时使用的整数标签一致
+    # --- 1. class labels (must match classifier training) ---
     CONTROL_LABEL = 0
     IFN_LABEL = 1
 
-    # --- 2. 调用 main 函数执行扰动任务 ---
-    # cell_type: [起始状态标签, 目标状态标签]
-    # inter=True: 激活梯度插值/扰动模式
-    # weight: [起始权重, 目标权重]。我们想完全变成IFN状态，所以Control权重为0，IFN权重为10（最大）。
+    # --- 2. run perturbation via main ---
+    # cell_type: [start status, target status]
+    # inter=True: gradient interpolation / perturbation mode
+    # weight: [start, target]; full IFN shift -> Control=0, IFN=10 (max)
     main(
         cell_type=[CONTROL_LABEL, IFN_LABEL], 
         inter=True, 

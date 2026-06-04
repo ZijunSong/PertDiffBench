@@ -6,118 +6,95 @@ import sys
 import os
 
 def verify_merged_h5ad(file_path):
-    """
-    读取一个合并后的 .h5ad 文件并打印其关键信息以供验证。
-    """
+    """Read a merged .h5ad file and print key info for validation."""
     if not os.path.exists(file_path):
-        print(f"ERROR: 验证失败，文件 '{file_path}' 不存在。")
+        print(f"ERROR: validation failed, file '{file_path}' does not exist.")
         return
-        
-    print("\n--- [验证步骤] ---")
-    print(f"INFO: 正在重新读取已保存的文件 '{file_path}' 进行检查...")
-    
+
+    print("\n--- [validation] ---")
+    print(f"INFO: re-reading saved file '{file_path}' for checks...")
+
     try:
         adata_check = ad.read_h5ad(file_path)
-        
-        print("\n1. 合并后 AnnData 对象摘要:")
+
+        print("\n1. Merged AnnData summary:")
         print(adata_check)
-        
-        print("\n2. 检查 'perturbation_status' 列:")
+
+        print("\n2. check 'perturbation_status' column:")
         if 'perturbation_status' in adata_check.obs.columns:
-            print("INFO: 'perturbation_status' 列存在。")
-            # 统计并打印该列中各类别的数量
+            print("INFO: 'perturbation_status' column exists.")
             status_counts = adata_check.obs['perturbation_status'].value_counts()
-            print("各状态下的细胞数量:")
+            print("Cell counts per status:")
             print(status_counts)
         else:
-            print("WARNING: 未找到 'perturbation_status' 列！")
+            print("WARNING: 'perturbation_status' column not found.")
 
-        print("\n3. 细胞元数据 (obs) 的前5行:")
+        print("\n3. cell metadata (obs) first 5 rows:")
         print(adata_check.obs.head())
-        
-        print("\n4. 细胞元数据 (obs) 的后5行 (以检查另一部分数据):")
+
+        print("\n4. cell metadata (obs) last 5 rows:")
         print(adata_check.obs.tail())
 
-        print(f"\nINFO: 验证成功。最终数据集包含 {adata_check.n_obs} 个细胞和 {adata_check.n_vars} 个基因。")
-        print("--- [验证结束] ---\n")
+        print(f"\nINFO: validation OK. Final dataset: {adata_check.n_obs} cells, {adata_check.n_vars} genes.")
+        print("--- [validation end] ---\n")
 
     except Exception as e:
-        print(f"ERROR: 验证过程中读取或检查文件 '{file_path}' 时发生错误: {e}")
+        print(f"ERROR: validation failed reading '{file_path}': {e}")
 
 
 def merge_h5ad_files(control_path, perturbed_path, output_path):
     """
-    合并两个h5ad文件，并添加一个obs列来区分它们。
+    Merge two h5ad files and add obs column to distinguish them.
 
     Args:
-        control_path (str): 控制组 .h5ad 文件的路径。
-        perturbed_path (str): 扰动组 .h5ad 文件的路径。
-        output_path (str): 输出的合并后的 .h5ad 文件的保存路径。
+        control_path (str): control group .h5ad path.
+        perturbed_path (str): perturbed group .h5ad path.
+        output_path (str): merged .h5ad output path.
     """
     try:
-        # --- 步骤 1: 加载两个h5ad文件 ---
-        print(f"INFO: 正在从 '{control_path}' 加载控制组数据...")
+        print(f"INFO: loading control from '{control_path}'...")
         adata_control = ad.read_h5ad(control_path)
 
-        print(f"INFO: 正在从 '{perturbed_path}' 加载扰动组数据...")
+        print(f"INFO: loading perturbed from '{perturbed_path}'...")
         adata_perturbed = ad.read_h5ad(perturbed_path)
 
-        # --- 步骤 2: 添加 'perturbation_status' 列 ---
         adata_control.obs['perturbation_status'] = 'Control'
-        print("INFO: 已为控制组数据添加 'perturbation_status' = 'Control'。")
+        print("INFO: set perturbation_status='Control' on control data.")
 
         adata_perturbed.obs['perturbation_status'] = 'IFN'
-        print("INFO: 已为扰动组数据添加 'perturbation_status' = 'IFN'。")
-        
-        # --- 步骤 3: 合并两个AnnData对象 ---
-        # AnnData.concatenate 默认使用 'inner' join，这意味着它只会保留
-        # 在两个数据对象中都存在的基因（变量），这通常是期望的行为。
-        print("INFO: 正在合并两个 AnnData 对象...")
+        print("INFO: set perturbation_status='IFN' on perturbed data.")
+
+        print("INFO: concatenating AnnData objects...")
         adata_merged = adata_control.concatenate(
             adata_perturbed,
-            join='inner' # 可以是 'inner' 或 'outer'
+            join='inner'
         )
 
-        print(f"INFO: 合并完成。新的数据集包含 {adata_merged.n_obs} 个细胞和 {adata_merged.n_vars} 个基因。")
+        print(f"INFO: merge done. New dataset: {adata_merged.n_obs} cells, {adata_merged.n_vars} genes.")
 
-        # --- 步骤 4: 保存合并后的文件 ---
-        print(f"INFO: 正在将合并后的数据保存到 '{output_path}'...")
+        print(f"INFO: saving merged data to '{output_path}'...")
         adata_merged.write_h5ad(output_path, compression="gzip")
-        
-        print("\n🎉 处理完成！")
 
-        # --- 步骤 5: 验证已保存的文件 ---
+        print("\nDone.")
+
         verify_merged_h5ad(output_path)
 
     except FileNotFoundError as e:
-        print(f"ERROR: 文件未找到 - {e}")
+        print(f"ERROR: file not found - {e}")
         sys.exit(1)
     except Exception as e:
-        print(f"ERROR: 处理过程中发生错误 - {e}")
+        print(f"ERROR: processing failed - {e}")
         sys.exit(1)
 
 
 if __name__ == '__main__':
-    # --- 设置命令行参数解析 ---
     parser = argparse.ArgumentParser(
-        description="合并两个 .h5ad 文件，并添加 'perturbation_status' 标签以区分来源。",
+        description="Merge two .h5ad files and add 'perturbation_status' labels.",
         formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument(
-        'control_h5ad', 
-        help='输入的控制组 .h5ad 文件路径。'
-    )
-    parser.add_argument(
-        'perturbed_h5ad', 
-        help='输入的扰动组 .h5ad 文件路径。'
-    )
-    parser.add_argument(
-        'output_h5ad', 
-        help='输出的合并后的 .h5ad 文件路径。'
-    )
+    parser.add_argument('control_h5ad', help='Control group .h5ad path.')
+    parser.add_argument('perturbed_h5ad', help='Perturbed group .h5ad path.')
+    parser.add_argument('output_h5ad', help='Merged .h5ad output path.')
 
-    # 解析命令行参数
     args = parser.parse_args()
-
-    # 调用主函数执行合并
     merge_h5ad_files(args.control_h5ad, args.perturbed_h5ad, args.output_h5ad)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 遇错退出
+# 
 set -e
 
 CELL_TYPE="CD4T"
@@ -41,7 +41,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "======================================================================"
 
   ########################################
-  # 1) 训练 scVI 并在 train 上写入 X_scvi
+  # 1) train scVI andin train on X_scvi
   ########################################
   echo -e "\n--- [1/4] Train scVI on train_${CELL_TYPE} (run ${run}) ---"
   python scripts/encoder_exp/scvi/train_scvi_and_latent_ddpm.py \
@@ -55,7 +55,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "--- scVI training for ${CELL_TYPE}, run ${run} complete. ---"
 
   ########################################
-  # 2) 用训练好的 scVI 给 valid 写 X_scvi
+  # 2) usingtrained scVI valid X_scvi
   ########################################
   echo -e "\n--- [2/4] Encode valid_${CELL_TYPE} with trained scVI (run ${run}) ---"
   python scripts/encoder_exp/scvi/apply_scvi_encoder.py \
@@ -67,7 +67,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "--- scVI encoding for valid_${CELL_TYPE}, run ${run} complete. ---"
 
   ########################################
-  # 3) 训练 latent DDPM + decoder
+  # 3) train latent DDPM + decoder
   ########################################
   echo -e "\n--- [3/4] Train latent DDPM+decoder for ${CELL_TYPE} (run ${run}) ---"
   python scripts/encoder_exp/scvi/train_scvi_latent_ddpm_mlp.py \
@@ -78,7 +78,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "--- latent DDPM training for ${CELL_TYPE}, run ${run} complete. ---"
 
   ########################################
-  # 4) 评测一次，并收集输出
+  # 4) eval , and output
   ########################################
   echo -e "\n--- [4/4] Evaluate model on valid_${CELL_TYPE} (run ${run}) ---"
 

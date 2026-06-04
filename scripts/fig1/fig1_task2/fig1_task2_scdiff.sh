@@ -15,7 +15,7 @@ NUM_RUNS=${NUM_RUNS:-3}
 METHOD_NAME=${METHOD_NAME:-scDiff}
 # --------------------
 
-# Project root (script 位于子目录时向上回溯)
+# Project root (script subdirwhentoon )
 HOMEDIR="$(dirname "$(dirname "$(realpath "$0")")")/.."
 cd "$HOMEDIR"
 echo "Current working directory: $(pwd)"
@@ -27,7 +27,7 @@ DATASETS=(
   'random3'
 )
 
-# 日志根目录（按数据集分别记录）
+# log root ( data log)
 RUNLOG_ROOT="${LOGDIR}/perturbation_${NAME}"
 mkdir -p "${RUNLOG_ROOT}"
 
@@ -44,14 +44,14 @@ for dataset in "${DATASETS[@]}"; do
   data_settings="data.params.train.params.dataset=${dataset_name} data.params.train.params.fname=${train_fname}"
   data_settings+=" data.params.test.params.dataset=${dataset_name} data.params.test.params.fname=${test_fname}"
 
-  # 结果与日志位置
+  # resultsand 
   DATASET_LOG="${RUNLOG_ROOT}/${dataset}.log"
   OUTDIR_BASE="samples/fig1/task2/${dataset}/scdiff"
   mkdir -p "${OUTDIR_BASE}"
 
   echo -e "\n==== $(date '+%F %T') | Begin dataset=${dataset} ====\n" | tee -a "${DATASET_LOG}"
 
-  # 收集三次评测输出
+  # evaloutput
   all_outputs=""
 
   # ==== NUM_RUNS times (train+eval) ====
@@ -60,7 +60,7 @@ for dataset in "${DATASETS[@]}"; do
     echo -e " Run ${i}/${NUM_RUNS} : ${dataset}" | tee -a "${DATASET_LOG}"
     echo -e "======================"           | tee -a "${DATASET_LOG}"
 
-    # 跑完整流程（训练+评测）；保留所有stdout/stderr
+    # (train+eval); keepallstdout/stderr
     output=$(python src/scDiff/main.py \
       --custom_data_path data/fig1/task2 \
       --base configs/scdiff/eval_perturbation.yaml \
@@ -70,10 +70,10 @@ for dataset in "${DATASETS[@]}"; do
       ${OFFLINE_SETTINGS} \
       ${data_settings} 2>&1) || true
 
-    # 打印并写入日志
+    # print and log
     echo "${output}" | tee -a "${DATASET_LOG}"
 
-    # 累积到统计文本
+    # append to stats text
     all_outputs+="${output}\n"
   done
 

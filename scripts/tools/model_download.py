@@ -20,11 +20,11 @@ from huggingface_hub import hf_hub_download
 import os
 
 if __name__ == "__main__":
-    # 指定下载路径
+    # specifyunder path
     target_dir = "/share/PertBench/checkpoints/CellFM/"
     os.makedirs(target_dir, exist_ok=True)
 
-    # 下载模型文件
+    # under file
     downloaded_path = hf_hub_download(
         repo_id="ShangguanNingyuan/CellFM",
         filename="CellFM_80M_weight.ckpt",

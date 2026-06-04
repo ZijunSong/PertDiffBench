@@ -20,12 +20,12 @@ from src.diffusion_baselines.schedulers.warmup import GradualWarmupScheduler
 
 class PairedLatentGeneDataset(Dataset):
     """
-    Dataset 返回:
+    Dataset return:
         z0: control latent
         z1: perturbed latent
         x1: perturbed gene expression
 
-    假设:
+    Assume:
         - adata.X: gene expression
         - adata.obsm["X_scvi"]: latent
         - adata.obs["perturbation_status"]: 'Control' or perturbation labels
@@ -80,9 +80,9 @@ class PairedLatentGeneDataset(Dataset):
 
 def try_find_checkpoint(save_dir: str):
     """
-    优先返回:
+     return:
       1) model_final.pth
-      2) 最新的 model_epoch_*.pth
+      2) model_epoch_*.pth
     """
     final_path = os.path.join(save_dir, "model_final.pth")
     if os.path.isfile(final_path):
@@ -103,17 +103,17 @@ def try_find_checkpoint(save_dir: str):
 
 def load_model_weights(model, ckpt_path: str, device):
     """
-    仅加载模型权重；你也可以按需加载优化器/调度器状态以便 resume 训练。
-    这里遵循“已训就用，不再训练”的语义，只加载 model。
+    only ; canto need / to resume train.
+    here " using, no longertrain" , model.
     """
     print(f"[Info] Loading checkpoint: {os.path.abspath(ckpt_path)}")
     state = torch.load(ckpt_path, map_location=device)
 
-    # 常见字段名
+    # common name
     if "model_state_dict" in state:
         model.load_state_dict(state["model_state_dict"], strict=True)
     else:
-        # 兜底：如果直接存的 state_dict
+        # : directly state_dict
         model.load_state_dict(state, strict=True)
 
     print(f"[OK] Loaded pre-trained model from: {ckpt_path}")

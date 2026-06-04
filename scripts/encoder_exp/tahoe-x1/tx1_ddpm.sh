@@ -24,9 +24,9 @@ NUM_RUNS=3
 METHOD_NAME="tx1_ddpm"
 
 # -------- Tx1 encoder settings --------
-# 若从 Hugging Face 下载 3b 失败（如网络/墙），可改用小模型： export TX1_MODEL_SIZE=70m 后再运行
+# from Hugging Face under 3b ( / ), can using : export TX1_MODEL_SIZE=70m after 
 TX1_REPO_ID="tahoebio/Tahoe-x1"
-TX1_MODEL_SIZE="${TX1_MODEL_SIZE:-3b}"   # 70m | 1b | 3b，可用环境变量覆盖
+TX1_MODEL_SIZE="${TX1_MODEL_SIZE:-3b}" # 70m | 1b | 3b, canusing amount 
 TX1_OBSM_KEY="X_tx1"
 TX1_SEQ_LEN=2048
 

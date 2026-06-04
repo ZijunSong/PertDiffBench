@@ -21,7 +21,7 @@ HOMEDIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$HOMEDIR"
 export PYTHONPATH="${HOMEDIR}:${PYTHONPATH:-}"
 
-# nohup 下自动激活 pertdiffbench 环境（若尚未激活）
+# Auto-activate pertdiffbench under nohup if needed
 if [[ -z "${CONDA_DEFAULT_ENV:-}" || "${CONDA_DEFAULT_ENV}" != "pertdiffbench" ]]; then
   if [[ -f "/home/szj/miniconda3/etc/profile.d/conda.sh" ]]; then
     # shellcheck source=/dev/null

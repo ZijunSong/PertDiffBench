@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scDiff pipeline for task2 unseen cell type (scGen setting): train on CD4T, test on B and NK.
-# 数据路径改为 task2_unseen_celltype，逻辑与 fig2_task1_scdiff.sh 一致。
+# data path as task2_unseen_celltype, logicand fig2_task1_scdiff.sh .
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
@@ -45,7 +45,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
 
   echo "== $(date '+%F %T') | dataset=${dataset_base} runs=${NUM_RUNS} =="
 
-  # scDiff data 配置：train 用 CD4T，test 用当前 cell_type 的测试集
+  # scDiff data : train using CD4T, test usingcurrent cell_type test set
   data_settings=()
   data_settings+=("data.params.train.params.dataset=${dataset_base}")
   data_settings+=("data.params.train.params.fname=${TRAIN_FNAME}")

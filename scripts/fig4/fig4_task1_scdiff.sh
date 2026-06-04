@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fig4 时间条件生成 — scDiff（训练使用 fig4 数据；时间条件采样需扩展 cond 为 treatment_time，完成后可接 eval_fig4）
+# Fig4 time-conditioned generation - scDiff (train using fig4 data; when rows need cond as treatment_time, doneaftercan eval_fig4)
 
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
@@ -16,7 +16,7 @@ cd "$HOMEDIR"
 DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
 TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
 TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
-# scDiff 需要 config + custom_data_path；fig4 数据需单独 config 或覆盖 data.params
+# scDiff must config + custom_data_path; fig4 dataneeds separate config or data.params
 dataset_name="fig4"
 train_fname="fig4_train.h5ad"
 valid_fname="fig4_test.h5ad"
@@ -27,7 +27,7 @@ csv_path="${sample_base}/metrics_${METHOD_NAME}_fig4.csv"
 log_file="${LOGDIR}/fig4_task1/scdiff_fig4.log"
 mkdir -p "${sample_base}" "${LOGDIR}/fig4_task1"
 
-# 检查 fig4 专用 config 是否存在；若无则用默认并覆盖 data path
+# check fig4 using config whetherexist; usingdefaultand data path
 CONFIG_BASE="configs/scdiff/eval_perturbation.yaml"
 BASE_DATA_SETTINGS=(
   "data.params.train.params.dataset=${dataset_name}"
@@ -56,8 +56,8 @@ BASE_DATA_SETTINGS=(
   done
 
   echo ""
-  echo "Note: scDiff 时间条件采样（生成 4h/6h）需在 data/model 中增加 treatment_time 条件。"
-  echo "完成后可运行: python scripts/fig4/eval_fig4_time_conditioned.py --test-h5ad ${TEST_H5} --generated-h5ad <path> --train-h5ad ${TRAIN_H5}"
+  echo "Note: scDiff when rows ( 4h/6h)needin data/model treatment_time rows ."
+  echo "doneaftercan : python scripts/fig4/eval_fig4_time_conditioned.py --test-h5ad ${TEST_H5} --generated-h5ad <path> --train-h5ad ${TRAIN_H5}"
   echo "--- Finished fig4 scDiff (train only; time-conditioned sampling TBD) ---"
 } 2>&1 | tee -a "${log_file}"
 

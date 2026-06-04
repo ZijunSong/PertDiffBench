@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scGen pipeline for task2 unseen cell type (scGen setting): train on CD4T, test on B and NK.
-# 数据路径改为 task2_unseen_celltype，逻辑与 fig2_task1_scgen.sh 一致。
+# data path as task2_unseen_celltype, logicand fig2_task1_scgen.sh .
 set -euo pipefail
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
@@ -11,7 +11,7 @@ NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scGen}"
 N_SAMPLES="${N_SAMPLES:-500}"
 
-# 项目根目录
+# repo root
 HOMEDIR="$(cd "$(dirname "$(realpath "$0")")/../../.." && pwd)"
 cd "$HOMEDIR"
 echo "PWD: $(pwd)"
@@ -24,7 +24,7 @@ CKPT_ROOT="checkpoints/fig2/task2_extend_scgen/scgen"
 GLOBAL_CSV="${OUT_ROOT}/metrics_all.csv"
 mkdir -p "$OUT_ROOT" "$CKPT_ROOT"
 
-# 全局 CSV 表头（与其余 extend 脚本一致）
+# CSV header (and extend )
 if [[ ! -f "${GLOBAL_CSV}" ]]; then
   {
     printf "Dataset,Method"
@@ -81,7 +81,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
     printf "%s\n" "$output"
   done
 
-  # 解析指标并追加到全局 CSV（与 fig2_task1_scgen / 其余 extend 格式一致）
+  # parse and to CSV (and fig2_task1_scgen / extend )
   echo -e "$all_outputs" | awk -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v ds="${cell_type}" -v csv_path="${GLOBAL_CSV}" '
     function to_num(x,   y){ y=x; gsub(/[^0-9eE+\-\.]/,"",y); return (y==""?0:y)+0 }
 

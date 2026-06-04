@@ -19,14 +19,14 @@ METHOD_NAME="${METHOD_NAME:-MLP-DDPM-MLP}"
 for prefix in "${PREFIXES[@]}"; do
   n_samples=${SAMPLE_SIZES[$prefix]}
 
-  # 训练：control->ifn；评测：control->coculture（固定成对）
+  # train: control->ifn; eval: control->coculture ( for)
   train_dataset="task4_${prefix}_control_to_ifn"
   eval_dataset="task4_${prefix}_control_to_coculture"
 
   LOG_ROOT="logs/fig1/task4_2/${eval_dataset}/mlp_ddpm_mlp"
   CSV_ROOT="samples/fig1/task4_2/${eval_dataset}/mlp_ddpm_mlp"
   CKPT_DIR="checkpoints/fig1/task4_2/${prefix}_control_to_ifn/mlp_ddpm_mlp"
-  METRICS_CSV="${CSV_ROOT}/metrics_${eval_dataset}.csv"  # ✅ 单表输出（范例样式）
+  METRICS_CSV="${CSV_ROOT}/metrics_${eval_dataset}.csv" # ✅ output ( )
 
   mkdir -p "$LOG_ROOT" "$CSV_ROOT" "$CKPT_DIR"
 
@@ -54,7 +54,7 @@ for prefix in "${PREFIXES[@]}"; do
     run_dir="${CSV_ROOT}/${run_tag}"
     mkdir -p "$run_dir"
 
-    # 先确保 ckpt 存在
+    # Ensure ckpt exist
     CKPT_FILE="${CKPT_DIR}/model_epoch_1000.pth"
     if [[ ! -f "$CKPT_FILE" ]]; then
       echo "[ERROR] Checkpoint not found: ${CKPT_FILE}" >&2
@@ -64,9 +64,9 @@ for prefix in "${PREFIXES[@]}"; do
     eval_log="${LOG_ROOT}/${eval_dataset}_${run_tag}.log"
     echo "[$(date '+%F %T')] >>> Evaluation ${run_tag} (${eval_dataset})" | tee -a "$eval_log"
 
-    # 用临时文件缓冲本次 run 的标准输出，供后续 awk 汇总
+    # usingtempfile run output, after awk 
     run_tmp="$(mktemp)"
-    # 关键：不要用命令替换；让管道直连，并显式检测退出码
+    # key: mustusing ; , andexplicit 
     if python scripts/baseline/eval_mlp_ddpm_mlp.py \
         --config "$CONFIG_FILE" \
         --data-path "data/fig1/task4/${eval_dataset}.h5ad" \
@@ -78,19 +78,19 @@ for prefix in "${PREFIXES[@]}"; do
         --n_samples "$n_samples" \
         2>&1 | tee -a "$eval_log" | tee "$run_tmp" > /dev/null
     then
-      # 仅在成功时收集输出
+      # onlyin when output
       ALL_OUTPUTS+=$(cat "$run_tmp")
       ALL_OUTPUTS+=$'\n'
     else
       echo "[ERROR] Evaluation ${run_tag} failed. See log: ${eval_log}" >&2
-      # 如果你想不中断后续 run，可改为 'continue'
+      # after run, can as 'continue'
       exit 1
     fi
     rm -f "$run_tmp"
   done
 
   # -------------------- Step 3: Aggregate to ONE CSV --------------------
-  # 依赖评测输出的 11 个标签（顺序不限、每 run 打印一次）：
+  # evaloutput 11 ( , run ): 
   # PDS / MAE / DES / E-Distance / MMD / R2 / Pearson(all) /
   # Pearson Delta(all) / Pearson Delta(top 20 DE) / (top 50 DE) / (top 100 DE)
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${eval_dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
@@ -162,8 +162,8 @@ for prefix in "${PREFIXES[@]}"; do
       for(i=1;i<=11;i++) row=row "," mean_std(i);
       for(r=0;r<num_runs;r++) for(i=1;i<=11;i++) row=row sprintf(",%.6f", val(i,r)+0);
 
-      print header > csv_path;   # 覆盖写入表头
-      print row    >> csv_path;  # 追加单行数据
+      print header > csv_path; # header
+      print row >> csv_path; # data
       close(csv_path);
       printf("CSV written: %s\n", csv_path);
     }

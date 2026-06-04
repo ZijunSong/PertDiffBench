@@ -87,7 +87,7 @@ def setup_seed(seed):
     th.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
-    th.backends.cudnn.deterministic = True # 设置随机数种子
+    th.backends.cudnn.deterministic = True  # fix random seeds for reproducibility
 
 
 if __name__ == "__main__":

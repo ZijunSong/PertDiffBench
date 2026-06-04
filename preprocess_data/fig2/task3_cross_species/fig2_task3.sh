@@ -1,4 +1,4 @@
-# 原始数据目录与输出目录（请在 PertDiffBench 项目根目录下运行本脚本）
+# Raw data and output dirs (run this script from PertDiffBench repo root)
 DATA_ORI=/data/ppnm/data/PertDiffBench/data_ori/fig2/task3_cross_species
 DATA_OUT=/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species
 mkdir -p "$DATA_OUT"

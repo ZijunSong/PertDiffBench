@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""合并 fig2_task1 scDiff 在各 MOA 子目录下 scdiff/metrics/metrics_*_test.csv 为单一 CSV。"""
+""" and fig2_task1 scDiff in MOA subdirunder scdiff/metrics/metrics_*_test.csv as CSV."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 def collect_split(
     task_root: Path, split: str
 ) -> tuple[list[str], list[list[str]]]:
-    """task_root 为 task1_unseenMOA/same 或 .../diff，其下为 <MOA>/scdiff/metrics/*.csv。"""
+    """task_root as task1_unseenMOA/same or .../diff, underas <MOA>/scdiff/metrics/*.csv."""
     paths = sorted(
         task_root.glob("*/scdiff/metrics/metrics_*_test.csv"),
         key=lambda p: p.parent.parent.parent.name,
@@ -31,7 +31,7 @@ def collect_split(
             base_header = header
         elif header != base_header:
             raise ValueError(
-                f"表头不一致: {csv_path.name} 与首个文件列名不同，请检查后再合并。"
+                f"header mismatch: {csv_path.name} and filecolsname , check headers before merge."
             )
         ds = csv_path.parent.parent.parent.name
         out_rows.append([split, ds] + data)
@@ -50,7 +50,7 @@ def main() -> None:
         default=Path(
             "/data/ppnm/data/PertDiffBench/samples/fig2/task1_unseenMOA/same"
         ),
-        help="unseen_same_moa：含各 MOA 子目录的根路径",
+        help="unseen_same_moa: with MOA subdir path",
     )
     p.add_argument(
         "--diff-root",
@@ -58,7 +58,7 @@ def main() -> None:
         default=Path(
             "/data/ppnm/data/PertDiffBench/samples/fig2/task1_unseenMOA/diff"
         ),
-        help="unseen_diff_moa：含各 MOA 子目录的根路径",
+        help="unseen_diff_moa: with MOA subdir path",
     )
     p.add_argument(
         "-o",
@@ -67,33 +67,33 @@ def main() -> None:
         default=Path(
             "/data/ppnm/data/PertDiffBench/samples/fig2/task1_unseenMOA/scdiff_moa_combined_metrics.csv"
         ),
-        help="输出合并后的 CSV 路径",
+        help="output andafter CSV path",
     )
     p.add_argument(
         "--same-only",
         action="store_true",
-        help="只合并 same，不包含 diff",
+        help=" and same, contain diff",
     )
     args = p.parse_args()
 
     same_header, same_rows = collect_split(args.same_root, "unseen_same_moa")
     if not same_rows:
-        raise SystemExit(f"未在 {args.same_root}/*/scdiff/metrics/ 找到 metrics_*_test.csv")
+        raise SystemExit(f" in {args.same_root}/*/scdiff/metrics/ found metrics_*_test.csv")
 
     if args.same_only:
         all_rows = [same_header] + same_rows
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with args.output.open("w", newline="", encoding="utf-8") as f:
             csv.writer(f).writerows(all_rows)
-        print(f"已写入 {args.output}（共 {len(same_rows)} 行，仅 same）")
+        print(f" {args.output} ( {len(same_rows)} , only same)")
         return
 
     diff_header, diff_rows = collect_split(args.diff_root, "unseen_diff_moa")
     if not diff_rows:
-        raise SystemExit(f"未在 {args.diff_root}/*/scdiff/metrics/ 找到 metrics_*_test.csv")
+        raise SystemExit(f" in {args.diff_root}/*/scdiff/metrics/ found metrics_*_test.csv")
 
     if same_header != diff_header:
-        raise SystemExit("same 与 diff 两侧表头不一致，无法合并。")
+        raise SystemExit("same and diff header mismatch, cannot merge.")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     all_rows = [same_header] + same_rows + diff_rows
@@ -101,7 +101,7 @@ def main() -> None:
         csv.writer(f).writerows(all_rows)
 
     print(
-        f"已写入 {args.output}（共 {len(all_rows) - 1} 行数据："
+        f" {args.output} ( {len(all_rows) - 1} data: "
         f"same {len(same_rows)} + diff {len(diff_rows)}）"
     )
 

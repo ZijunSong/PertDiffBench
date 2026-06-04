@@ -31,7 +31,7 @@ from src.diffusion_baselines.models.mlp_ddpm_mlp_diffusion import MLPDDPMMLP
 
 
 def resolve_ckpt(path_or_dir: str) -> str:
-    """既支持直接给 .pth 文件，也支持给目录（从中选 epoch 最大的那个）."""
+    """ supportdirectly .pth file, support directory (from epoch )."""
     if os.path.isfile(path_or_dir):
         return path_or_dir
 
@@ -66,14 +66,14 @@ def main():
         required=True,
         help="Config used to build MLPDDPMMLP.",
     )
-    # 兼容不同调用习惯：-k / --ckpt / --ckpt-dir / --save-dir -> ckpt_dir
+    # call : -k / --ckpt / --ckpt-dir / --save-dir -> ckpt_dir
     parser.add_argument(
         "-k", "--ckpt", "--ckpt-dir", "--save-dir",
         dest="ckpt_dir",
         required=True,
         help="Path to checkpoint directory or a single .pth file.",
     )
-    # 兼容 --data-path / --valid-h5ad
+    # --data-path / --valid-h5ad
     parser.add_argument(
         "--data-path", "--valid-h5ad",
         dest="data_path",
@@ -101,7 +101,7 @@ def main():
     # 1) Load config + model
     cfg = OmegaConf.load(args.config)
 
-    # 先直接用 config 里的 device，如果没有就自己猜
+    # directlyusing config device, no own 
     if "train" in cfg and "device" in cfg.train:
         device = torch.device(cfg.train.device)
     else:
@@ -121,7 +121,7 @@ def main():
     latent_dim = Z.shape[1]
     print(f"[eval] Geneformer latent dim = {latent_dim}")
 
-    # 覆盖 AE input_dim，让 MLPDDPMMLP 在 Geneformer latent 空间里工作
+    # AE input_dim, MLPDDPMMLP in Geneformer latent empty 
     if "model" in cfg and "ae" in cfg.model:
         print(f"[eval] Original cfg.model.ae.input_dim = {cfg.model.ae.input_dim}")
         cfg.model.ae.input_dim = latent_dim
@@ -129,7 +129,7 @@ def main():
     else:
         raise ValueError("Config must have model.ae section for MLPDDPMMLP.")
 
-    # 构建模型 + 加载 ckpt
+    # + ckpt
     model = MLPDDPMMLP(cfg).to(device)
     ckpt_path = resolve_ckpt(args.ckpt_dir)
     print(f"[eval] Loading checkpoint {ckpt_path}")
@@ -145,7 +145,7 @@ def main():
     model.load_state_dict(state_dict, strict=False)
     model.eval()
 
-    # 2) 基于 perturbation_status 按照 scVI 脚本的逻辑采样
+    # 2) based on perturbation_status per scVI logic 
     pert_status = adata.obs["perturbation_status"].astype(str)
     ctrl_mask = pert_status == "Control"
     ctrl_ids = adata.obs_names[ctrl_mask].tolist()
@@ -164,7 +164,7 @@ def main():
             f"[eval] --n_samples ({args.n_samples}) > max_possible_samples ({max_possible_samples}). "
             f"Reduce n_samples or you will oversample."
         )
-        # 这里我不直接退出，而是自动下调到 max_possible_samples，避免脚本中断
+        # here directly , under to max_possible_samples, 
         n_samples = max_possible_samples
         print(f"[eval] Using n_samples = {n_samples}")
     else:
@@ -174,10 +174,10 @@ def main():
     metrics_results = defaultdict(list)
     all_synthetic_adata = []
 
-    # 为 latent 特征准备伪 var_names
+    # as latent prepare var_names
     latent_var_names = np.array([f"gf_latent_{i}" for i in range(latent_dim)])
 
-    # 3) Loop over perturbations（在 Geneformer latent 空间算指标）
+    # 3) Loop over perturbations (in Geneformer latent empty )
     for pert in perturbations:
         print(f"\n--- Evaluating perturbation: {pert} ---")
         pert_mask = pert_status == pert
@@ -194,9 +194,9 @@ def main():
 
         z_ctrl_tensor = torch.from_numpy(z_ctrl).to(device)
 
-        # 模型在 Geneformer latent 空间中做 "ctrl -> pert" 映射
+        # in Geneformer latent empty "ctrl -> pert" 
         with torch.no_grad():
-            z_pred_tensor = model.sample(z_ctrl_tensor)  # 输出也是 [n_samples, latent_dim]
+            z_pred_tensor = model.sample(z_ctrl_tensor) # output [n_samples, latent_dim]
             z_pred = z_pred_tensor.cpu().numpy()
 
         # population means in latent space
@@ -208,7 +208,7 @@ def main():
         all_pred_pb.append(pred_pert_pb)
         all_ctrl_pb.append(ctrl_pb)
 
-        # 各种指标都在 latent 空间算
+        # types in latent empty 
         metrics_results["mae"].append(compute_mae(true_pert_pb, pred_pert_pb))
         metrics_results["r2"].append(compute_r2(z_true, z_pred))
         metrics_results["edistance"].append(compute_edistance(z_true, z_pred))
@@ -227,7 +227,7 @@ def main():
             compute_pearson_delta_de(true_pert_pb, pred_pert_pb, ctrl_pb, k=100)
         )
 
-        # DES: 现在的 "gene" 实际是 latent feature 名字
+        # DES: in "gene" latent feature name 
         delta_true_pb = true_pert_pb - ctrl_pb
         de_idx = np.argsort(np.abs(delta_true_pb))[::-1][:100]
         true_de_genes = set(latent_var_names[de_idx].tolist())
@@ -241,7 +241,7 @@ def main():
             compute_des(true_de_genes, pred_de_genes, pred_gene_fold_changes)
         )
 
-        # optional synthetic AnnData（在 latent 空间）
+        # optional synthetic AnnData (in latent empty )
         if args.out_h5ad:
             obs = pd.DataFrame(
                 {
@@ -253,7 +253,7 @@ def main():
             var = pd.DataFrame(index=latent_var_names)
             all_synthetic_adata.append(sc.AnnData(X=z_pred, obs=obs, var=var))
 
-    # 4) aggregate metrics & print (兼容 .sh 的 awk parser)
+    # 4) aggregate metrics & print ( .sh awk parser)
     print("\n" + "=" * 66)
     print(f"Aggregate Evaluation Metrics (averaged over {len(perturbations)} perturbations)")
     print("=" * 66)
@@ -262,7 +262,7 @@ def main():
     y_pred_all = np.vstack(all_pred_pb)
     pds_val = compute_pds(y_pred_all, y_true_all)
 
-    # 这些前缀要和 geneformer_ddpm.sh 里 awk 的正则完全一致
+    # before must geneformer_ddpm.sh awk 
     print(f"Perturbation Discrimination Score (PDS): {pds_val:.4f}")
     print(f"Mean Absolute Error (MAE): {np.mean(metrics_results['mae']):.4f}")
     print(f"Differential Expression Score (DES): {np.mean(metrics_results['des']):.4f}")
@@ -278,7 +278,7 @@ def main():
     print(f"Pearson Delta (top 100 DE genes): {np.mean(metrics_results['pearson_delta_de100']):.4f}")
     print("=" * 66)
 
-    # 5) 保存 synthetic AnnData（可选）
+    # 5) synthetic AnnData (optional)
     if args.out_h5ad and len(all_synthetic_adata) > 0:
         adata_synth = sc.concat(all_synthetic_adata, join="outer", index_unique=None)
         out_path = args.out_h5ad

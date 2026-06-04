@@ -72,7 +72,7 @@ class LatentDiffusionModel(DiffusionModel):
     def forward(self, z0: torch.Tensor) -> torch.Tensor:    
         if z0.dim() == 1:
                 print(f"[WARN] Input tensor has only 1 dimension (shape: {z0.shape}). Unsqueezing to add a batch dimension of 1.")
-                z0 = z0.unsqueeze(0) # 例如, shape [3072] -> [1, 3072]
+                z0 = z0.unsqueeze(0)  # e.g. shape [3072] -> [1, 3072]
             
         # The forward pass now directly receives the pre-computed embedding z0
         B = z0.shape[0]

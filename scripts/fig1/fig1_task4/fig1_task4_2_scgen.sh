@@ -11,19 +11,19 @@ declare -A SAMPLE_SIZES=(
   ["B2M"]="367"
 )
 
-NUM_RUNS="${NUM_RUNS:-3}"                       # 训练+测评重复次数
-METHOD_NAME="${METHOD_NAME:-scGen}"             # CSV 中的方法名
-GENE_NUMS="${GENE_NUMS:-}"                      # 若 scGen 需要基因数可传，否则留空不传参
+NUM_RUNS="${NUM_RUNS:-3}" # train+eval count
+METHOD_NAME="${METHOD_NAME:-scGen}" # CSV name
+GENE_NUMS="${GENE_NUMS:-}" # scGen mustgenecountcan , else empty 
 
 # ------------------------- Main ---------------------------
 for prefix in "${PREFIXES[@]}"; do
   n_samples="${SAMPLE_SIZES[$prefix]}"
 
-  # 固定成对：训练用 control->ifn；评测在 control->coculture
+  # for: trainusing control->ifn; evalin control->coculture
   train_dataset="task4_${prefix}_control_to_ifn"
   eval_dataset="task4_${prefix}_control_to_coculture"
 
-  # 目录规划
+  # directory 
   LOG_ROOT="logs/fig1/task4_2/${eval_dataset}/scgen"
   OUT_ROOT="samples/fig1/task4_2/${eval_dataset}/scgen"
   CKPT_ROOT="checkpoints/fig1/task4_2/${prefix}_control_to_ifn/scgen"
@@ -37,25 +37,25 @@ for prefix in "${PREFIXES[@]}"; do
   echo "### Eval  on: ${eval_dataset}   (runs=${NUM_RUNS}, n_samples=${n_samples})"
   echo "######################################################################"
 
-  # -------------------- Run 1..NUM_RUNS （每次都训练+测评） --------------------
+  # -------------------- Run 1..NUM_RUNS (each run train+eval) --------------------
   ALL_OUTPUTS=""
   for (( i=1; i<=NUM_RUNS; i++ )); do
     run_tag="run${i}"
     run_dir="${OUT_ROOT}/${run_tag}"
     mkdir -p "$run_dir"
 
-    # 每次 run 的独立 checkpoint 目录，避免覆盖
+    # each run run standalone checkpoint directory, 
     run_ckpt_dir="${CKPT_ROOT}/${run_tag}"
 
     log_file="${LOG_ROOT}/${eval_dataset}_${run_tag}.log"
     echo "[$(date '+%F %T')] >>> ${run_tag}: Train+Eval (${prefix})" | tee "$log_file"
 
-    # 允许可选的 GENE_NUMS 传入
+    # optional GENE_NUMS 
     extra_gene_arg=()
     [[ -n "$GENE_NUMS" ]] && extra_gene_arg=( --gene-nums "$GENE_NUMS" )
 
-    # 直接调用 scGen_eval.py：训练 (control->ifn) + 在 (control->coculture) 上预测与评测
-    # 注意：修正了你原脚本里的 ${dataset} → ${prefix} 命名错误，并将输出按 run 分目录保存
+    # directlycall scGen_eval.py: train (control->ifn) + in (control->coculture) on andeval
+    # : ${dataset} → ${prefix} name , andoutput run directory 
     if python scripts/scGen_eval.py \
         --train_data_path "data/fig1/task4/${train_dataset}.h5ad" \
         --test_data_path  "data/fig1/task4/${eval_dataset}.h5ad" \
@@ -73,7 +73,7 @@ for prefix in "${PREFIXES[@]}"; do
       exit 1
     fi
 
-    # 只抓本次 run 的可解析标准输出用于统计
+    # run canparse outputfor stats
     run_tmp="$(mktemp)"
     grep -E "Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)" "$log_file" > "$run_tmp" || true
     ALL_OUTPUTS+=$(cat "$run_tmp")
@@ -81,8 +81,8 @@ for prefix in "${PREFIXES[@]}"; do
     rm -f "$run_tmp"
   done
 
-  # -------------------- 汇总统计到单个 CSV --------------------
-  # 依赖评测输出的 11 个标签（顺序不限、每 run 打印一次）：
+  # -------------------- statsto CSV --------------------
+  # evaloutput 11 ( , run ): 
   # PDS / MAE / DES / E-Distance / MMD / R2 / Pearson(all) /
   # Pearson Delta(all) / Pearson Delta(top 20 DE) / (top 50 DE) / (top 100 DE)
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${eval_dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
@@ -154,7 +154,7 @@ for prefix in "${PREFIXES[@]}"; do
       for(i=1;i<=11;i++) row=row "," mean_std(i);
       for(r=0;r<num_runs;r++) for(i=1;i<=11;i++) row=row sprintf(",%.6f", val(i,r)+0);
 
-      # 覆盖写表头，再追加一行结果
+      # header, results
       print header > csv_path;
       print row    >> csv_path;
       close(csv_path);

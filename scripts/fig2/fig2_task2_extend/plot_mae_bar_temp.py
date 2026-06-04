@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""从 fig2_task2_extend_metrics_merged.csv 绘制无标注 MAE 示意图（单细胞类型，纯 stdlib → SVG + PNG）。"""
+"""from fig2_task2_extend_metrics_merged.csv MAE fig ( celltype, stdlib → SVG + PNG)."""
 import csv
 import re
 import struct
@@ -10,13 +10,13 @@ CSV_PATH = Path(__file__).resolve().parent / "fig2_task2_extend_metrics_merged.c
 OUT_SVG = Path(__file__).resolve().parent / "mae_bar_temp.svg"
 OUT_PNG = Path(__file__).resolve().parent / "mae_bar_temp.png"
 
-# 仅画一种细胞： "B" 或 "NK"
+# only typescell: "B" or "NK"
 DATASET = "B"
 
-# 示意图默认不含 Squidiff（MAE 与其它方法差量级）；若需 6 柱可在 order 中保留并在下方改映射
+# figdefault with Squidiff (MAE and amountlevel); need 6 canin order keepandinunder 
 INCLUDE_SQUIDIFF = False
 
-# 槽宽中柱子占比越大、柱与柱之间越紧（0.65–0.92）
+# , and (0.65–0.92)
 BAR_WIDTH_FRAC = 0.88
 
 
@@ -76,7 +76,7 @@ def schematic_svg(
     height: float = 140,
     pad: float = 6,
 ) -> str:
-    """无文字、无坐标轴；仅矩形柱。values: (method_id, mae) 顺序即左→右。"""
+    """ , ; only .values: (method_id, mae) → ."""
     maes = [v for _, v in values]
     n = len(values)
     if n == 0:
@@ -93,7 +93,7 @@ def schematic_svg(
     slot_w = plot_w / n
     bar_w = slot_w * BAR_WIDTH_FRAC
 
-    # 柔和区分方法（无图例，仅示意）
+    # distinguish methods ( fig , only )
     palette = [
         "#6B8EB7",
         "#8FAD8A",
@@ -135,7 +135,7 @@ def schematic_png_bytes(
     height: int = 120,
     pad: float = 4,
 ) -> bytes:
-    """与 schematic_svg 相同几何，光栅化为 RGB PNG 字节流。"""
+    """and schematic_svg , as RGB PNG ."""
     bg = _hex_rgb("#fafafa")
     maes = [v for _, v in values]
     n = len(values)

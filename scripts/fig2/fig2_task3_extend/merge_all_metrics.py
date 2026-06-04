@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-汇总所有fig2_task3_extend脚本生成的CSV文件到一个统一的CSV文件中。
+ allfig2_task3_extend CSVfileto CSVfile .
 
-每个.sh脚本会为4个物种（mouse, pig, rabbit, rat）各生成一个CSV文件。
-此脚本会找到所有这些CSV文件并将它们合并。
+each.sh willas4 types (mouse, pig, rabbit, rat) CSVfile.
+ willfoundall CSVfileand and.
 """
 
 import os
@@ -12,15 +12,15 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Optional
 
-# 项目根目录
+# repo root
 SCRIPT_DIR = Path(__file__).parent.absolute()
 HOMEDIR = SCRIPT_DIR.parent.parent.parent
 SAMPLES_ROOT = HOMEDIR / "samples" / "fig2" / "task3_extend"
 
-# 所有物种
+# all types
 ALL_SPECIES = ["mouse", "pig", "rabbit", "rat"]
 
-# CSV文件路径映射：方法名 -> 文件路径模式
+# CSVfilepath : name -> filepath 
 CSV_PATTERNS = {
     "scRNA-DDPM-scRNA": {
         "pattern": "{species}/scrna_ddpm_scrna/metrics_leave1out_{species}.csv",
@@ -40,8 +40,8 @@ CSV_PATTERNS = {
     },
     "scDiffusion(6619)": {
         "pattern": "scDiffusion_6619/metrics_all.csv",
-        "has_species_col": True,  # 这个文件已经包含了所有物种，且有Species列
-        "is_global": True,  # 这是一个全局文件，不是每个物种一个
+        "has_species_col": True, # filealreadycontainall types, Speciescols
+        "is_global": True, # file, each types 
     },
     "Squidiff": {
         "pattern": "{species}/squidiff_1000/metrics_Leave1out_test_{species}.csv",
@@ -52,13 +52,13 @@ CSV_PATTERNS = {
 
 def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
     """
-    标准化列名，将scDiffusion的特殊列名转换为标准格式。
+    normalizedcolsname, scDiffusion colsnameconvert to .
     """
-    # 创建列名映射
+    # colsname 
     column_mapping = {}
     for col in df.columns:
         new_col = col
-        # 处理scDiffusion的特殊列名
+        # handlescDiffusion colsname
         if "Pearson (all)" in col and "Pearson (all genes)" not in col:
             new_col = col.replace("Pearson (all)", "Pearson (all genes)")
         if "PearsonΔ" in col:
@@ -83,36 +83,36 @@ def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
 
 def read_csv_file(file_path: Path, method_name: str, species: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
-    读取CSV文件并标准化格式。
+     CSVfileandnormalized .
     
     Args:
-        file_path: CSV文件路径
-        method_name: 方法名称
-        species: 物种名称（如果CSV文件不包含Species列）
+        file_path: CSVfilepath
+        method_name: name 
+        species: typesname ( CSVfile containSpeciescols)
     
     Returns:
-        标准化后的DataFrame，如果文件不存在则返回None
+        normalizedafterDataFrame, file exist returnNone
     """
     if not file_path.exists():
-        print(f"[WARNING] CSV文件不存在: {file_path}", file=sys.stderr)
+        print(f"[WARNING] CSV file not found: {file_path}", file=sys.stderr)
         return None
     
     try:
         df = pd.read_csv(file_path)
         
-        # 标准化列名
+        # normalizedcolsname
         df = normalize_column_names(df)
         
-        # 如果CSV文件没有Species列，但我们需要添加
+        # CSVfileno Speciescols, wemustadd
         if species and "Species" not in df.columns:
             df.insert(1, "Species", species)
         
-        # 确保Method列存在且正确
+        # EnsureMethodcolsexist correct
         if "Method" in df.columns:
-            # 如果Method列的值与方法名不一致，更新它
+            # Methodcolsvalueand name , 
             df["Method"] = method_name
         else:
-            # 如果Method列不存在，添加它
+            # Methodcols exist, add 
             if "Species" in df.columns:
                 df.insert(2, "Method", method_name)
             else:
@@ -121,16 +121,16 @@ def read_csv_file(file_path: Path, method_name: str, species: Optional[str] = No
         return df
     
     except Exception as e:
-        print(f"[ERROR] 读取CSV文件失败 {file_path}: {e}", file=sys.stderr)
+        print(f"[ERROR] CSVfile {file_path}: {e}", file=sys.stderr)
         return None
 
 
 def collect_all_csvs() -> tuple[List[pd.DataFrame], List[tuple[str, str]]]:
     """
-    收集所有CSV文件并返回DataFrame列表和缺失文件列表。
+     allCSVfileandreturnDataFramecols filecols .
     
     Returns:
-        (DataFrame列表, 缺失文件列表[(method_name, species_or_path)])
+        (DataFramecols , filecols [(method_name, species_or_path)])
     """
     all_dfs = []
     missing_files = []
@@ -141,22 +141,22 @@ def collect_all_csvs() -> tuple[List[pd.DataFrame], List[tuple[str, str]]]:
         has_species_col = config.get("has_species_col", False)
         
         if is_global:
-            # 处理全局文件（如scDiffusion）
+            # handle file ( scDiffusion)
             csv_path = SAMPLES_ROOT / pattern
             df = read_csv_file(csv_path, method_name)
             if df is not None:
                 all_dfs.append(df)
-                print(f"[INFO] 读取全局CSV: {csv_path} ({len(df)} 行)")
+                print(f"[INFO] CSV: {csv_path} ({len(df)} )")
             else:
                 missing_files.append((method_name, str(csv_path)))
         else:
-            # 处理每个物种的文件
+            # handleeach typesfile
             for species in ALL_SPECIES:
                 csv_path = SAMPLES_ROOT / pattern.format(species=species)
                 df = read_csv_file(csv_path, method_name, species=species if not has_species_col else None)
                 if df is not None:
                     all_dfs.append(df)
-                    print(f"[INFO] 读取CSV: {csv_path} ({len(df)} 行)")
+                    print(f"[INFO] CSV: {csv_path} ({len(df)} )")
                 else:
                     missing_files.append((method_name, species))
     
@@ -165,46 +165,46 @@ def collect_all_csvs() -> tuple[List[pd.DataFrame], List[tuple[str, str]]]:
 
 def merge_csvs(output_path: Path):
     """
-    合并所有CSV文件并保存到输出文件。
+     andallCSVfileand tooutputfile.
     
     Args:
-        output_path: 输出CSV文件路径
+        output_path: outputCSVfilepath
     """
-    print(f"[INFO] 开始收集CSV文件...")
+    print(f"[INFO] Start CSVfile...")
     all_dfs, missing_files = collect_all_csvs()
     
     if not all_dfs:
-        print("[ERROR] 没有找到任何CSV文件！", file=sys.stderr)
+        print("[ERROR] nofound CSVfile!", file=sys.stderr)
         sys.exit(1)
     
-    print(f"[INFO] 找到 {len(all_dfs)} 个CSV文件")
+    print(f"[INFO] found {len(all_dfs)} CSVfile")
     
-    # 报告缺失的文件
+    # file
     if missing_files:
-        print(f"\n[WARNING] 发现 {len(missing_files)} 个缺失的CSV文件:")
+        print(f"\n[WARNING] Found {len(missing_files)} CSVfile:")
         for method_name, species_or_path in missing_files:
             if "/" in species_or_path or "\\" in species_or_path:
-                # 这是一个路径
+                # path
                 print(f"  - {method_name}: {species_or_path}")
             else:
-                # 这是一个物种名
+                # typesname
                 print(f"  - {method_name} ({species_or_path})")
         print("")
     
-    # 合并所有DataFrame
-    print("[INFO] 合并CSV文件...")
+    # andallDataFrame
+    print("[INFO] andCSVfile...")
     merged_df = pd.concat(all_dfs, ignore_index=True)
     
-    # 标准化列顺序：Dataset, Species (如果有), Method, 然后是所有指标列
+    # normalizedcols : Dataset, Species ( ), Method, after all cols
     base_cols = ["Dataset"]
     if "Species" in merged_df.columns:
         base_cols.append("Species")
     base_cols.append("Method")
     
-    # 获取其他列（指标列）
+    # getothercols ( cols)
     other_cols = [col for col in merged_df.columns if col not in base_cols]
     
-    # 定义指标的标准顺序
+    # define 
     metric_order = [
         "PDS", "MAE", "DES", "E-Distance", "MMD", "R2",
         "Pearson (all genes)", "Pearson Delta (all genes)",
@@ -212,7 +212,7 @@ def merge_csvs(output_path: Path):
         "Pearson Delta (top 100 DE genes)"
     ]
     
-    # 分离mean±std列和Run列
+    # mean±stdcols Runcols
     mean_std_cols = []
     run_cols = []
     other_remaining = []
@@ -225,7 +225,7 @@ def merge_csvs(output_path: Path):
         else:
             other_remaining.append(col)
     
-    # 按照metric_order排序mean±std列
+    # permetric_order mean±stdcols
     def get_metric_priority(col):
         for i, metric in enumerate(metric_order):
             if metric in col:
@@ -234,76 +234,76 @@ def merge_csvs(output_path: Path):
     
     mean_std_cols.sort(key=get_metric_priority)
     
-    # 按照Run编号和metric顺序排序Run列
+    # perRun id metric Runcols
     def get_run_priority(col):
-        # 提取Run编号
+        # Run id
         import re
         run_match = re.match(r"Run(\d+)", col)
         run_num = int(run_match.group(1)) if run_match else 999
-        # 提取metric优先级
+        # metric level
         metric_priority = get_metric_priority(col)
         return (run_num, metric_priority)
     
     run_cols.sort(key=get_run_priority)
     
-    # 重新排列列顺序
+    # colscols 
     merged_df = merged_df[base_cols + mean_std_cols + run_cols + other_remaining]
     
-    # 保存合并后的CSV
+    # andafterCSV
     output_path.parent.mkdir(parents=True, exist_ok=True)
     merged_df.to_csv(output_path, index=False)
     
-    print(f"[INFO] 合并完成！")
-    print(f"[INFO] 总共 {len(merged_df)} 行数据")
-    print(f"[INFO] 输出文件: {output_path}")
+    print(f"[INFO] anddone!")
+    print(f"[INFO] {len(merged_df)} data")
+    print(f"[INFO] outputfile: {output_path}")
     
-    # 打印摘要信息
-    print("\n[INFO] 汇总摘要:")
+    # mustbatch info
+    print("\n[INFO] must:")
     if "Species" in merged_df.columns:
         summary = merged_df.groupby(["Method", "Species"]).size()
         print(summary.to_string())
         
-        # 检查每个方法是否都有4个物种
-        print("\n[INFO] 各方法物种完整性检查:")
+        # checkeach whether 4 types
+        print("\n[INFO] types check:")
         for method in merged_df["Method"].unique():
             species_count = len(merged_df[merged_df["Method"] == method]["Species"].unique())
             expected = 4
             if species_count < expected:
                 missing_species = set(ALL_SPECIES) - set(merged_df[merged_df["Method"] == method]["Species"].unique())
-                print(f"  - {method}: {species_count}/{expected} 物种 (缺失: {', '.join(missing_species)})")
+                print(f" - {method}: {species_count}/{expected} types ( : {', '.join(missing_species)})")
             else:
-                print(f"  - {method}: {species_count}/{expected} 物种 ✓")
+                print(f" - {method}: {species_count}/{expected} types ✓")
     else:
         print(merged_df.groupby("Method").size().to_string())
 
 
 def main():
-    """主函数"""
+    """ count"""
     import argparse
     
-    # 使用全局变量前先声明
+    # using amountbefore 
     global SAMPLES_ROOT
     
     parser = argparse.ArgumentParser(
-        description="汇总所有fig2_task3_extend脚本生成的CSV文件"
+        description=" allfig2_task3_extend CSVfile"
     )
     parser.add_argument(
         "--output",
         "-o",
         type=str,
         default=str(SAMPLES_ROOT / "metrics_all_methods.csv"),
-        help="输出CSV文件路径（默认: samples/fig2/task3_extend/metrics_all_methods.csv）",
+        help="outputCSVfilepath (default: samples/fig2/task3_extend/metrics_all_methods.csv)",
     )
     parser.add_argument(
         "--samples-root",
         type=str,
         default=None,
-        help="samples根目录路径（默认: 自动检测）",
+        help="samples directorypath (default: )",
     )
     
     args = parser.parse_args()
     
-    # 如果指定了samples-root，使用它
+    # specifysamples-root, using 
     if args.samples_root:
         SAMPLES_ROOT = Path(args.samples_root)
     

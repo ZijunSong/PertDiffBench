@@ -8,7 +8,7 @@ LOGDIR="${LOGDIR:-logs}"
 NAME="${NAME:-v7.5}"
 OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 NUM_RUNS=${NUM_RUNS:-3}
-METHOD_NAME=${METHOD_NAME:-scDiff}   # CSV 第一列方法名
+METHOD_NAME=${METHOD_NAME:-scDiff}   # CSV method column name
 
 # -------------------- Project Root ---------------------
 HOMEDIR=$(dirname $(dirname $(realpath $0)))/..
@@ -43,7 +43,7 @@ for seed in "${SEEDS[@]}"; do
 
   echo "== $(date '+%F %T') | dataset=${dataset_base} runs=${NUM_RUNS} =="
 
-  # scDiff data 配置
+  # scDiff data 
   data_settings=()
   data_settings+=("data.params.train.params.dataset=${dataset_base}")
   data_settings+=("data.params.train.params.fname=${train_fname}")
@@ -200,7 +200,7 @@ for seed in "${SEEDS[@]}"; do
     echo
     echo "--- Finished pipeline for dataset: ${train_ds} ---"
     echo
-  }  # <- 不再重定向到 tee
+  } # <- no longer toto tee
 
 done
 

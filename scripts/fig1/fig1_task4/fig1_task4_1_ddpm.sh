@@ -38,17 +38,17 @@ for dataset in "${!GENE_SIZES[@]}"; do
   train_data_path="data/fig1/task4/task4_${dataset}_train.h5ad"
   valid_data_path="data/fig1/task4/task4_${dataset}_test.h5ad"
 
-  # 单一 CSV（含 mean±std + per-run 值）
+  # CSV (with mean±std + per-run value)
   METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv"
 
-  # 累积所有评估输出文本（仅评估阶段标准输出）
+  # allevaloutput (onlyeval output)
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo -e "\n=== [${dataset}] Run ${i}/${NUM_RUNS}: Train + Eval ==="
     run_tag="run${i}"
 
-    # 输出目录（沿用你原有的 ckpt 位置与文件名）
+    # output dir ( using ckpt andfilename)
     ckpt_dir="checkpoints/ddpm_mlp/${dataset}/${run_tag}"
     samples_dir="samples/fig1/task4_1/${dataset}/scrna_ddpm_scrna/${run_tag}"
     mkdir -p "$ckpt_dir" "$samples_dir"
@@ -81,7 +81,7 @@ for dataset in "${!GENE_SIZES[@]}"; do
     echo "[$(date '+%F %T')] >>> Finished (${dataset}, ${run_tag})" | tee -a "$log_file"
   done
 
-  # 仅依赖以下 11 个标签行，请确保评估脚本打印一致：
+  # only tounder 11 , Ensureeval : 
   # Perturbation Discrimination Score (PDS): <num>
   # Mean Absolute Error (MAE): <num>
   # Differential Expression Score (DES): <num>
@@ -177,7 +177,7 @@ for dataset in "${!GENE_SIZES[@]}"; do
       }
       for (r=0;r<num_runs;r++) {
         for (i=1;i<=11;i++) {
-          v = val(i, r); if (v=="") v=0;  # 容错占位
+          v = val(i, r); if (v=="") v=0; # 
           row = row sprintf(",%.6f", v);
         }
       }

@@ -1,28 +1,28 @@
 #!/bin/bash
-# 三次运行（训练+测评），统计写入 log 与 csv
+# 3 train+eval runs; stats to log/csv
 
 set -e
 trap 'echo "ERROR: A command failed. Exiting." >&2' ERR
 
-# -------- 配置 --------
+# -------- --------
 DATASETS=('mix2' 'mix3' 'mix4' 'mix5' 'mix6' 'mix7')
 NUM_GENES="1000"
 NUM_RUNS=3
 CONFIG_FILE="configs/baselines/scrna_ddpm_scrna.yaml"
 METHOD_NAME="DDPM"
-N_SAMPLES=100  # 与原评测脚本保持一致
+N_SAMPLES=100 # and eval stay consistent
 
-# 根目录（可按需改）
+# directory (can need )
 SAVE_ROOT="checkpoints/ddpm"
 SAMPLE_ROOT="samples/fig1/task3"
 
-# -------- 主逻辑 --------
+# -------- logic --------
 for dataset in "${DATASETS[@]}"; do
   echo "######################################################################"
   echo "###   Starting pipeline for dataset: $dataset"
   echo "######################################################################"
 
-  # 路径
+  # path
   train_data_path="data/fig1/hvg_task3/${dataset}_train_HVG_${NUM_GENES}.h5ad"
   eval_data_path="data/fig1/hvg_task3/${dataset}_test_HVG_${NUM_GENES}.h5ad"
 
@@ -31,11 +31,11 @@ for dataset in "${DATASETS[@]}"; do
   mkdir -p "${save_dir_base}" "${sample_dir_base}"
 
   LOG_FILE="${sample_dir_base}/pipeline_${dataset}.log"
-  : > "${LOG_FILE}"   # 清空/创建本数据集 log
+  : > "${LOG_FILE}" # clear/ this dataset log
 
   all_outputs=""
 
-  # -------- 3 次（训练+评测） --------
+  # -------- 3 (train+eval) --------
   for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
     echo -e "\n======================"
     echo -e " Run ${run_idx}/${NUM_RUNS} for ${dataset} (Gene=${NUM_GENES})"
@@ -47,7 +47,7 @@ for dataset in "${DATASETS[@]}"; do
 
     checkpoint_file="${save_dir_run}/scrna_ddpm_epoch1000.pt"
 
-    # ---- 训练 ----
+    # ---- train ----
     echo -e "\n--- Step A: Training Model (dataset=${dataset}, run=${run_idx}) ---" | tee -a "${LOG_FILE}"
     python scripts/baseline/train_scrna_ddpm_scrna.py \
       --config "$CONFIG_FILE" \
@@ -55,7 +55,7 @@ for dataset in "${DATASETS[@]}"; do
       --save-weight-dir "$save_dir_run" \
       --gene-nums "$NUM_GENES" 2>&1 | tee -a "${LOG_FILE}"
 
-    # ---- 评测 ----
+    # ---- eval ----
     echo -e "\n--- Step B: Evaluating Model (dataset=${dataset}, run=${run_idx}) ---" | tee -a "${LOG_FILE}"
     output=$(python scripts/baseline/eval_scrna_ddpm_scrna.py \
       --config "$CONFIG_FILE" \
@@ -71,13 +71,13 @@ for dataset in "${DATASETS[@]}"; do
     all_outputs+="$output\n"
   done
 
-  # -------- 统计与 CSV --------
+  # -------- stats and CSV --------
   echo -e "\n" | tee -a "${LOG_FILE}"
   csv_file="${sample_dir_base}/metrics_${METHOD_NAME}_${dataset}_gene_${NUM_GENES}.csv"
 
-  # 统计 + 生成 CSV（含 mean±std 与每次 run 的值）
+  # stats + CSV (with mean±std andeach run run value)
   echo -e "$all_outputs" | awk -v dataset="$dataset" -v num_runs="$NUM_RUNS" -v method="$METHOD_NAME" -v csv_path="$csv_file" '
-    # 抓取 11 项指标
+    # 11 items 
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
     /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
     /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
@@ -90,7 +90,7 @@ for dataset in "${DATASETS[@]}"; do
     /Pearson Delta \(top 50 DE genes\):/        { pearson_delta_de50[c_pearson_delta_de50++] = $NF }
     /Pearson Delta \(top 100 DE genes\):/       { pearson_delta_de100[c_pearson_delta_de100++] = $NF }
 
-    # 求 mean|std（根据指标编号选择数组）
+    # mean|std (based on id array)
     function mean_std(idx,   i,n,s,mu,ss,v) {
       if (idx==1){ n=c_pds;                for(i=0;i<n;i++){v=pds[i];                s+=v} }
       else if(idx==2){ n=c_mae;            for(i=0;i<n;i++){v=mae[i];                s+=v} }
@@ -121,7 +121,7 @@ for dataset in "${DATASETS[@]}"; do
       return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
     }
 
-    # 取第 j 次（0-based）的数值
+    # j (0-based)countvalue
     function val(idx, j, v){
       if (idx==1) v=pds[j];
       else if(idx==2) v=mae[j];
@@ -150,7 +150,7 @@ for dataset in "${DATASETS[@]}"; do
     }
 
     END{
-      # 控制台/日志漂亮打印
+      # / 
       print "==================================================================";
       printf " Final statistics for dataset %s (%d runs: train+eval)\n", dataset, num_runs;
       print "==================================================================";
@@ -169,7 +169,7 @@ for dataset in "${DATASETS[@]}"; do
       print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
       print "==================================================================\n";
 
-      # CSV（1 行方法；先 11 个 mean±std，再 3*11 个单次值）
+      # CSV (1 ; 11 mean±std, 3*11 value)
       metric_names[1]="PDS";
       metric_names[2]="MAE";
       metric_names[3]="DES";

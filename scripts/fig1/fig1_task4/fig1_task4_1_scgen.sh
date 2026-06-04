@@ -17,9 +17,9 @@ declare -A SAMPLE_SIZES=(
   ["B2M_control_ifn"]="73"
 )
 
-NUM_RUNS="${NUM_RUNS:-3}"                   # 与范例一致：可通过环境变量覆盖
+NUM_RUNS="${NUM_RUNS:-3}" # and : canvia amount 
 CELLTYPE_TO_PREDICT="${CELLTYPE_TO_PREDICT:-melanocytes}"
-METHOD_NAME="${METHOD_NAME:-scGen}"         # 新增：方法名写入 CSV（与范例一致）
+METHOD_NAME="${METHOD_NAME:-scGen}" # : name CSV (and )
 
 # -----------------------------------------
 
@@ -44,10 +44,10 @@ for dataset in "${DATASETS[@]}"; do
   model_dir="${CKPT_ROOT}/${dataset}"
   mkdir -p "${model_dir}"
 
-  # ===== 改动点 1：与范例保持一致，仅输出单一 CSV（含 mean±std 与 per-run 值） =====
+  # ===== 1: and stay consistent, onlyoutput CSV (with mean±std and per-run value) =====
   METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv"
 
-  # 累积所有评测标准输出文本（仅评估阶段标准输出）
+  # alleval output (onlyeval output)
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
@@ -58,7 +58,7 @@ for dataset in "${DATASETS[@]}"; do
     umap_png="${SAMPLES_DIR}/${dataset}_umap_comparison_${i}.png"
 
     echo "[$(date '+%F %T')] >>> Eval start: ${dataset}, run${i}" | tee "${log_file}"
-    # ===== 改动点 2：捕获评测的标准输出到变量，同时 tee 到日志 =====
+    # ===== 2: eval outputto amount, when tee to =====
     eval_output="$(
       python scripts/scGen_eval.py \
         --train_data_path "${train}" \
@@ -72,11 +72,11 @@ for dataset in "${DATASETS[@]}"; do
     )"
     echo "[$(date '+%F %T')] >>> Eval done: ${dataset}, run${i}" | tee -a "${log_file}"
 
-    # 追加到总汇文本（供 AWK 统一解析）
+    # to ( AWK parse)
     ALL_OUTPUTS+="${eval_output}\n"
   done
 
-  # 仅依赖以下 11 个标签行（确保评估脚本打印一致；与范例完全对齐）：
+  # only tounder 11 (Ensureeval ; and align): 
   # Perturbation Discrimination Score (PDS): <num>
   # Mean Absolute Error (MAE): <num>
   # Differential Expression Score (DES): <num>
@@ -89,7 +89,7 @@ for dataset in "${DATASETS[@]}"; do
   # Pearson Delta (top 50 DE genes): <num>
   # Pearson Delta (top 100 DE genes): <num>
 
-  # ===== 改动点 3：AWK 产出“大表头 + 单行数据”，含 mean±std 和每次 run 的值 =====
+  # ===== 3: AWK " header + data", with mean±std each run run value =====
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF + 0 }
     /Mean Absolute Error \(MAE\):/               { mae[c_mae++] = $NF + 0 }
@@ -175,8 +175,8 @@ for dataset in "${DATASETS[@]}"; do
         for (i=1;i<=11;i++) row = row sprintf(",%.6f", val(i, r));
       }
 
-      print header > csv_path;   # 覆盖写入表头
-      print row    >> csv_path;  # 追加单行数据
+      print header > csv_path; # header
+      print row >> csv_path; # data
       close(csv_path);
       printf("CSV written: %s\n", csv_path);
     }

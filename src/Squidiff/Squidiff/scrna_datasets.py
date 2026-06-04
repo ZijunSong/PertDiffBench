@@ -10,7 +10,7 @@ from rdkit.Chem import AllChem
 
 def split_smiles_advanced(smiles):
     """
-    智能拆分 SMILES：按顶层 ; 分隔，但保留 [] 内的内容
+    Split SMILES on top-level ';' while keeping bracketed content intact.
     """
     if ';' not in smiles:
         return [smiles]
@@ -25,7 +25,7 @@ def split_smiles_advanced(smiles):
         elif char == ']':
             bracket_depth -= 1
         elif char == ';' and bracket_depth == 0:
-            # 只有在方括号外，分号才是分隔符
+            # only semicolons outside brackets act as separators
             if current.strip():
                 parts.append(current.strip())
             current = ""
@@ -47,11 +47,11 @@ def Drug_dose_encoder(drug_SMILES_list: list, dose_list: list, num_Bits=1024, co
     fcfp4_array = np.zeros((drug_len, num_Bits), dtype=np.float32)
 
     for i, smiles in enumerate(drug_SMILES_list):
-        # 跳过空值
+        # skip empty values
         if not smiles or smiles == '' or pd.isna(smiles):
             continue
         
-        # 使用智能拆分，正确处理 [Na+] 等离子
+        # smart split handles ions like [Na+] correctly
         smiles_parts = split_smiles_advanced(smiles)
         
         combined_fingerprint = np.zeros(num_Bits, dtype=np.float32)
@@ -75,7 +75,7 @@ def Drug_dose_encoder(drug_SMILES_list: list, dose_list: list, num_Bits=1024, co
                 print(f"Warning: Error processing SMILES part '{smi}': {e}")
                 continue
         
-        # 应用剂量缩放
+        # apply dose scaling
         if valid_parts > 0:
             try:
                 dose_val = float(dose_list[i]) if dose_list[i] not in ['', None] else 0.0
@@ -128,12 +128,11 @@ class AnnDataDataset(Dataset):
             drug_dose = self.encode_drug_doses[idx]
             group = self.encoded_obs_tensor[idx]
             
-            # 如果当前细胞是 control，直接使用自身特征
-            # 如果当前细胞是 treated，随机采样一个 control 细胞（或取平均）
+            # control cells use their own features; treated cells sample a random control
             if group == 0:  # control
-                control_feature = feature  # 或者从 control_features 中找对应
+                control_feature = feature
             else:  # treated
-                # 随机采样一个 control 细胞
+                # randomly sample one control cell
                 control_idx = torch.randint(0, len(self.control_features), (1,)).item()
                 control_feature = self.control_features[control_idx]
             

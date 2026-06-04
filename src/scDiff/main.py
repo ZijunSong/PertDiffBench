@@ -469,7 +469,7 @@ if __name__ == "__main__":
             ckpt_path = os.path.join(logdir, "checkpoints", "last.ckpt")
 
         base_configs = sorted(glob.glob(os.path.join(logdir, "configs/*.yaml")))
-        # 仅用 logdir 内保存的 config，不追加默认 base，否则会覆盖成 PerturbationTest 等导致 use_drug_cond 报错
+        # use only configs saved under logdir; do not append default base or use_drug_cond may break
         opt.base = base_configs
         _tmp = logdir.split("/")
         nowname = _tmp[-1]
@@ -831,7 +831,7 @@ if __name__ == "__main__":
                     loadable_state_dict, _, _, pretrained_embed = check_weights(model, ckpt_path)
                     model = load_weights(model, loadable_state_dict, pretrained_embed)
         else:
-            # 如果是恢复训练，则按原逻辑执行
+            # resume training: follow the original workflow
             with maybe_profile_ctxt(enable=opt.profile_train, msg="Training"):
                 if opt.train:
                     if ckpt_path is not None:  # TODO: force to retrain conditioner embeddings

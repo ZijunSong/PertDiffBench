@@ -12,9 +12,9 @@ import scanpy as sc
 import pandas as pd
 
 from omegaconf import OmegaConf
-import matplotlib.pyplot as plt  # 只为了保持接口一致，如果你不用画图可以删掉
+import matplotlib.pyplot as plt # as , using figcanto 
 
-# Metrics (和你 eval_mlp_ddpm_mlp.py 一致)
+# Metrics ( eval_mlp_ddpm_mlp.py )
 from utils.metrics import (
     compute_mae,
     compute_des,
@@ -28,7 +28,7 @@ from utils.metrics import (
     compute_pearson_delta_de,
 )
 
-# 模型：latent DDPM + decoder
+# : latent DDPM + decoder
 from src.diffusion_baselines.models.scimilarity_latent_ddpm_mlp import (
     ScimilarityLatentDDPMMLP,
 )
@@ -36,11 +36,11 @@ from src.diffusion_baselines.models.scimilarity_latent_ddpm_mlp import (
 
 def infer_latent_and_hidden_dim_from_ckpt(ckpt_state_dict):
     """
-    从 checkpoint 的 state_dict 自动推断 latent_dim / hidden_dim。
+    from checkpoint state_dict latent_dim / hidden_dim.
 
-    利用 decoder 第一层:
+     using decoder first :
         decoder.net.0: Linear(latent_dim -> hidden_dim)
-        weight 形状为 [hidden_dim, latent_dim]
+        weight shapeas [hidden_dim, latent_dim]
     """
     for name, param in ckpt_state_dict.items():
         if name.endswith("decoder.net.0.weight"):
@@ -98,7 +98,7 @@ def main():
         "--data-path",
         type=str,
         required=True,
-        help="Path to the VALID h5ad WITH SCimilarity latent (apply_scimilarity_encoder 输出).",
+        help="Path to the VALID h5ad WITH SCimilarity latent (apply_scimilarity_encoder output).",
     )
     parser.add_argument(
         "--latent-key",
@@ -108,7 +108,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # 1) Load config (只用里面的 model / train，不再假设有 cfg.data)
+    # 1) Load config (only useinside model / train, no longerAssume cfg.data)
     cfg = OmegaConf.load(args.config)
 
     # 2) Set device
@@ -129,7 +129,7 @@ def main():
 
     latent_dim, hidden_dim = infer_latent_and_hidden_dim_from_ckpt(state_dict)
 
-    # 覆盖 config 里的 latent_dim / hidden_dim，使之与 checkpoint 完全一致
+    # config latent_dim / hidden_dim, and checkpoint 
     old_latent = cfg.model.ae.latent_dim
     old_hidden = cfg.model.ae.hidden_dim
     cfg.model.ae.latent_dim = latent_dim
@@ -169,13 +169,13 @@ def main():
             f"but checkpoint/model expects {latent_dim}."
         )
 
-    # 可选：如果你担心 gene_dim 也不一致，可以在这里 assert 一下：
+    # optional: gene_dim , cantoinhere assert under: 
     gene_dim_cfg = cfg.model.ae.input_dim
     if gene_dim_cfg != adata.n_vars:
         print(
             f"[eval][Warn] cfg.model.ae.input_dim={gene_dim_cfg} "
             f"!= adata.n_vars={adata.n_vars}. "
-            f"Decoder最后一层可能和数据不匹配（除非训练时就是这样）。"
+            f"Decoder after may data ( trainwhen )."
         )
 
     ctrl_mask = adata.obs["perturbation_status"] == "Control"
@@ -185,7 +185,7 @@ def main():
     perturbations = [p for p in perturbations if p != "Control"]
     print(f"[eval] Found {len(perturbations)} perturbations in VALID set: {perturbations}")
 
-    # 预检查样本数
+    # check count
     print("\n--- Checking sample counts in VALID set ---")
     ctrl_count = len(ctrl_ids)
     pert_counts = {p: int(np.sum(adata.obs["perturbation_status"] == p)) for p in perturbations}
@@ -213,7 +213,7 @@ def main():
     metrics_results = defaultdict(list)
     all_synthetic_adata = []
 
-    # 6) 对每个 perturbation 评估
+    # 6) foreach perturbation eval
     for pert in perturbations:
         print(f"\n--- Evaluating perturbation: {pert} ---")
         pert_mask = adata.obs["perturbation_status"] == pert
@@ -222,29 +222,29 @@ def main():
         selected_ctrl_ids = np.random.choice(ctrl_ids, args.n_samples, replace=False)
         selected_pert_ids = np.random.choice(pert_ids, args.n_samples, replace=False)
 
-        # 控制组 latent 作为模型输入
+        # latent as input
         ctrl_latent = X_latent[adata.obs_names.get_indexer(selected_ctrl_ids)]
         ctrl_latent_tensor = torch.from_numpy(
             ctrl_latent.astype(np.float32)
         ).to(device)
 
-        # 真实扰动表达，用于 metric（表达空间）
+        # expressed, for metric (expressedempty )
         true_pert = adata[selected_pert_ids].X
         if hasattr(true_pert, "toarray"):
             true_pert = true_pert.toarray()
         true_pert = true_pert.astype(np.float32)
 
-        # 真实 control 表达（计算 delta / ctrl_pb）
+        # control expressed ( delta / ctrl_pb)
         ctrl_expr = adata[selected_ctrl_ids].X
         if hasattr(ctrl_expr, "toarray"):
             ctrl_expr = ctrl_expr.toarray()
         ctrl_expr = ctrl_expr.astype(np.float32)
 
-        # 通过 latent DDPM+decoder 生成预测扰动表达
+        # via latent DDPM+decoder expressed
         with torch.no_grad():
             pred_pert = model.sample_from_latent(ctrl_latent_tensor).cpu().numpy().astype(np.float32)
 
-        # 7) 计算各种 metrics（和 MLP baseline 一致）
+        # 7) types metrics ( MLP baseline )
         true_pert_pb = np.mean(true_pert, axis=0)
         pred_pert_pb = np.mean(pred_pert, axis=0)
         ctrl_pb = np.mean(ctrl_expr, axis=0)
@@ -286,7 +286,7 @@ def main():
             compute_des(true_de_genes, pred_de_genes, pred_gene_fold_changes)
         )
 
-        # 保存 synthetic AnnData 方便后续 concat
+        # synthetic AnnData after concat
         obs = pd.DataFrame(
             {
                 "perturbation_status": [f"Predicted_{pert}"] * args.n_samples,
@@ -297,7 +297,7 @@ def main():
         var = pd.DataFrame(index=adata.var_names)
         all_synthetic_adata.append(sc.AnnData(X=pred_pert, obs=obs, var=var))
 
-    # 8) 聚合指标并打印
+    # 8) and 
     print("\n" + "=" * 50)
     print(
         f"   Aggregate Evaluation Metrics (averaged over {len(perturbations)} perturbations)"
@@ -331,7 +331,7 @@ def main():
     )
     print("=" * 50 + "\nEvaluation complete!")
 
-    # 9) 合并并保存 synthetic AnnData（可选）
+    # 9) andand synthetic AnnData (optional)
     if all_synthetic_adata:
         os.makedirs(os.path.dirname(args.out_h5ad) or ".", exist_ok=True)
         adata_synth = sc.concat(all_synthetic_adata, join="outer", index_unique=None)

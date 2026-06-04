@@ -28,15 +28,15 @@ num=8
 ip=$2
 batch=4
 port=8448
-# 循环启动8个Worker训练进程
-export MS_WORKER_NUM=$ttl          # 设置集群中Worker进程数量为8
-export MS_SCHED_HOST=61.47.2.$ip  # 设置Scheduler IP地址为本地环路地址
-export MS_SCHED_PORT=$port       # 设置Scheduler端口
-export MS_ROLE=MS_WORKER        # 设置启动的进程为MS_WORKER角色
+# launch 8 worker training processes
+export MS_WORKER_NUM=$ttl # number of worker processes in the cluster (8)
+export MS_SCHED_HOST=61.47.2.$ip # scheduler host IP
+export MS_SCHED_PORT=$port # scheduler port
+export MS_ROLE=MS_WORKER # run this process as MS_WORKER
 for((i=$((start+1));i<$((start+num));i++));
 do
-    export MS_NODE_ID=$i                      # 设置进程id，可选
+ export MS_NODE_ID=$i # process id (optional)
     python ./1B_train.py --dist --data $1 --batch $batch --data $data > worker_$i.log 2>&1 &
 done
-export MS_NODE_ID=$start                      # 设置进程id，可选
+export MS_NODE_ID=$start # process id (optional)
 python ./1B_train.py --dist --data $1 --batch $batch --data $data 

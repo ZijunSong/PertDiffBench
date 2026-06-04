@@ -25,7 +25,7 @@ class PairedCellfmLatentGeneDataset(Dataset):
         z1: perturbed latent (X_cellfm)
         x1: perturbed gene expression (adata.X)
 
-    假设：
+    Assume: 
       - adata.X: gene expression matrix
       - adata.obsm["X_cellfm"]: latent from CellFM encoder
       - adata.obs["perturbation_status"]: 'Control' or perturbation labels

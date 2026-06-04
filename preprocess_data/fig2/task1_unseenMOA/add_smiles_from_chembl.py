@@ -13,9 +13,9 @@ import requests
 
 
 CHEMBL_API = "https://www.ebi.ac.uk/chembl/api/data"
-# 处理后数据的根路径（可从项目根目录运行脚本）
+# Processed data root (script can be run from repo root)
 DATA_OUT = Path("/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA")
-# cache 放在脚本所在目录，便于复用
+# Cache in script directory for reuse
 _SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_CACHE = str(_SCRIPT_DIR / "chembl_smiles_cache.json")
 

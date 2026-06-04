@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-构建 scGen setting 下的训练用 h5ad：训练集 (Control+IFN) + 各测试集的 Control 细胞，
-并添加 obs['split']：'train' 表示来自训练集（用于配对），'test_control' 表示来自测试集 Control（不参与配对）。
-输出保存在 DATA_DIR 下：scgen_combined_train_plus_test_control.h5ad
+ scGen setting undertrainusing h5ad: train set (Control+IFN) + test set Control cell, 
+andadd obs['split']: 'train' train set (for for), 'test_control' test set Control ( and for).
+output exist DATA_DIR under: scgen_combined_train_plus_test_control.h5ad
 """
 import os
 import argparse
@@ -16,7 +16,7 @@ def main():
                         help="Output h5ad path; default: <data_dir>/scgen_combined_train_plus_test_control.h5ad")
     args = parser.parse_args()
     if not args.data_dir:
-        # 默认：项目根下 data/fig2/task2_unseen_celltype
+        # default: items under data/fig2/task2_unseen_celltype
         proj = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
         data_dir = os.path.join(proj, "data", "fig2", "task2_unseen_celltype")
     else:

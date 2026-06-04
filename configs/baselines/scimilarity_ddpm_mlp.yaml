@@ -6,7 +6,7 @@ model:
     hidden_dim: 512
 
   ae:
-    input_dim: 6998   # = 基因数 (train/valid h5ad 的 n_vars)
+ input_dim: 6998 # number of genes (train/valid h5ad n_vars)
     latent_dim: 32    # = scVI n_latent
     hidden_dim: 1024
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-从已有 scDiff 训练产生的 logdir（含 checkpoints/last.ckpt）只重跑 test，
-解析 stdout 中的 11 个指标，写回 per-dataset CSV，并可选生成汇总 CSV。
+from scDiff train logdir (with checkpoints/last.ckpt) test, 
+parse stdout 11 , per-dataset CSV, andoptional CSV.
 
-用法（在项目根目录）:
-  # 只重跑 test，写回 samples/fig2/task1_unseen_moa_diff/*/scdiff/metrics/*.csv
+using (inrepo root):
+  # test, samples/fig2/task1_unseen_moa_diff/*/scdiff/metrics/*.csv
   python scripts/fig2/fig2_task1_moa/rerun_test_only_scdiff_moa_diff.py \
     --logdir-root logs \
     --datadir-substr unseen_diff_moa \
@@ -12,7 +12,7 @@
     --method-name "scDiff(v7.5)" \
     --num-runs 3
 
-  # 同时生成汇总 CSV
+  # when CSV
   python scripts/fig2/fig2_task1_moa/rerun_test_only_scdiff_moa_diff.py \
     ... --aggregate-to samples/fig2/task1_unseen_moa_diff/aggregated_metrics_scdiff.csv
 """
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import yaml
 
-# 与 shell AWK 一致的 11 个指标名（用于解析和写 CSV）
+# and shell AWK 11 name (for parse CSV)
 METRIC_PATTERNS = [
     (r"Perturbation Discrimination Score \(PDS\):\s*([\d.eE+-]+)", "PDS"),
     (r"Mean Absolute Error \(MAE\):\s*([\d.eE+-]+)", "MAE"),
@@ -43,7 +43,7 @@ METRIC_PATTERNS = [
 
 
 def parse_metrics_from_stdout(text: str) -> dict:
-    """从 test 阶段 stdout 文本中解析 11 个指标，返回 {metric_short_name: float}。"""
+    """from test stdout parse 11 , return {metric_short_name: float}."""
     values = {}
     for pattern, short_name in METRIC_PATTERNS:
         m = re.search(pattern, text)
@@ -58,18 +58,18 @@ def parse_metrics_from_stdout(text: str) -> dict:
 
 
 def get_dataset_from_logdir(logdir: Path) -> str | None:
-    """从 logdir/configs/*.yaml 中读取 data.params.test.params.dataset（或 train）。"""
+    """from logdir/configs/*.yaml data.params.test.params.dataset (or train)."""
     cfg_dir = logdir / "configs"
     if not cfg_dir.is_dir():
         return None
-    # 通常 project yaml 里有 data 配置
+    # project yaml data 
     for f in sorted(cfg_dir.glob("*.yaml")):
         try:
             with open(f, "r") as fp:
                 data = yaml.safe_load(fp)
             if not data:
                 continue
-            # data.params.test.params.dataset 或 data.params.train.params.dataset
+            # data.params.test.params.dataset or data.params.train.params.dataset
             for key in ("test", "train"):
                 params = (data.get("data") or {}).get("params") or {}
                 t = (params.get(key) or {}).get("params") or {}
@@ -81,7 +81,7 @@ def get_dataset_from_logdir(logdir: Path) -> str | None:
 
 
 def get_datadir_from_logdir(logdir: Path) -> str | None:
-    """从 logdir 的 config 里取 datadir（test 或 train）。"""
+    """from logdir config datadir (test or train)."""
     cfg_dir = logdir / "configs"
     if not cfg_dir.is_dir():
         return None
@@ -103,9 +103,9 @@ def get_datadir_from_logdir(logdir: Path) -> str | None:
 
 def find_logdirs(logdir_root: Path, datadir_substr: str, num_runs: int) -> dict[str, list[Path]]:
     """
-    扫描 logdir_root，找出所有含 checkpoints/last.ckpt 且 config 里 datadir 包含 datadir_substr 的目录。
-    按 dataset 分组，每组按 mtime 排序取前 num_runs 个（视为 run1..runN）。
-    返回 {dataset: [logdir_run1, logdir_run2, ...]}。
+     logdir_root, allwith checkpoints/last.ckpt config datadir contain datadir_substr directory.
+     dataset , mtime before num_runs ( as run1..runN).
+    return {dataset: [logdir_run1, logdir_run2, ...]}.
     """
     logdir_root = Path(logdir_root).resolve()
     by_dataset: dict[str, list[tuple[float, Path]]] = {}
@@ -127,7 +127,7 @@ def find_logdirs(logdir_root: Path, datadir_substr: str, num_runs: int) -> dict[
             by_dataset[dataset] = []
         by_dataset[dataset].append((mtime, d))
 
-    # 每组按 mtime 排序，取前 num_runs 个
+    # mtime , before num_runs 
     result = {}
     for dataset, list_mtime_dir in by_dataset.items():
         list_mtime_dir.sort(key=lambda x: x[0])
@@ -141,7 +141,7 @@ def find_logdirs(logdir_root: Path, datadir_substr: str, num_runs: int) -> dict[
 
 
 def run_test_only(project_root: Path, logdir: Path) -> str:
-    """运行 main.py --resume <logdir> --train False，返回 stdout+stderr。"""
+    """ main.py --resume <logdir> --train False, return stdout+stderr."""
     cmd = [
         sys.executable,
         str(project_root / "src" / "scDiff" / "main.py"),
@@ -149,7 +149,7 @@ def run_test_only(project_root: Path, logdir: Path) -> str:
         "--train", "False",
     ]
     env = os.environ.copy()
-    # 与 fig2 脚本一致：项目根 + src/scDiff，保证 from scdiff 可导入
+    # and fig2 : items + src/scDiff, from scdiff can 
     scdiff_src = str(project_root / "src" / "scDiff")
     env["PYTHONPATH"] = os.pathsep.join([str(project_root), scdiff_src, env.get("PYTHONPATH", "")])
     result = subprocess.run(
@@ -175,7 +175,7 @@ def write_per_dataset_csv(
     runs_metrics: list[dict],
     method_name: str,
 ) -> None:
-    """写单 dataset 的 metrics CSV：一行 method + 11 个 mean±std + Run1..RunN 各 11 列。"""
+    """ dataset metrics CSV: method + 11 mean±std + Run1..RunN 11 cols."""
     metric_short_names = [m[1] for m in METRIC_PATTERNS]
     n_runs = len(runs_metrics)
 
@@ -190,7 +190,7 @@ def write_per_dataset_csv(
             s = 0.0
         return m, s
 
-    # 表头
+    # header
     header = ["Method"]
     for name in metric_short_names:
         header.append(f"{name} (mean±std)")
@@ -198,7 +198,7 @@ def write_per_dataset_csv(
         for name in metric_short_names:
             header.append(f"Run{r} {name}")
 
-    # 数值行
+    # countvalue 
     row = [method_name]
     for name in metric_short_names:
         vals = [run.get(name) for run in runs_metrics]
@@ -257,7 +257,7 @@ def main():
             print(f"  Running test for {dataset} run{idx + 1} (resume {logdir}) ...")
             out = run_test_only(project_root, logdir)
             metrics = parse_metrics_from_stdout(out)
-            # 若一条都没解析到，打印末尾输出便于排查
+            # rows parseto, output 
             if all(_is_nan(metrics.get(m[1], float("nan"))) for m in METRIC_PATTERNS):
                 print(f"    [WARN] No metrics parsed for {dataset} run{idx+1}. Last 40 lines of output:")
                 for line in out.strip().split("\n")[-40:]:
@@ -266,7 +266,7 @@ def main():
         write_per_dataset_csv(samples_root, dataset, test_ds, runs_metrics, args.method_name)
 
     if args.aggregate_to:
-        # 汇总：每个 dataset 的 CSV 取最后一行，前面加 Dataset 列
+        # : each dataset CSV after , before Dataset cols
         agg_path = Path(args.aggregate_to).resolve()
         agg_path.parent.mkdir(parents=True, exist_ok=True)
         metric_short_names = [m[1] for m in METRIC_PATTERNS]

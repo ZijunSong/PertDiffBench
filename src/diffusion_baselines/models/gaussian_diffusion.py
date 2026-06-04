@@ -28,14 +28,14 @@ def extract(v, t, x_shape):
 
 def extract(buf, t, shape):
     """
-    从一维张量 buf 中按照索引 t 取值，并 reshape 成 shape。
+    Gather values from a 1-D buffer buf at indices t and reshape for broadcasting.
     """
     out = buf.gather(-1, t)            # [B]
     return out.view([t.shape[0]] + [1]*(len(shape)-1)).expand(shape)
 
 class GaussianDiffusionTrainer(nn.Module):
     """
-    Trainer for (conditional) DDPM. 支持条件 diffusion。
+    Trainer for (conditional) DDPM. Supports conditional diffusion.
     """
     def __init__(self, model: nn.Module, beta_1: float, beta_T: float, T: int, conditional: bool=False):
         super().__init__()
@@ -53,28 +53,28 @@ class GaussianDiffusionTrainer(nn.Module):
     def forward(self, x_0: torch.Tensor, cond: torch.Tensor=None) -> torch.Tensor:
         """
         Args:
-            x_0: 目标干净样本（latent 或者原始），形状 [B, D]
-            cond: 可选的条件向量，形状 [B, D_cond]
+            x_0: target clean sample (latent or raw), shape [B, D]
+            cond: optional conditioning vector, shape [B, D_cond]
         Returns:
-            标量 loss
+            scalar loss
         """
         B = x_0.shape[0]
-        # 1) 随机选 t
+        # 1) sample random t
         t = torch.randint(0, self.T, (B,), device=x_0.device, dtype=torch.long)
-        # 2) 采噪声
+        # 2) sample noise
         noise = torch.randn_like(x_0)
-        # 3) 构造 x_t
+        # 3) build x_t
         x_t = (
             extract(self.sqrt_alphas_bar, t, x_0.shape) * x_0 +
             extract(self.sqrt_one_minus_alphas_bar, t, x_0.shape) * noise
         )
-        # 4) 调用网络预测噪声
+        # 4) predict noise with the network
         if self.conditional:
             assert cond is not None, "Conditional trainer requires cond tensor"
             pred = self.model(x_t, cond, t)
         else:
             pred = self.model(x_t, t)
-        # 5) 计算 MSE
+        # 5) compute  MSE
         loss = F.mse_loss(pred, noise, reduction='none')
         return loss.mean()
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Fig4: 生成带 treatment_time 的 h5ad 供 eval_fig4_time_conditioned 使用。
-当前 DDPM 无时间条件，使用 train 中 0h 细胞作为 control 采样，
-将同一批生成结果分别标为 4h 和 6h 以跑通流程；后续可改为真实时间条件采样。
+Fig4: treatment_time h5ad eval_fig4_time_conditioned using.
+current DDPM when rows , using train 0h cell as control , 
+ results as 4h 6h to ; after can as when rows .
 """
 import os
 import sys

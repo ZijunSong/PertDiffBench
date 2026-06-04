@@ -1,81 +1,80 @@
-# Fig4 时间条件生成任务 — 数据处理说明
+# Fig4 time-conditioned generation — data processing
 
-## 1. 原始数据
+## 1. Raw data
 
-目录：`/data/ppnm/data/PertDiffBench/data_ori/fig4/`（与仓库内 `data_ori/fig4` 对应）
+Directory: `data_ori/fig4/` (local mirror may be under `/data/ppnm/data/PertDiffBench/data_ori/fig4/`)
 
-- **表达矩阵**: `GSM3770930_A549_lognorm_scale_hvg3000.csv`（细胞×基因，已 log2 标准化，3000 HVG）
-- **元数据**: `GSM3770930_A549_cell_annotate.txt`，列含 `sample`, `treatment_time`, `doublet_score` 等
-- **时间点**: 0h, 2h, 4h, 6h, 8h, 10h（各时间点细胞数约 1k–1.4k）
+- **Expression matrix**: `GSM3770930_A549_lognorm_scale_hvg3000.csv` (cells × genes, log2-normalized, 3000 HVGs)
+- **Metadata**: `GSM3770930_A549_cell_annotate.txt` with columns such as `sample`, `treatment_time`, `doublet_score`
+- **Time points**: 0h, 2h, 4h, 6h, 8h, 10h (~1k–1.4k cells per time point)
 
-## 2. 是否用 perturbation_status，以及如何设
+## 2. `perturbation_status` (compatibility only)
 
-- 本任务**没有**真实的 Control/IFN 分组，只有 `treatment_time`。
-- 为兼容现有依赖 `perturbation_status` 的代码（如 scDiffusion 的 classifier 若仍从该列读二分类），可以**仅在训练集**里做如下**约定**：
-  - **训练集**：`0h, 2h` → `perturbation_status = "Control"`；`8h, 10h` → `perturbation_status = "IFN"`。
-- 这样做的含义是：「早期时间点」视为 Control，「晚期时间点」视为 IFN，仅用于满足接口或二分类兼容；**真正用于时间条件生成的是 `treatment_time` 列**（0h/2h/8h/10h 作为多类标签）。
-- **测试集**（4h, 6h）不参与训练，`perturbation_status` 可统一设为 `"IFN"` 或 `"Holdout"`，仅作占位；评估时以 `treatment_time` 区分 4h 与 6h 即可。
+- This task has **no** true Control/IFN groups—only `treatment_time`.
+- To satisfy code that still reads `perturbation_status` (e.g. scDiffusion classifier), use this **train-only convention**:
+  - **Train**: `0h, 2h` → `perturbation_status = "Control"`; `8h, 10h` → `perturbation_status = "IFN"`.
+- Early time points stand in for Control and late for IFN **only for API compatibility**; **time-conditioned training/eval uses `treatment_time`** (0h/2h/8h/10h as multi-class labels).
+- **Test** (4h, 6h) is not used for training; set `perturbation_status` to `"IFN"` or `"Holdout"` as a placeholder. Evaluate by `treatment_time` (4h vs 6h).
 
-**结论**：  
-- 训练集中把 0h/2h 标为 Control、8h/10h 标为 IFN 是合理且便于兼容的。  
-- 测试集不需要“真实”的 Control/IFN，只要保留 `treatment_time` 用于评估即可。
+**Summary**
 
-## 3. 数据划分（训练 / 测试）
+- Labeling 0h/2h as Control and 8h/10h as IFN on the train set is reasonable for compatibility.
+- The test set does not need real Control/IFN—keep `treatment_time` for evaluation.
 
-- **训练集 (train)**  
-  - 只使用 **0h, 2h, 8h, 10h** 的细胞。  
-  - 用于训练时间条件生成模型（如 scDiffusion 的 diffusion + classifier，条件为时间点）。
+## 3. Train / test split
 
-- **测试集 (test)**  
-  - 只使用 **4h, 6h** 的细胞。  
-  - 用于评估：在推理时给定时间标签 4h、6h 分别生成细胞，与真实 4h、6h 细胞比较（MMD、LISI 等）。
+- **Train**
+  - Cells from **0h, 2h, 8h, 10h** only.
+  - Train time-conditioned models (e.g. scDiffusion diffusion + classifier on time).
 
-**不必**在 0h/2h/8h/10h 中再拆一份做“验证集”，除非你希望做 early stopping；若做，可从训练时间点中随机留约 10% 作为 valid。
+- **Test**
+  - Cells from **4h, 6h** only.
+  - Evaluate generation at 4h and 6h vs ground truth (MMD, LISI, etc.).
 
-## 4. 建议的 h5ad 产出
+You do **not** need a validation split from 0h/2h/8h/10h unless you want early stopping; optionally hold out ~10% of train time points as `valid`.
 
-输出目录：`/data/ppnm/data/PertDiffBench/data/fig4_task1/`（由 `preprocess_data/fig4/prepare_fig4_h5ad.py` 生成）
+## 4. Recommended h5ad outputs
 
-| 文件 | 内容 | 用途 |
-|------|------|------|
-| `fig4_train.h5ad` | 0h + 2h + 8h + 10h 细胞 | 训练（VAE + Diffusion + Classifier 等） |
-| `fig4_test.h5ad`  | 4h + 6h 细胞 | 评估生成质量（与真实 4h/6h 对比） |
+Output directory: `data/fig4_task1/` (from `preprocess_data/fig4/prepare_fig4_h5ad.py`)
 
-可选：  
-- `fig4_valid.h5ad`：从 0h/2h/8h/10h 中留约 10% 作验证（可选）。
+| File | Contents | Use |
+|------|----------|-----|
+| `fig4_train.h5ad` | 0h + 2h + 8h + 10h cells | Training (VAE + diffusion + classifier, etc.) |
+| `fig4_test.h5ad` | 4h + 6h cells | Evaluate vs real 4h/6h |
 
-## 5. obs 列建议
+Optional: `fig4_valid.h5ad` (~10% held out from train time points).
 
-- **必须保留**  
-  - `treatment_time`：字符串，如 `"0h"`, `"2h"`, `"4h"`, `"6h"`, `"8h"`, `"10h"`。  
-  - 用于：时间条件训练的标签、评估时按时间点分组。
+## 5. Recommended `obs` columns
 
-- **兼容现有 pipeline**  
-  - `perturbation_status`：  
-    - 训练集：0h/2h → `"Control"`，8h/10h → `"IFN"`。  
-    - 测试集：可全部设为 `"IFN"` 或 `"Holdout"`。
+- **Required**
+  - `treatment_time`: strings `"0h"`, `"2h"`, `"4h"`, `"6h"`, `"8h"`, `"10h"` for training labels and eval grouping.
 
-- **可选**  
-  - `split`：`"train"` / `"test"`（或 `"valid"`），便于检查划分。  
-  - 其他元数据（如 `doublet_score`）按需保留。
+- **Pipeline compatibility**
+  - `perturbation_status`:
+    - Train: 0h/2h → `"Control"`, 8h/10h → `"IFN"`.
+    - Test: all `"IFN"` or `"Holdout"`.
 
-## 6. 与 fig1 的差异（简要）
+- **Optional**
+  - `split`: `"train"` / `"test"` (or `"valid"`).
+  - Other metadata (e.g. `doublet_score`) as needed.
 
-- fig1：每个细胞有真实 Control/IFN 标签，train/valid 按细胞类型或随机划分，且通常 Control 与 IFN 成对或同细胞类型。  
-- fig4：无 Control/IFN，只有时间；**按时间点划分**：训练时间点 (0h,2h,8h,10h) → train，未见时间点 (4h,6h) → test；`perturbation_status` 仅在训练集按上面约定填写，以兼容现有代码。
+## 6. Difference from fig1 (brief)
 
-## 7. 脚本与评估（scripts/fig4）
+- **fig1**: real Control/IFN per cell; train/valid by cell type or random split; paired Control/IFN common.
+- **fig4**: time only; **split by time point**—train times (0h,2h,8h,10h) vs held-out (4h,6h); `perturbation_status` filled on train only for compatibility.
 
-- **数据处理**：`preprocess_data/fig4/prepare_fig4_h5ad.py` 从 `data_ori/fig4` 读入 CSV/元数据，生成上述 `fig4_train.h5ad` 与 `fig4_test.h5ad`。  
-- **时间条件评估**：`scripts/fig4/eval_fig4_time_conditioned.py` 按 `treatment_time` 分组计算 11 项指标（与 fig1 一致），需 `--test-h5ad`、`--generated-h5ad`，可选 `--train-h5ad`（0h 作 control 算 delta 类指标）。  
-- **baseline 脚本**：`fig4_task1_scdiffusion.sh`、`fig4_task1_ddpm.sh`、`fig4_task1_ddpm_mlp.sh`、`fig4_task1_scdiff.sh`、`fig4_task1_squidiff.sh` 仿 fig1 逻辑：对 fig4 数据做多轮训练+测评并汇总 CSV。  
-- **无 Control/IFN 的 test**：fig4_test 仅含 4h/6h，无 Control。若 baseline 的 eval 要求 test 中同时有 Control 与 IFN，则使用 **时间条件模式**：`--time-conditioned` + `--generated-h5ad`，由 `eval_fig4_time_conditioned.py` 按时间分组评估。
+## 7. Scripts and evaluation (`scripts/fig4`)
 
-## 8. 各方法如何生成 4h/6h（与图2 对齐）
+- **Preprocessing**: `preprocess_data/fig4/prepare_fig4_h5ad.py` builds `fig4_train.h5ad` and `fig4_test.h5ad` from `data_ori/fig4`.
+- **Time-conditioned eval**: `scripts/fig4/eval_fig4_time_conditioned.py` computes 11 metrics per `treatment_time` (same as fig1); requires `--test-h5ad`, `--generated-h5ad`; optional `--train-h5ad` (0h as control for delta metrics).
+- **Baseline shells**: `fig4_task1_scdiffusion.sh`, `fig4_task1_ddpm.sh`, `fig4_task1_ddpm_mlp.sh`, `fig4_task1_scdiff.sh`, `fig4_task1_squidiff.sh`—multi-run train/eval and CSV aggregation like fig1.
+- **Test without Control/IFN**: `fig4_test` is 4h/6h only. If a baseline eval requires both Control and IFN in test, use **time-conditioned mode**: `--time-conditioned` + `--generated-h5ad` and `eval_fig4_time_conditioned.py`.
 
-| 方法 | 4h/6h 生成方式 |
-|------|----------------|
-| **DDPM** | 为 fig4 单独训练一个 VAE（仅 encoder+decoder，与 DDPM+MLP 同结构），脚本：`train_fig4_ae_for_ddpm.py`；再用该 VAE 做 2h/8h 线性插值生成 4h/6h，脚本：`sample_fig4_vae_linear_interp.py`。 |
-| **DDPM+MLP** | 使用本模型自带的 encoder/decoder 做 2h/8h 线性插值 → 4h/6h（不跑 diffusion），脚本：`sample_fig4_vae_linear_interp.py`，ckpt 为 DDPM+MLP 的 `model_epoch_1000.pth`。 |
-| **Squidiff** | 按原文 **addition** 方式：以 2h 细胞为 origin，计算 Δz_sem = mean(z_8h)−mean(z_2h)，scale(4h)=1/3、scale(6h)=2/3，经 `interp_with_direction` 得到 z_mod，再 DDIM 条件解码。脚本：`sample_fig4_squidiff_interp.py`（`--method addition`，可选 `--method lerp`）。 |
-| **scDiffusion** | 使用 classifier 的 **梯度插值**（2h–8h 方向）生成 4h/6h，不改为线性插值。 |
+## 8. How each method generates 4h/6h (aligned with fig2)
+
+| Method | 4h/6h generation |
+|--------|------------------|
+| **DDPM** | Train a fig4-only VAE (encoder+decoder, same structure as DDPM+MLP): `train_fig4_ae_for_ddpm.py`; linear interp 2h/8h → 4h/6h: `sample_fig4_vae_linear_interp.py`. |
+| **DDPM+MLP** | Built-in encoder/decoder, 2h/8h linear interp → 4h/6h (no diffusion at sample time); `sample_fig4_vae_linear_interp.py`, ckpt `model_epoch_1000.pth`. |
+| **Squidiff** | **Addition**: origin at 2h, Δz_sem = mean(z_8h)−mean(z_2h), scale 1/3 (4h) and 2/3 (6h), `interp_with_direction` → z_mod, DDIM decode. Script: `sample_fig4_squidiff_interp.py` (`--method addition`, optional `lerp`). |
+| **scDiffusion** | Classifier **gradient interpolation** along 2h–8h (not linear latent interp). |

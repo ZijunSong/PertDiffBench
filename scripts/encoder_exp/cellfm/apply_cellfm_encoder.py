@@ -21,28 +21,28 @@ import argparse
 import traceback
 from typing import Tuple
 
-# 在 import 其他库前降低 MindSpore/GLOG 的刷屏（如 load_param_into_net 的 “parameters not loaded”）
+# in import other before MindSpore/GLOG ( load_param_into_net "parameters not loaded")
 if "GLOG_minloglevel" not in os.environ:
     os.environ["GLOG_minloglevel"] = "2"  # 0=INFO, 1=WARNING, 2=ERROR
 
 
 def _ensure_ld_path_for_gpu_and_reexec():
     """
-    Linux 下动态链接器在进程启动时读取 LD_LIBRARY_PATH，在 Python 里后改无效。
-    若要用 GPU，必须在启动 Python 前设好；这里通过 re-exec 让新进程继承正确的 LD_LIBRARY_PATH。
+    Linux under in when LD_LIBRARY_PATH, in Python after .
+     mustusing GPU, in Python before ; herevia re-exec correct LD_LIBRARY_PATH.
     """
-    # 检查是否需要 GPU
+    # checkwhethermust GPU
     need_gpu = False
     if "--device" in sys.argv:
         idx = sys.argv.index("--device")
         if idx + 1 < len(sys.argv) and sys.argv[idx + 1].startswith("cuda"):
             need_gpu = True
     else:
-        # 默认 device 是 cuda，视为需要 GPU
+        # default device cuda, asmust GPU
         need_gpu = True
     if not need_gpu:
         return
-    # 推断 conda 环境路径（与 _setup_mindspore_gpu_env 一致）
+    # conda path (and _setup_mindspore_gpu_env )
     conda_prefix = os.environ.get("CONDA_PREFIX")
     if not conda_prefix and hasattr(sys, "executable"):
         exe = os.path.realpath(sys.executable)
@@ -55,25 +55,25 @@ def _ensure_ld_path_for_gpu_and_reexec():
             except ValueError:
                 pass
     if not conda_prefix or not os.path.isdir(os.path.join(conda_prefix, "lib")):
-        # 调试：如果找不到 conda_prefix，打印信息
+        # : to conda_prefix, batch info
         if not conda_prefix:
             print(f"[apply_cellfm] DEBUG: CONDA_PREFIX not found, sys.executable={sys.executable if hasattr(sys, 'executable') else 'N/A'}", file=sys.stderr, flush=True)
         return
     conda_lib = os.path.join(conda_prefix, "lib")
     existing = os.environ.get("LD_LIBRARY_PATH", "")
-    # 检查是否已正确设置（conda lib 在最前）
-    # 注意：即使 LD_LIBRARY_PATH 看起来正确，MindSpore 的 run_check 在 import 时立即执行，
-    # 此时动态链接器使用的是进程启动时的 LD_LIBRARY_PATH。
-    # 如果 LD_LIBRARY_PATH 不是在进程启动时设置的（例如在 Python 中设置的），
-    # 我们需要 re-exec 以确保新进程在启动时就拥有正确的 LD_LIBRARY_PATH。
-    # 但为了不无限循环，我们只在确实需要时才 re-exec（即 LD_LIBRARY_PATH 未正确设置时）。
+    # checkwhether correct (conda lib in front)
+    # : LD_LIBRARY_PATH correct, MindSpore run_check in import when , 
+    # when using when LD_LIBRARY_PATH.
+    # LD_LIBRARY_PATH in when (e.g.in Python ), 
+    # wemust re-exec toEnsure in when correct LD_LIBRARY_PATH.
+    # as , we in mustwhen re-exec ( LD_LIBRARY_PATH correct when).
     
-    # 检查existing是否包含MindSpore的路径（说明已经import过MindSpore）
+    # checkexistingwhethercontainMindSporepath ( alreadyimport MindSpore)
     has_mindspore_path = "mindspore/lib/plugin" in existing
     
-    # 构建正确的LD_LIBRARY_PATH：conda lib在最前，然后是系统lib
+    # correctLD_LIBRARY_PATH: conda libin front, after lib
     new_ld_parts = [conda_lib, "/usr/lib/x86_64-linux-gnu"]
-    # 从existing中提取不在new_ld_parts中的路径，但排除系统CUDA路径和MindSpore路径
+    # fromexisting innew_ld_parts path, CUDApath MindSporepath
     if existing:
         existing_parts = existing.split(os.pathsep)
         for p in existing_parts:
@@ -81,22 +81,22 @@ def _ensure_ld_path_for_gpu_and_reexec():
                 new_ld_parts.append(p)
     new_ld = os.pathsep.join(new_ld_parts)
     
-    # 检查是否需要re-exec：
-    # 1. LD_LIBRARY_PATH未设置
-    # 2. conda lib不在最前
-    # 3. 包含MindSpore路径（说明已经import过，需要re-exec来清除）
+    # checkwhethermustre-exec: 
+    # 1. LD_LIBRARY_PATHnot set
+    # 2. conda lib in front
+    # 3. containMindSporepath ( alreadyimport , mustre-exec )
     needs_reexec = (not existing or 
                     (not existing.startswith(conda_lib + os.pathsep) and existing != conda_lib) or
                     has_mindspore_path)
     
     if needs_reexec:
-        # 需要 re-exec：设置 LD_LIBRARY_PATH 并保留 CONDA_PREFIX
+        # must re-exec: LD_LIBRARY_PATH andkeep CONDA_PREFIX
         os.environ["LD_LIBRARY_PATH"] = new_ld
         if not os.environ.get("CONDA_PREFIX"):
             os.environ["CONDA_PREFIX"] = conda_prefix
-        # Re-exec：新进程会从脚本开头重新执行，但这次 LD_LIBRARY_PATH 已在进程启动时正确
-        # 注意：execv 会替换当前进程，所以此 print 通常不会出现在输出中
-        # 但如果看到此消息，说明 re-exec 未生效（execv 失败）
+        # Re-exec: willfrom , LD_LIBRARY_PATH in whencorrect
+        # : execv will current , to print will inoutput 
+        # to , re-exec (execv )
         print(f"[apply_cellfm] Re-executing Python with LD_LIBRARY_PATH={new_ld[:150]}...", file=sys.stderr, flush=True)
         print(f"[apply_cellfm] DEBUG: existing={existing[:100]}, has_mindspore={has_mindspore_path}, needs_reexec={needs_reexec}", file=sys.stderr, flush=True)
         try:
@@ -105,8 +105,8 @@ def _ensure_ld_path_for_gpu_and_reexec():
             print(f"[apply_cellfm] Re-exec failed: {e}", file=sys.stderr, flush=True)
             raise
     else:
-        # 已正确设置，但确保LD_LIBRARY_PATH包含所有必要的路径
-        # 如果包含MindSpore路径，仍然需要re-exec来清除
+        # correct , EnsureLD_LIBRARY_PATHcontainall mustpath
+        # containMindSporepath, stillmustre-exec 
         if has_mindspore_path:
             print(f"[apply_cellfm] DEBUG: LD_LIBRARY_PATH contains MindSpore path, forcing re-exec", file=sys.stderr, flush=True)
             os.environ["LD_LIBRARY_PATH"] = new_ld
@@ -122,7 +122,7 @@ def _ensure_ld_path_for_gpu_and_reexec():
             os.environ["LD_LIBRARY_PATH"] = new_ld
 
 
-# 若需 GPU，确保 LD_LIBRARY_PATH 在进程启动前包含 conda/lib，必要时 re-exec
+# need GPU, Ensure LD_LIBRARY_PATH in beforecontain conda/lib, mustwhen re-exec
 _ensure_ld_path_for_gpu_and_reexec()
 
 import numpy as np
@@ -156,17 +156,17 @@ def _get_repo_root() -> str:
 
 def _resolve_ckpt_path(ckpt_path: str) -> str:
     """
-    解析 checkpoint 路径：若为断开的 symlink（如 HF 缓存的 blobs 指针），
-    则尝试从 HuggingFace 重新下载到同目录下的实体文件并返回可用路径。
+    parse checkpoint path: as symlink ( HF blobs ), 
+     from HuggingFace under to directoryunder fileandreturncanusingpath.
     """
     ckpt_path = os.path.abspath(ckpt_path)
-    # 若当前路径可读（或 symlink 目标存在），直接使用
+    # currentpathcan (or symlink exist), directly using
     if os.path.isfile(ckpt_path) and os.path.getsize(ckpt_path) > 0:
         return ckpt_path
     real = os.path.realpath(ckpt_path)
     if os.path.isfile(real) and os.path.getsize(real) > 0:
         return real
-    # 断开的 symlink 或目标不存在：从 HuggingFace 下载到同目录的实体文件
+    # symlink or exist: from HuggingFace under to directory file
     ckpt_dir = os.path.dirname(ckpt_path)
     local_ckpt = os.path.join(ckpt_dir, "CellFM_80M_weight_local.ckpt")
     if os.path.isfile(local_ckpt) and os.path.getsize(local_ckpt) > 0:
@@ -174,7 +174,7 @@ def _resolve_ckpt_path(ckpt_path: str) -> str:
     try:
         from huggingface_hub import hf_hub_download
         print("[apply_cellfm] Checkpoint path missing or broken symlink, downloading from HuggingFace...")
-        # 下载到实体文件，避免再次产生指向 blobs 的 symlink
+        # under to file, to blobs symlink
         downloaded = hf_hub_download(
             repo_id="ShangguanNingyuan/CellFM",
             filename="CellFM_80M_weight.ckpt",
@@ -191,8 +191,8 @@ def _resolve_ckpt_path(ckpt_path: str) -> str:
 
 def _load_geneset(repo_root: str, use_expand: bool = True):
     """
-    Load gene name -> 1-based index. CellFM_80M 权重用 expand_gene_info 训练（27855 基因），
-    需与 checkpoint 的 gene_emb 形状 (27856, 1536) 一致，故默认用 expand_gene_info.csv。
+    Load gene name -> 1-based index. CellFM_80M using expand_gene_info train (27855 gene), 
+    needand checkpoint gene_emb shape (27856, 1536) , defaultusing expand_gene_info.csv.
     """
     filename = "expand_gene_info.csv" if use_expand else "gene_info.csv"
     path = os.path.join(repo_root, "src", "CellFM", "csv", filename)
@@ -215,7 +215,7 @@ def _prepare_cell_batch(
     """
     Build (expr, gene, zero_idx) for a batch of cells.
     X_block: (n_cells, n_genes), dense; total_counts: (n_cells,).
-    Returns expr (n_cells, NONZ_LEN, 2) — ValueEncoder 需要 [unmask, expr] 两通道，推理时 unmask=1；
+    Returns expr (n_cells, NONZ_LEN, 2) - ValueEncoder must [unmask, expr] , when unmask=1; 
     gene (n_cells, NONZ_LEN), zero_idx (n_cells, NONZ_LEN + PAD).
     """
     n_cells = X_block.shape[0]
@@ -262,12 +262,12 @@ def _prepare_cell_batch(
 
 
 def _setup_mindspore_gpu_env():
-    """在 import mindspore 之前设置 LD_LIBRARY_PATH，让 mindspore-gpu 能找到 libcuda/libcudnn（含 conda 环境）。"""
+    """in import mindspore before LD_LIBRARY_PATH, mindspore-gpu found libcuda/libcudnn (with conda )."""
     extra_paths = []
-    # 优先使用 conda 环境中的 CUDA 库（用户无 sudo 时用 conda install cuda-toolkit cudnn）
+    # using conda CUDA (using sudo whenusing conda install cuda-toolkit cudnn)
     conda_prefix = os.environ.get("CONDA_PREFIX")
     if not conda_prefix and hasattr(sys, "executable"):
-        # nohup 等场景下 CONDA_PREFIX 可能未传入，从 python 路径推断（如 .../envs/cellfm/bin/python）
+        # nohup under CONDA_PREFIX may , from python path ( .../envs/cellfm/bin/python)
         exe = os.path.realpath(sys.executable)
         if os.path.sep + "envs" + os.path.sep in exe:
             # .../envs/ENVNAME/bin/python -> .../envs/ENVNAME
@@ -280,9 +280,9 @@ def _setup_mindspore_gpu_env():
                 pass
     if conda_prefix and os.path.isdir(os.path.join(conda_prefix, "lib")):
         extra_paths.append(os.path.join(conda_prefix, "lib"))
-    # 驱动提供的 libcuda 通常在 /usr/lib/x86_64-linux-gnu
+    # libcuda in /usr/lib/x86_64-linux-gnu
     extra_paths.append("/usr/lib/x86_64-linux-gnu")
-    # 仅当无 conda CUDA 时才加系统 CUDA，避免加载到 libcublas.so.12/13
+    # only conda CUDA when CUDA, to libcublas.so.12/13
     if not (conda_prefix and os.path.isdir(os.path.join(conda_prefix, "lib"))):
         extra_paths.extend([
             "/usr/local/cuda/lib64",
@@ -291,9 +291,9 @@ def _setup_mindspore_gpu_env():
     existing = os.environ.get("LD_LIBRARY_PATH", "")
     added = os.pathsep.join(p for p in extra_paths if os.path.isdir(p))
     if added:
-        # 确保conda lib在最前，避免加载到系统CUDA 13
+        # Ensureconda libin front, to CUDA 13
         existing_parts = [p for p in existing.split(os.pathsep) if p and p not in extra_paths]
-        # 移除可能存在的系统CUDA路径
+        # mayexist CUDApath
         existing_parts = [p for p in existing_parts if not p.startswith("/usr/local/cuda")]
         new_ld = added
         if existing_parts:
@@ -304,18 +304,18 @@ def _setup_mindspore_gpu_env():
 def encode_with_cellfm(adata, ckpt_path: str, device: str = "cpu") -> np.ndarray:
     """
     Encode cells with CellFM (MindSpore 80M) and return cell embeddings (n_cells, 1536).
-    使用 GPU 前请安装 mindspore-gpu（见脚本注释或 README），并确保系统有 libcuda.so、libcudnn.so。
+     using GPU before mindspore-gpu ( or README), andEnsure libcuda.so, libcudnn.so.
     """
     ckpt_path = _resolve_ckpt_path(ckpt_path)
     repo_root = _get_repo_root()
     _setup_cellfm_path(repo_root)
 
-    # 在 import 前设置，以便 mindspore-gpu 加载时能找到系统 CUDA/cuDNN
+    # in import before , to mindspore-gpu when found CUDA/cuDNN
     _setup_mindspore_gpu_env()
 
     import mindspore as ms
     import logging as _logging
-    # 抑制 MindSpore 刷屏：load_param_into_net 的 “456 parameters not loaded” 等
+    # MindSpore : load_param_into_net "456 parameters not loaded" 
     for _name in ("mindspore", "mindspore.train", "mindspore.train.serialization", "mindspore.context", "mindspore.run_check"):
         _logging.getLogger(_name).setLevel(_logging.ERROR)
 
@@ -327,8 +327,8 @@ def encode_with_cellfm(adata, ckpt_path: str, device: str = "cpu") -> np.ndarray
                 "[apply_cellfm] GPU context failed (MindSpore could not load GPU).",
                 file=sys.stderr,
             )
-            print(f"[apply_cellfm] MindSpore 报错: {e}", file=sys.stderr)
-            # 简要诊断：关键库及 MindSpore 要求的 .11/.8 版本
+            print(f"[apply_cellfm] MindSpore : {e}", file=sys.stderr)
+            # must : key and MindSpore requires .11/.8 
             ld_paths = os.environ.get("LD_LIBRARY_PATH", "").split(os.pathsep)
             has_cublas11 = False
             has_cudnn8 = False
@@ -351,11 +351,11 @@ def encode_with_cellfm(adata, ckpt_path: str, device: str = "cpu") -> np.ndarray
                 print(f"  {lib}: {'found ' + str(found[:2]) if found else 'NOT FOUND in LD_LIBRARY_PATH'}", file=sys.stderr)
             if not has_cublas11 or not has_cudnn8:
                 print(
-                    "[apply_cellfm] MindSpore 2.6 GPU 需要 CUDA 11 (libcublas.so.11) 与 cuDNN 8 (libcudnn.so.8)，当前环境可能是 CUDA 13 / cuDNN 9，版本不兼容。",
+                    "[apply_cellfm] MindSpore 2.6 GPU must CUDA 11 (libcublas.so.11) and cuDNN 8 (libcudnn.so.8), current may CUDA 13 / cuDNN 9, .",
                     file=sys.stderr,
                 )
                 print(
-                    "  请在 cellfm 环境中安装 CUDA 11 与 cuDNN 8 后重试（示例）：",
+                    " in cellfm CUDA 11 and cuDNN 8 after ( ): ",
                     file=sys.stderr,
                 )
                 print(
@@ -363,7 +363,7 @@ def encode_with_cellfm(adata, ckpt_path: str, device: str = "cpu") -> np.ndarray
                     file=sys.stderr,
                 )
                 print(
-                    "  或先移除新版本再装: conda remove cuda-toolkit cudnn --force; conda install -y -c nvidia cuda-toolkit=11.8 cuda-cudnn-cu11=8.9",
+                    " or : conda remove cuda-toolkit cudnn --force; conda install -y -c nvidia cuda-toolkit=11.8 cuda-cudnn-cu11=8.9",
                     file=sys.stderr,
                 )
             print(
@@ -409,7 +409,7 @@ def encode_with_cellfm(adata, ckpt_path: str, device: str = "cpu") -> np.ndarray
     model.set_train(False)
 
     param_dict = ms.load_checkpoint(ckpt_path)
-    # 抑制 “parameters not loaded” 的重复打印（MindSpore 会按每 key 打印一行）
+    # "parameters not loaded" (MindSpore will key )
     import logging
     _ms_log = logging.getLogger("mindspore")
     _old_level = _ms_log.level
@@ -494,7 +494,7 @@ def main():
     args = parser.parse_args()
 
     repo_root = _get_repo_root()
-    # 路径若为相对则基于仓库根，避免 cwd 不同导致读错/写错
+    # path as for based on , cwd / 
     if os.path.isabs(args.out_h5ad):
         out_abs = args.out_h5ad
     else:

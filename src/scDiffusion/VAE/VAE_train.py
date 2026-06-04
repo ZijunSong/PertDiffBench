@@ -69,8 +69,8 @@ def train_vae(args, return_model=False):
     for step in tqdm(range(args["max_steps"]), desc="Training VAE", total=args["max_steps"]):
         genes, _ = next(datasets)
         genes = genes.float()
-        # print(f"输入数据 'genes' 的数据类型是: {genes.dtype}")
-        # print(f"模型 'autoencoder' 参数的数据类型是: {next(autoencoder.parameters()).dtype}")
+        # print(f"input 'genes' dtype: {genes.dtype}")
+        # print(f"autoencoder param dtype: {next(autoencoder.parameters()).dtype}")
         minibatch_training_stats = autoencoder.train_step(genes)
 
         if step % 1000 == 0:

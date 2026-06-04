@@ -5,19 +5,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .gaussian_diffusion import GaussianDiffusionTrainer, GaussianDiffusionSampler
-from .mlp_ddpm_mlp_diffusion import MLPCond  # 复用你已有的条件 MLP
+from .mlp_ddpm_mlp_diffusion import MLPCond  # reuse existing conditional MLP
 
 
 class ScimilarityLatentDDPMMLP(nn.Module):
     """
     DDPM in SCimilarity latent space + MLP decoder back to gene space.
 
-    训练输入:
+    traininput:
         z0: control latent  [B, latent_dim]
         z1: perturbed latent [B, latent_dim]
         x1: perturbed gene expression [B, G]
 
-    compute_loss 返回:
+    compute_loss returns:
         loss_total, loss_diff, loss_dec
     """
 
@@ -28,7 +28,7 @@ class ScimilarityLatentDDPMMLP(nn.Module):
         ae_cfg = cfg.model.ae
         diff_cfg = cfg.model.diffusion
 
-        latent_dim = ae_cfg.latent_dim   # 由训练脚本自动设为 X_scim 的维度
+        latent_dim = ae_cfg.latent_dim  # set automatically by train script to X_scim dim
         gene_dim = ae_cfg.input_dim      # = adata.n_vars
         hidden_ae = ae_cfg.hidden_dim
         hidden_diff = diff_cfg.hidden_dim
@@ -65,7 +65,7 @@ class ScimilarityLatentDDPMMLP(nn.Module):
             T=T,
         )
 
-        # decoder loss 权重，config 里可以设置 model.dec_weight
+        # decoder loss weight; set via model.dec_weight in config
         self.dec_weight = getattr(cfg.model, "dec_weight", 1.0)
 
     def compute_loss(self, z0: torch.Tensor, z1: torch.Tensor, x1: torch.Tensor):
@@ -74,10 +74,10 @@ class ScimilarityLatentDDPMMLP(nn.Module):
         z1: [B, latent_dim] perturbed latent
         x1: [B, G]          perturbed gene expression
         """
-        # 1) diffusion loss: 在 latent space 上学习 z1
+        # 1) diffusion loss: learn z1 in latent space
         loss_diff = self.diffusion_trainer(z1, cond=z0)
 
-        # 2) decoder loss: 用“干净”的 z1 重建 x1
+        # 2) decoder loss: reconstruct x1 from clean z1
         x1_hat = self.decoder(z1)
         loss_dec = F.mse_loss(x1_hat, x1)
 
@@ -87,12 +87,12 @@ class ScimilarityLatentDDPMMLP(nn.Module):
     @torch.no_grad()
     def sample_from_latent(self, z0: torch.Tensor, noise: torch.Tensor = None):
         """
-        给定 control latent z0，从 DDPM+decoder 生成预测的 gene expression。
+        Given control latent z0, run DDPM+decoder to predict gene expression.
 
         z0: [B, latent_dim]
-        noise: optional 初始噪声, [B, latent_dim]
+        noise: optional initial noise, [B, latent_dim]
 
-        返回:
+        Returns:
             x1_pred: [B, G]
         """
         device = z0.device

@@ -1,5 +1,5 @@
 #!/bin/bash
-# 失败即报错退出
+# 
 set -e
 trap "echo ERROR && exit 1" ERR
 
@@ -15,12 +15,12 @@ NUM_RUNS=${NUM_RUNS:-3}
 mkdir -p "${LOG_SUBDIR}"
 # --------------------
 
-# 项目根目录（脚本位于子目录时自动回到根）
+# repo root ( subdirwhen to )
 HOMEDIR=$(dirname "$(dirname "$(realpath "$0")")")/..
 cd "$HOMEDIR"
 echo "Current working directory: $(pwd)"
 
-# 需要处理的全部数据集
+# musthandle data 
 DATASETS=(
   'ACTA2_control_coculture'
   'ACTA2_control_ifn'
@@ -33,22 +33,22 @@ for dataset in "${DATASETS[@]}"; do
   echo "###   Starting pipeline for dataset: $dataset"
   echo "######################################################################"
 
-  # 构造 dataset 对应的 data_settings
+  # build dataset forshould data_settings
   train_fname="task4_${dataset}_train.h5ad"
   test_fname="task4_${dataset}_test.h5ad"
   data_settings="data.params.train.params.dataset=${dataset} data.params.train.params.fname=${train_fname}"
   data_settings+=" data.params.test.params.dataset=${dataset} data.params.test.params.fname=${test_fname}"
 
-  # 该数据集的 CSV 与日志路径（CSV 为单一文件：均值±标准差 + 各 run 值）
+  # data CSV and path (CSV as file: value± + run value)
   CSV_DIR="samples/fig1/task4_1/${dataset}/scdiff"
   METRICS_CSV="${CSV_DIR}/${dataset}.csv"
   LOG_FILE="${LOG_SUBDIR}/${dataset}.log"
   mkdir -p "${CSV_DIR}"
 
-  # 累积三次评测输出（仅用于 CSV 解析）
+  # evaloutput (onlyfor CSV parse)
   all_outputs=""
 
-  # 三次（训练+评测）
+  # (train+eval)
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo -e "\n--- Running iteration $i/$NUM_RUNS for $dataset ---"
 
@@ -71,10 +71,10 @@ for dataset in "${DATASETS[@]}"; do
     all_outputs+="$output\n"
   done
 
-  # 解析三次评测输出，生成唯一 CSV（Dataset,Method, 11*(mean±std), 每次 run 的 11 项）
+  # parse evaloutput, CSV (Dataset,Method, 11*(mean±std), each run run 11 items)
   echo -e "\n" | tee -a "${LOG_FILE}"
   echo -e "$all_outputs" | awk -v ds="$dataset" -v num_runs="$NUM_RUNS" -v method="$METHOD_NAME" -v csv_path="$METRICS_CSV" '
-    # 抓取 11 项指标
+    # 11 items 
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
     /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
     /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
@@ -118,7 +118,7 @@ for dataset in "${DATASETS[@]}"; do
       return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
     }
 
-    # 取第 j 次（0-based）的指标值
+    # j (0-based) value
     function val(idx, j, v){
       if (idx==1) v=pds[j];
       else if(idx==2) v=mae[j];
@@ -147,7 +147,7 @@ for dataset in "${DATASETS[@]}"; do
     }
 
     END{
-      # 控制台打印统计
+      # stats
       print "==================================================================";
       printf " Final statistics for dataset %s (%d runs: train+eval)\n", ds, num_runs;
       print "==================================================================";
@@ -166,7 +166,7 @@ for dataset in "${DATASETS[@]}"; do
       print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
       print "==================================================================\n";
 
-      # CSV：Dataset,Method, 11*(mean±std), Run1..RunN 的 11 项
+      # CSV: Dataset,Method, 11*(mean±std), Run1..RunN  11 items
       metric_names[1]="PDS";
       metric_names[2]="MAE";
       metric_names[3]="DES";
@@ -192,7 +192,7 @@ for dataset in "${DATASETS[@]}"; do
       }
       for(r=0;r<num_runs;r++){
         for(i=1;i<=11;i++){
-          v=val(i, r); if (v=="") v=0;   # 容错：缺失用 0 占位；如需留空，可改成 v=""
+          v=val(i, r); if (v=="") v=0; # : using 0 ; need empty, can v=""
           row=row sprintf(",%.6f", v);
         }
       }

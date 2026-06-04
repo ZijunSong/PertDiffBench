@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-留一法 (leave-one-out) 设置：将多个物种的 control_ifn.h5ad 合并为一个训练集 h5ad。
-用于跨物种泛化实验：测试物种留出，其余物种合并作为训练数据。
+ (leave-one-out) : types control_ifn.h5ad andas train set h5ad.
+for types : test types , types and astraindata.
 
-用法示例:
+using :
   python merge_species_control_ifn.py \\
     --data-root data/fig2/task3_cross_species \\
     --train-species mouse,pig,rabbit \\
@@ -57,7 +57,7 @@ def main() -> None:
         a.obs["species"] = sp
         adatas.append(a)
 
-    # 按 var（基因）取交集合并，保证基因顺序一致
+    # var (gene) and, gene 
     merged = ad.concat(adatas, join="inner", label="batch", keys=train_species)
     merged.obs_names_make_unique()
     out_path.parent.mkdir(parents=True, exist_ok=True)

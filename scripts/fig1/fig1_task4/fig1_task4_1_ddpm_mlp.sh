@@ -20,7 +20,7 @@ NUM_RUNS=${NUM_RUNS:-3}
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
 METHOD_NAME="${METHOD_NAME:-MLP-DDPM-MLP}"
 
-# 评估脚本需要在日志里打印如下 11 行（末尾为数值）：
+# eval mustin under 11 ( ascountvalue): 
 # Perturbation Discrimination Score (PDS): <num>
 # Mean Absolute Error (MAE): <num>
 # Differential Expression Score (DES): <num>
@@ -34,7 +34,7 @@ METHOD_NAME="${METHOD_NAME:-MLP-DDPM-MLP}"
 # Pearson Delta (top 100 DE genes): <num>
 
 for dataset in "${!GENE_SIZES[@]}"; do
-  # 路径按你原来的 mlp_ddpm_mlp 组织
+  # path mlp_ddpm_mlp 
   LOG_ROOT="logs/fig1/task4_1/${dataset}/mlp_ddpm_mlp"
   CSV_ROOT="samples/fig1/task4_1/${dataset}/mlp_ddpm_mlp"
   mkdir -p "$LOG_ROOT" "$CSV_ROOT"
@@ -50,10 +50,10 @@ for dataset in "${!GENE_SIZES[@]}"; do
   train_data_path="data/fig1/task4/task4_${dataset}_train.h5ad"
   valid_data_path="data/fig1/task4/task4_${dataset}_test.h5ad"
 
-  # 单一 CSV：包含 mean±std + 每次 run 的原始值
+  # CSV: contain mean±std + each run run originalvalue
   METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv"
 
-  # 累积所有评估输出文本（仅评估阶段标准输出）
+  # allevaloutput (onlyeval output)
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
@@ -77,7 +77,7 @@ for dataset in "${!GENE_SIZES[@]}"; do
     } 2>&1 | tee "$log_file"
 
     echo "[$(date '+%F %T')] >>> Step 2: Evaluation (${dataset}, ${run_tag})" | tee -a "$log_file"
-    # 捕获评估阶段标准输出；即使报错也把输出落盘便于排查
+    # eval output; output 
     eval_output="$(python scripts/baseline/eval_mlp_ddpm_mlp.py \
         --config "$CONFIG_FILE" \
         --data-path "$valid_data_path" \
@@ -93,7 +93,7 @@ for dataset in "${!GENE_SIZES[@]}"; do
     echo "[$(date '+%F %T')] >>> Finished (${dataset}, ${run_tag})" | tee -a "$log_file"
   done
 
-  # 解析所有 run 的评估输出，生成 CSV
+  # parseall run evaloutput, CSV
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
     /Mean Absolute Error \(MAE\):/               { mae[c_mae++] = $NF }
@@ -179,8 +179,8 @@ for dataset in "${!GENE_SIZES[@]}"; do
         for (i=1;i<=11;i++) row = row sprintf(",%.6f", val(i, r));
       }
 
-      print header > csv_path;     # 每个数据集写自己的表头
-      print row    >> csv_path;    # 并追加数据行
+      print header > csv_path; # eachdata ownheader
+      print row >> csv_path; # and data 
       close(csv_path);
       printf("CSV written: %s\n", csv_path);
     }

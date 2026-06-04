@@ -30,7 +30,7 @@ for species in "${TARGET_SPECIES[@]}"; do
   echo "###   Starting pipeline for target species: ${species}"
   echo "######################################################################"
 
-  # Data settings（与原范式一致）
+  # Data settings (and )
   data_settings=()
   data_settings+=("data.params.train.params.dataset=${dataset_name}")
   data_settings+=("data.params.train.params.fname=${train_fname}")
@@ -64,7 +64,7 @@ for species in "${TARGET_SPECIES[@]}"; do
 
     printf "%s\n" "$EVAL_OUTPUT"
 
-    # 仅抽取可解析指标行，避免噪声
+    # only canparse , avoid noise
     run_tmp="$(mktemp)"
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
     grep -E "$pattern_re" <<< "$EVAL_OUTPUT" > "$run_tmp" || true
@@ -73,7 +73,7 @@ for species in "${TARGET_SPECIES[@]}"; do
     rm -f "$run_tmp"
   done
 
-  # -------------------- 聚合 & 写 CSV（mean±std + 逐值） --------------------
+  # -------------------- & CSV (mean±std + value) --------------------
   awk -v ds="mouse_to_${species}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
 BEGIN{
   c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=c_p_all=c_pd_all=c_pd20=c_pd50=c_pd100=0
@@ -92,7 +92,7 @@ $0 ~ /Pearson Delta \(top 20 DE genes\):/        { pd20[c_cpd20++]  = to_num($NF
 $0 ~ /Pearson Delta \(top 50 DE genes\):/        { pd50[c_cpd50++]  = to_num($NF); next }
 $0 ~ /Pearson Delta \(top 100 DE genes\):/       { pd100[c_cpd100++]= to_num($NF); next }
 
-# 兼容计数变量名（便于阅读）
+# counts amountname ( )
 function cnt(idx){
   if(idx==1) return c_pds;
   if(idx==2) return c_mae;

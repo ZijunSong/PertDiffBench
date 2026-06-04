@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-为 fig4 的 DDPM baseline 单独训练一个 VAE（仅 encoder + decoder，与 DDPM+MLP 同结构），
-用于 4h/6h 的 2h/8h latent 线性插值生成。保存的 state_dict 仅含 encoder/decoder，
-sample_fig4_vae_linear_interp.py 会以 strict=False 加载到 MLPDDPMMLP 中使用。
+as fig4 DDPM baseline separatetrain VAE (only encoder + decoder, and DDPM+MLP structure), 
+for 4h/6h 2h/8h latent linear interpolation . state_dict onlywith encoder/decoder, 
+sample_fig4_vae_linear_interp.py willto strict=False to MLPDDPMMLP using.
 """
 import os
 import sys
@@ -19,7 +19,7 @@ from src.diffusion_baselines.models.mlp_ddpm_mlp_autoencoder import ScRNAEncoder
 
 
 class AEOnly(nn.Module):
-    """仅 encoder + decoder，与 MLPDDPMMLP 的对应部分结构一致，便于 load_state_dict(..., strict=False)。"""
+    """only encoder + decoder, and MLPDDPMMLP forshould structure , load_state_dict(..., strict=False)."""
     def __init__(self, input_dim, latent_dim, hidden_dim):
         super().__init__()
         self.encoder = ScRNAEncoder(input_dim, latent_dim, hidden_dim)
@@ -56,7 +56,7 @@ def main():
     if hasattr(X, "toarray"):
         X = X.toarray()
     X = np.asarray(X, dtype=np.float32)
-    # 与常见 pipeline 一致：clip 到 [-1,1]
+    # andcommon pipeline : clip to [-1,1]
     X = np.clip(X, -1.0, 1.0)
     X_t = torch.from_numpy(X)
 
@@ -90,7 +90,7 @@ def main():
         if (epoch + 1) % 100 == 0 or epoch == 0:
             print(f"Epoch {epoch+1}/{args.epochs} loss={total_loss/max(n_batches,1):.6f}")
 
-    # 保存为与 MLPDDPMMLP 兼容的 state_dict（仅 encoder/decoder）
+    # asand MLPDDPMMLP state_dict (only encoder/decoder)
     state = {"model_state_dict": model.state_dict()}
     torch.save(state, ckpt_path)
     print(f"Saved AE checkpoint: {ckpt_path}")

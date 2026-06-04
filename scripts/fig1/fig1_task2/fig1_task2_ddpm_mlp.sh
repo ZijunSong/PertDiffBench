@@ -10,8 +10,8 @@ NUM_GENES=${NUM_GENES:-2969}
 N_SAMPLES=${N_SAMPLES:-6}
 NUM_RUNS=${NUM_RUNS:-3}
 CONFIG_FILE=${CONFIG_FILE:-"configs/baselines/mlp_ddpm_mlp.yaml"}
-METHOD_NAME=${METHOD_NAME:-"MLP+DDPM+MLP"}     # CSV 第一列方法名
-CKPT_NAME=${CKPT_NAME:-"model_epoch_1000.pth"} # 训练产物文件名（若不同请改）
+METHOD_NAME=${METHOD_NAME:-"MLP+DDPM+MLP"}     # CSV method column name
+CKPT_NAME=${CKPT_NAME:-"model_epoch_1000.pth"} # train filename ( )
 # -------------------------------------------------------
 
 # Datasets
@@ -54,7 +54,7 @@ for dataset in "${DATASETS[@]}"; do
       sample_dir_run="${samples_base}/run${i}"
       mkdir -p "${ckpt_dir_run}" "${sample_dir_run}"
 
-      # --- Step 1: Training (per run,独立目录避免覆盖) ---
+      # --- Step 1: Training (per run,standalonedirectory ) ---
       echo
       echo "--- Step 1: Training model for ${dataset} [run ${i}] ---"
       python scripts/baseline/train_mlp_ddpm_mlp.py \

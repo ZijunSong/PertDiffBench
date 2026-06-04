@@ -8,7 +8,7 @@ NUM_GENES="2969"
 NUM_RUNS=3
 CONFIG_FILE="configs/baselines/scrna_ddpm_scrna.yaml"
 METHOD_NAME="DDPM"
-N_SAMPLES=6                      # eval 生成样本数（按你原脚本）
+N_SAMPLES=6                      # eval sample count (original script)
 LOGDIR=${LOGDIR:-logs/fig1_task2}
 CKPT_NAME="scrna_ddpm_epoch1000.pt"
 
@@ -30,7 +30,7 @@ for dataset in "${DATASETS[@]}"; do
   LOGFILE="${LOGDIR}/${dataset}.log"
   echo -e "\n==== $(date '+%F %T') | Begin ${dataset} ====\n" | tee -a "$LOGFILE"
 
-  # 汇总所有 run 的评测输出文本，用于统计
+  # aggregate eval stdout for stats
   all_outputs=""
 
   for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
@@ -46,7 +46,7 @@ for dataset in "${DATASETS[@]}"; do
 
     # -------- Step 1: Training --------
     echo -e "\n--- Step 1: Training model (dataset: $dataset, run: $run_idx) ---" | tee -a "$LOGFILE"
-    # 将训练输出也落盘到日志
+    # tee training stdout to log
     python scripts/baseline/train_scrna_ddpm_scrna.py \
       --config "$CONFIG_FILE" \
       --data-path "$train_data_path" \
@@ -55,7 +55,7 @@ for dataset in "${DATASETS[@]}"; do
 
     # -------- Step 2: Evaluation for this run --------
     echo -e "\n--- Step 2: Evaluating model (dataset: $dataset, run: $run_idx) ---" | tee -a "$LOGFILE"
-    # 收集评测输出到变量，同时也打印/落盘
+    # capture eval output; tee to log
     output=$(python scripts/baseline/eval_scrna_ddpm_scrna.py \
       --config "$CONFIG_FILE" \
       --train-data-path "$train_data_path" \

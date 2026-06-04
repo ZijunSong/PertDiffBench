@@ -169,7 +169,7 @@ for ht in "${HOLDOUT_TYPES[@]}"; do
         printf("CSV appended: %s\n", csv_path);
       }
     ' "${CELL_BUF}"
-    # cwd 为 src/Squidiff；锁路径须相对 HOMEDIR，否则会出现 .metrics_rows.lock: No such file or directory 并提前退出，导致只跑完第一个 holdout。
+    # cwd as src/Squidiff; path for HOMEDIR, elsewill .metrics_rows.lock: No such file or directory and before , first holdout.
     ) 199>"${HOMEDIR}/${METRICS_ROWS_LOCK}"
 
     echo "--- Finished ${ds_tag} ---"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""合并 fig2_task1 Squidiff 在 unseen_same_moa / unseen_diff_moa 下各 MOA 的 metrics_*.csv 为单一 CSV。"""
+""" and fig2_task1 Squidiff in unseen_same_moa / unseen_diff_moa under MOA metrics_*.csv as CSV."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def read_metrics_rows(metrics_dir: Path, split: str) -> list[list[str]]:
     for h, _, name in parsed:
         if h != base_header:
             raise ValueError(
-                f"表头不一致: {name} 与首个文件列名不同，请检查后再合并。"
+                f"header mismatch: {name} and filecolsname , check headers before merge."
             )
 
     out_header = ["split"] + base_header
@@ -43,7 +43,7 @@ def main() -> None:
         default=Path(
             "/data/ppnm/data/PertDiffBench/samples/fig2/task1_unseenMOA/same/squidiff/metrics"
         ),
-        help="unseen_same_moa 的 metrics 目录",
+        help="unseen_same_moa  metrics directory",
     )
     p.add_argument(
         "--diff-dir",
@@ -51,7 +51,7 @@ def main() -> None:
         default=Path(
             "/data/ppnm/data/PertDiffBench/samples/fig2/task1_unseenMOA/diff/squidiff/metrics"
         ),
-        help="unseen_diff_moa 的 metrics 目录",
+        help="unseen_diff_moa  metrics directory",
     )
     p.add_argument(
         "-o",
@@ -60,7 +60,7 @@ def main() -> None:
         default=Path(
             "/data/ppnm/data/PertDiffBench/samples/fig2/task1_unseenMOA/squidiff_moa_combined_metrics.csv"
         ),
-        help="输出合并后的 CSV 路径",
+        help="output andafter CSV path",
     )
     args = p.parse_args()
 
@@ -68,14 +68,14 @@ def main() -> None:
     diff_block = read_metrics_rows(args.diff_dir, "unseen_diff_moa")
 
     if len(same_block) <= 1:
-        raise SystemExit(f"未在 {args.same_dir} 读到任何 metrics_*.csv 数据行")
+        raise SystemExit(f" in {args.same_dir} to metrics_*.csv data ")
     if len(diff_block) <= 1:
-        raise SystemExit(f"未在 {args.diff_dir} 读到任何 metrics_*.csv 数据行")
+        raise SystemExit(f" in {args.diff_dir} to metrics_*.csv data ")
 
     same_header, *same_rows = same_block
     diff_header, *diff_rows = diff_block
     if same_header != diff_header:
-        raise SystemExit("same 与 diff 两侧表头不一致，无法合并。")
+        raise SystemExit("same and diff header mismatch, cannot merge.")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     all_rows = [same_header] + same_rows + diff_rows
@@ -84,7 +84,7 @@ def main() -> None:
         w.writerows(all_rows)
 
     print(
-        f"已写入 {args.output}（共 {len(all_rows) - 1} 行数据："
+        f" {args.output} ( {len(all_rows) - 1} data: "
         f"same {len(same_rows)} + diff {len(diff_rows)}）"
     )
 

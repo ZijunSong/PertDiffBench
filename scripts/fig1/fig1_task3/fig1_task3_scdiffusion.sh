@@ -1,14 +1,14 @@
 #!/bin/bash
-# 三次运行（训练+测评），统计写入 log 与 csv
+# 3 train+eval runs; stats to log/csv
 
 set -e
 trap "echo ERROR && exit 1" ERR
 
-# -------------------- 配置 --------------------
+# -------------------- Config --------------------
 NUM_GENES="1000"
 NUM_RUNS=3
-METHOD_NAME="scDiffusion"   # CSV 第一列的方法名
-N_SAMPLES=100               # 每次采样数量（与原脚本一致）
+METHOD_NAME="scDiffusion" # CSV firstcols name
+N_SAMPLES=100 # each run countamount (and )
 
 DATASETS=(
   'mix2'
@@ -19,14 +19,14 @@ DATASETS=(
   'mix7'
 )
 
-# 目录基准（可按需修改）
+# directory (can need )
 VAE_CKPT_ROOT="checkpoints/scdiffusion/vae_checkpoint"
 DIFF_CKPT_ROOT="checkpoints/scdiffusion/diffusion_checkpoint"
 CLS_CKPT_ROOT="checkpoints/scdiffusion/classifier_checkpoint/2-classifier"
 SAMPLE_ROOT="samples/fig1/task3"
 DATA_ROOT="data/fig1/hvg_task3"
 
-# -------------------- 主循环 --------------------
+# -------------------- Main loop --------------------
 for dataset in "${DATASETS[@]}"; do
   echo "######################################################################"
   echo "###   Starting full pipeline for dataset: ${dataset}"
@@ -35,7 +35,7 @@ for dataset in "${DATASETS[@]}"; do
   TRAIN_H5="${DATA_ROOT}/${dataset}_train_HVG_${NUM_GENES}.h5ad"
   TEST_H5="${DATA_ROOT}/${dataset}_test_HVG_${NUM_GENES}.h5ad"
 
-  # 输出目录（日志 + 评测文件 + CSV）
+  # output dir ( + evalfile + CSV)
   OUT_BASE="${SAMPLE_ROOT}/${dataset}/scdiffusion_1000/"
   mkdir -p "${OUT_BASE}"
   LOG_FILE="${OUT_BASE}/pipeline_${dataset}.log"
@@ -43,20 +43,20 @@ for dataset in "${DATASETS[@]}"; do
 
   all_outputs=""
 
-  # -------- 3 次完整（训练+评测） --------
+  # -------- 3 (train+eval) --------
   for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
     echo -e "\n======================"       | tee -a "${LOG_FILE}"
     echo -e " Run ${run_idx}/${NUM_RUNS} " | tee -a "${LOG_FILE}"
     echo -e "======================"       | tee -a "${LOG_FILE}"
 
-    # 各阶段保存目录（分 run）
+    # directory ( run)
     VAE_DIR="${VAE_CKPT_ROOT}/${dataset}_${NUM_GENES}/run${run_idx}"
     DIFF_DIR="${DIFF_CKPT_ROOT}/${dataset}_${NUM_GENES}/run${run_idx}"
     CLS_DIR="${CLS_CKPT_ROOT}/${dataset}_${NUM_GENES}/run${run_idx}"
     SAMPLE_DIR="${OUT_BASE}/run${run_idx}"
     mkdir -p "${VAE_DIR}" "${DIFF_DIR}" "${CLS_DIR}" "${SAMPLE_DIR}"
 
-    # 约定的文件名（保持与原始训练脚本输出一致）
+    # filename ( andoriginaltrain output )
     VAE_PT="${VAE_DIR}/model_seed=0_step=9999.pt"
     DIFF_PT="${DIFF_DIR}/my_diffusion/model010000.pt"
     CLS_PT="${CLS_DIR}/model009999.pt"
@@ -109,12 +109,12 @@ for dataset in "${DATASETS[@]}"; do
     all_outputs+="$output\n"
   done
 
-  # -------- 统计 + CSV --------
+  # -------- stats + CSV --------
   CSV_FILE="${OUT_BASE}/metrics_${METHOD_NAME}_${dataset}_gene_${NUM_GENES}.csv"
 
   echo -e "\n" | tee -a "${LOG_FILE}"
   echo -e "$all_outputs" | awk -v dataset="$dataset" -v num_runs="$NUM_RUNS" -v method="$METHOD_NAME" -v csv_path="$CSV_FILE" '
-    # 抓指标（11项）
+    # (11items)
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
     /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
     /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
@@ -158,7 +158,7 @@ for dataset in "${DATASETS[@]}"; do
       return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
     }
 
-    # 取第 j 次（0-based）的数值
+    # j (0-based)countvalue
     function val(idx, j, v){
       if (idx==1) v=pds[j];
       else if(idx==2) v=mae[j];
@@ -187,7 +187,7 @@ for dataset in "${DATASETS[@]}"; do
     }
 
     END{
-      # 日志友好打印
+      # 
       print "==================================================================";
       printf " Final statistics for dataset %s (%d runs: train+eval)\n", dataset, num_runs;
       print "==================================================================";
@@ -206,7 +206,7 @@ for dataset in "${DATASETS[@]}"; do
       print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
       print "==================================================================\n";
 
-      # CSV：表头 + 一行数值（mean±std + 每次原始值）
+      # CSV: header + countvalue (mean±std + each runoriginalvalue)
       metric_names[1]="PDS";
       metric_names[2]="MAE";
       metric_names[3]="DES";

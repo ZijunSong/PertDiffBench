@@ -22,24 +22,23 @@ def _filter_to_vocab(
     stoi: dict
 ) -> Tuple[np.ndarray, List[str]]:
     """
-    只保留在 stoi（词表）中出现的基因。
-    - counts: 原始表达矩阵，shape [B, G]
-    - gene_names: 原始基因列表，length G
-    - stoi: 基因->idx 映射表
+    Keep only genes present in the vocabulary (stoi).
 
-    返回:
-    - new_counts: 仅含有效列的矩阵，shape [B, G']
-    - new_gene_names: 仅含有效基因名的列表，length G'
+    - counts: raw expression matrix, shape [B, G]
+    - gene_names: original gene name list, length G
+    - stoi: gene -> index mapping
+
+    Returns:
+    - new_counts: matrix with valid columns only, shape [B, G']
+    - new_gene_names: valid gene names, length G'
     """
-    # 找到在词表中的基因及其原始下标
     valid_pairs = [(i, g) for i, g in enumerate(gene_names) if g in stoi]
     if not valid_pairs:
-        raise ValueError("没有任何基因在词表中，请检查输入数据与词表的匹配。")
+        raise ValueError("No genes in vocabulary; check input data and vocab match.")
     valid_indices, valid_genes = zip(*valid_pairs)
     valid_indices = list(valid_indices)
     valid_genes = list(valid_genes)
 
-    # 截断 counts 矩阵，只保留有效的列
     new_counts = counts[:, valid_indices]
     return new_counts, valid_genes
 
@@ -47,75 +46,67 @@ def embed_cells(
     model: torch.nn.Module,
     tokenizer: scGPTTokenizer,
     x: torch.Tensor,
-    gene_names: List[str],    # 字符串列表
+    gene_names: List[str],
 ) -> torch.Tensor:
     """
-    1) 把基因名称映射成 vocab 中的整数索引数组 gene_ids_array (np.int64, 长度 G)；
-    2) 调用 tokenize_and_pad_batch 完成 tokenize + padding；
-    3) 返回 CLS token embedding。
+    1) Map gene names to integer indices in vocab (gene_ids_array, np.int64, length G);
+    2) Call tokenize_and_pad_batch for tokenize + padding;
+    3) Return CLS token embedding.
     """
-    print(f"[embed_cells DEBUG] 输入 x 的形状: {x.shape}")  # 输入 x 的形状: torch.Size([64, 2000])
-    print(f"[embed_cells DEBUG] 输入 gene_names 的长度: {len(gene_names)}")  # 入 gene_names 的长度: 2000
+    print(f"[embed_cells DEBUG] input x  shape: {x.shape}")
+    print(f"[embed_cells DEBUG] input gene_names length: {len(gene_names)}")
     if gene_names:
-        print(f"[embed_cells DEBUG] gene_names 示例 (前5个): {gene_names[:5]}")  # gene_names 示例 (前5个): ['HSPA1A', 'LYZ', 'CXCL8', 'SERPINB2', 'SOD2']
+        print(f"[embed_cells DEBUG] gene_names example (first 5): {gene_names[:5]}")
 
     device = model.device
-    counts = x.detach().cpu().numpy()  # 将输入张量转换为NumPy数组，形状 (B, G)
-    B, G = counts.shape  # 获取批次大小和基因数量
+    counts = x.detach().cpu().numpy()
+    B, G = counts.shape
 
-    print(f"[embed_cells DEBUG] counts 类型: {type(counts)}, dtype: {counts.dtype}")
-    print(f"[embed_cells DEBUG] counts[0,:5] 示例: {counts[0, :5]}")
+    print(f"[embed_cells DEBUG] counts type: {type(counts)}, dtype: {counts.dtype}")
+    print(f"[embed_cells DEBUG] counts[0,:5] example: {counts[0, :5]}")
 
-    # 1) 准备词表并注册特殊 token
-    vocab = get_default_gene_vocab() # 获取默认基因词汇表
+    # 1) Prepare vocab and register special tokens
+    vocab = get_default_gene_vocab()
     stoi = vocab.get_stoi()
-    print(f"[embed_cells DEBUG] 默认词汇表示例 (前5个stoi): {list(vocab.get_stoi().items())[:5]}")  # 默认词汇表示例 (前5个stoi): [('ZYG11B', 48287), ('ZXDC', 48284), ('ZXDB', 48283), ('ZWS1', 48281), ('ZWILCH', 48278)]
-    print(f"[embed_cells DEBUG] 默认词汇表大小: {len(vocab)}")  # 默认词汇表大小: 48292
-    
-    # 确保特殊token在词汇表中
+    print(f"[embed_cells DEBUG] default vocab example (first 5 stoi): {list(vocab.get_stoi().items())[:5]}")
+    print(f"[embed_cells DEBUG] default vocab size: {len(vocab)}")
+
     for special_token in ("<pad>", "<cls>"):
         if special_token not in vocab.get_stoi():
-            # 如果特殊token不在，则添加到词汇表中
-            stoi[special_token] = max(stoi.values()) + 1 if stoi else 0 # 处理空词典的情况
-            vocab = vocab.from_dict(stoi) # 更新词汇表
-            print(f"[embed_cells DEBUG] 添加特殊token '{special_token}' 到词汇表")
-            # 添加特殊token '<pad>' 到词汇表
-            # 添加特殊token '<cls>' 到词汇表
-        vocab.set_default_token(special_token)  # 设置默认token (虽然scGPT的tokenizer可能不直接使用这个)
+            stoi[special_token] = max(stoi.values()) + 1 if stoi else 0
+            vocab = vocab.from_dict(stoi)
+            print(f"[embed_cells DEBUG] added special token '{special_token}' to vocab")
+    vocab.set_default_token(special_token)
     stoi = vocab.get_stoi()
-    print(f"[embed_cells DEBUG] 更新后词汇表示例 (前5个stoi): {list(vocab.get_stoi().items())[:5]}")  # 更新后词汇表示例 (前5个stoi): [('ZYG11B', 48287), ('ZXDC', 48284), ('ZXDB', 48283), ('ZWS1', 48281), ('ZWILCH', 48278)]
-    print(f"[embed_cells DEBUG] 更新后词汇表大小: {len(vocab)}")  # 更新后词汇表大小: 48294
+    print(f"[embed_cells DEBUG] updated vocab example (first 5 stoi): {list(vocab.get_stoi().items())[:5]}")
+    print(f"[embed_cells DEBUG] updated vocab size: {len(vocab)}")
 
-    # 2) 过滤到交集数据
+    # 2) Filter to intersection with vocab
     counts, gene_names = _filter_to_vocab(counts, gene_names, stoi)
-    B, G = counts.shape  # 更新 G
-    print(f"[embed_cells DEBUG] 过滤后 G': {G}, 保留基因示例: {gene_names[:5]}")
+    B, G = counts.shape
+    print(f"[embed_cells DEBUG] after filter G'={G}, kept genes example: {gene_names[:5]}")
 
-    # —— 在这里对过滤后的 counts 归一化 ----
     counts = np.log1p(counts)
     min_vals = counts.min(axis=0, keepdims=True)
     max_vals = counts.max(axis=0, keepdims=True)
     counts = (counts - min_vals) / (max_vals - min_vals + 1e-6)
-    print(f"[embed_cells DEBUG] 归一化后 counts: min={counts.min():.4f}, max={counts.max():.4f}")
-    # ---------------------------------------------
+    print(f"[embed_cells DEBUG] normalized counts: min={counts.min():.4f}, max={counts.max():.4f}")
 
-    # 3) 构建 gene_ids_array
     gene_ids_array = np.array([stoi[g] for g in gene_names], dtype=np.int64)
-    print(f"[embed_cells DEBUG] gene_ids_array 的形状: {gene_ids_array.shape}")
-    print(f"[embed_cells DEBUG] gene_ids_array 的数据类型: {gene_ids_array.dtype}")
-    print(f"[embed_cells DEBUG] gene_ids_array 示例 (前5个): {gene_ids_array[:5]}")
+    print(f"[embed_cells DEBUG] gene_ids_array shape: {gene_ids_array.shape}")
+    print(f"[embed_cells DEBUG] gene_ids_array dtype: {gene_ids_array.dtype}")
+    print(f"[embed_cells DEBUG] gene_ids_array example (first 5): {gene_ids_array[:5]}")
 
-    # 断言检查基因数量是否匹配
-    assert gene_ids_array.shape[0] == G, \
-        f"基因数量 G ({G}) 与 gene_ids_array 长度 ({gene_ids_array.shape[0]}) 不匹配。可能是由于gene_names中的基因在词汇表中找不到。"
+    assert gene_ids_array.shape[0] == G, (
+        f"Gene count G ({G}) and gene_ids_array length ({gene_ids_array.shape[0]}) mismatch; "
+        "some gene names may be missing from the vocabulary."
+    )
 
-    # 4) 调用 tokenize_and_pad_batch
-    # 这个函数是scGPT库的一部分，错误发生在它的内部或它调用的函数中
-    print("[embed_cells DEBUG] 即将调用 tokenize_and_pad_batch...")
-    print(f"[embed_cells DEBUG]   data (counts) 的形状: {counts.shape}, 类型: {type(counts)}")
-    print(f"[embed_cells DEBUG]   gene_ids (gene_ids_array) 的形状: {gene_ids_array.shape}, 类型: {type(gene_ids_array)}, dtype: {gene_ids_array.dtype}")
+    print("[embed_cells DEBUG] calling tokenize_and_pad_batch...")
+    print(f"[embed_cells DEBUG] data (counts) shape: {counts.shape}, type: {type(counts)}")
+    print(f"[embed_cells DEBUG] gene_ids shape: {gene_ids_array.shape}, dtype: {gene_ids_array.dtype}")
     print(f"[embed_cells DEBUG]   max_len: {G}")
-    print(f"[embed_cells DEBUG]   vocab 对象: {type(vocab)}")
+    print(f"[embed_cells DEBUG]   vocab object: {type(vocab)}")
     print(f"[embed_cells DEBUG]   pad_token: '<pad>'")
     print(f"[embed_cells DEBUG]   cls_token: '<cls>'")
     print(f"[embed_cells DEBUG]   pad_value: 0")
@@ -124,62 +115,57 @@ def embed_cells(
 
     try:
         batch = tokenize_and_pad_batch(
-            data=counts,            # 输入表达数据，NumPy数组 [B, G]
-            gene_ids=gene_ids_array,# 基因的整数索引数组，NumPy int64 数组 [G]
-            max_len=G,              # 最大序列长度，这里等于基因数量
-            vocab=vocab,            # 词汇表对象
-            pad_token="<pad>",      # padding使用的token
-            cls_token="<cls>",      # CLS token
-            pad_value=0,            # padding使用的值
-            append_cls=True,        # 是否在序列前添加CLS token
-            return_pt=True,         # 是否返回PyTorch张量
+            data=counts,
+            gene_ids=gene_ids_array,
+            max_len=G,
+            vocab=vocab,
+            pad_token="<pad>",
+            cls_token="<cls>",
+            pad_value=0,
+            append_cls=True,
+            return_pt=True,
         )
     except TypeError as e:
-        print(f"[embed_cells ERROR] 调用 tokenize_and_pad_batch 时发生 TypeError: {e}")
-        print(f"[embed_cells DEBUG HINT] 检查 tokenize_and_pad_batch 内部的 tokenize_batch 函数，其输入 gene_ids (即这里的 gene_ids_array) 和 idx。")
-        print(f"[embed_cells DEBUG HINT] gene_ids_array (传递给tokenize_batch的gene_ids) 应该是一维 NumPy int64 数组。")
-        print(f"[embed_cells DEBUG HINT] idx (在tokenize_batch内部生成或使用) 必须是整数标量或有效的整数数组索引。")
-        raise e # 重新抛出异常，以便看到完整的Traceback
+        print(f"[embed_cells ERROR] tokenize_and_pad_batch TypeError: {e}")
+        print("[embed_cells DEBUG HINT] check tokenize_batch inputs: gene_ids_array and idx.")
+        print("[embed_cells DEBUG HINT] gene_ids_array should be 1D NumPy int64.")
+        print("[embed_cells DEBUG HINT] idx must be integer scalar or valid integer indices.")
+        raise e
 
-    # batch 应该是一个字典，包含 'genes' (token ID) 和 'values' (表达值或attention mask)
-    print(f"[embed_cells DEBUG] tokenize_and_pad_batch 返回的 batch keys: {batch.keys()}")
-    print(f"[embed_cells DEBUG] batch['genes'] 的形状: {batch['genes'].shape}, 类型: {batch['genes'].dtype}")
-    print(f"[embed_cells DEBUG] batch['values'] 的形状: {batch['values'].shape}, 类型: {batch['values'].dtype}")
+    print(f"[embed_cells DEBUG] tokenize_and_pad_batch returned keys: {batch.keys()}")
+    print(f"[embed_cells DEBUG] batch['genes'] shape: {batch['genes'].shape}, dtype: {batch['genes'].dtype}")
+    print(f"[embed_cells DEBUG] batch['values'] shape: {batch['values'].shape}, dtype: {batch['values'].dtype}")
 
-    # 5) 前向 scGPT 模型
-    input_ids = batch["genes"].to(device)      # 获取基因token ID，并移动到设备
-    values = batch["values"].to(device) # 获取表达值/mask，并移动到设备
+    input_ids = batch["genes"].to(device)
+    values = batch["values"].to(device)
     pad_id = stoi["<pad>"]
 
-    # 统计总 NaN 数量和比例
     num_total = values.numel()
     nan_count = torch.isnan(values).sum().item()
     nan_ratio = nan_count / num_total
-    print(f"[embed_cells DEBUG] values 中共有 {nan_count}/{num_total} 个 NaN（{nan_ratio:.2%}）")
+    print(f"[embed_cells DEBUG] values NaN count: {nan_count}/{num_total} ({nan_ratio:.2%})")
 
-    # 再按行（按样本）统计，看看哪些样本受影响最严重
-    nan_per_row = torch.isnan(values).sum(dim=1)  # shape [B]
+    nan_per_row = torch.isnan(values).sum(dim=1)
     rows_with_nan = (nan_per_row > 0).nonzero(as_tuple=False).view(-1).tolist()
-    print(f"[embed_cells DEBUG] 有 NaN 的样本索引：{rows_with_nan[:10]}（共 {len(rows_with_nan)} 个）")
-    print(f"[embed_cells DEBUG] 每个有 NaN 样本的 NaN 数量（前 10）：{nan_per_row[rows_with_nan[:10]].tolist()}")
+    print(f"[embed_cells DEBUG] rows with NaN (first 10): {rows_with_nan[:10]} (total {len(rows_with_nan)})")
+    print(f"[embed_cells DEBUG] NaN per affected row (first 10): {nan_per_row[rows_with_nan[:10]].tolist()}")
 
     nan0 = torch.isnan(values).sum().item()
     if nan0 > 0:
-        print(f"[embed_cells DEBUG] values 中留有 {nan0} 个 NaN，统一替换为 0")
+        print(f"[embed_cells DEBUG] replacing {nan0} NaN values with 0")
         values = torch.nan_to_num(values, nan=0.0, posinf=0.0, neginf=0.0)
 
-    # 2) 再把所有 pad 位置的 values 也置为 0，确保万无一失
     pad_mask = (input_ids == pad_id)
     if pad_mask.any():
         values = values.masked_fill(pad_mask, 0.0)
 
-    assert not torch.isnan(values).any(), "values 中出现 NaN"
-    assert not torch.isnan(input_ids.float()).any(), "input_ids 转 float 后出现 NaN"
+    assert not torch.isnan(values).any(), "values still contain NaN"
+    assert not torch.isnan(input_ids.float()).any(), "input_ids contain NaN after float cast"
 
     attention_mask = (input_ids != pad_id)
 
-    print(f"[embed_cells DEBUG] scGPT模型输入 input_ids 的形状: {input_ids.shape}")
-    print(f"[embed_cells DEBUG] scGPT模型输入 values 的形状: {values.shape}")
+    print(f"[embed_cells DEBUG] scGPT input_ids shape: {input_ids.shape}")
+    print(f"[embed_cells DEBUG] scGPT values shape: {values.shape}")
 
     with torch.autograd.set_detect_anomaly(True):
         outputs = model(
@@ -189,20 +175,15 @@ def embed_cells(
         )
     print(outputs)
 
-    # 6) 取 CLS token embedding
-    # 调试输出 keys
-    print(f"[embed_cells DEBUG] model 输出 keys: {list(outputs.keys())}")
+    print(f"[embed_cells DEBUG] model output keys: {list(outputs.keys())}")
 
-    # 安全地拿到 CLS 向量
     if "cell_emb" in outputs:
-        # scGPT的自定义输出，已经是在CLS位置做了 pooling
-        cls_embedding = outputs["cell_emb"]     # [B, emb_dim]
+        cls_embedding = outputs["cell_emb"]
     elif isinstance(outputs, dict) and "last_hidden_state" in outputs:
         cls_embedding = outputs["last_hidden_state"][:, 0, :]
     else:
-        # 万一 API 变动，兜底
         hidden = outputs.last_hidden_state
         cls_embedding = hidden[:, 0, :]
 
-    print(f"[embed_cells DEBUG] 返回的 CLS 嵌入向量形状: {cls_embedding.shape}")
+    print(f"[embed_cells DEBUG] CLS embedding shape: {cls_embedding.shape}")
     return cls_embedding

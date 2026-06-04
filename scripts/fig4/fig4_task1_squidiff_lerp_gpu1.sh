@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Fig4 Squidiff — 原文 lerp（latent 线性插值 + DDIM 条件解码）
-# 单卡 GPU 1 | 独立全流程：训练 → lerp 采样 → eval（ckpt 与 addition 分开）
+# Fig4 Squidiff - lerp (latent linear interpolation + DDIM conditional decode)
+# single GPU 1 | standalone pipeline: train → lerp → eval (ckpt and addition )
 set -euo pipefail
 export PYTHONUNBUFFERED=1
 trap 'echo "[ERROR] command failed at line ${LINENO}" >&2' ERR
@@ -16,14 +16,14 @@ fi
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1}"
 
-# ---------- H20 141GB 推荐参数（与 addition 脚本一致） ----------
+# ---------- H20 141GB recommendedargs (and addition ) ----------
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS="${NUM_RUNS:-3}"
 N_SAMPLES="${N_SAMPLES:-1200}"
 BATCH_SIZE="${BATCH_SIZE:-4096}"
 SAMPLE_BATCH="${SAMPLE_BATCH:-512}"
 LR_ANNEAL_STEPS="${LR_ANNEAL_STEPS:-100000}"
-USE_FP16="${USE_FP16:-False}"   # MLPModel 不支持 convert_to_fp16
+USE_FP16="${USE_FP16:-False}" # MLPModel support convert_to_fp16
 METHOD_NAME="${METHOD_NAME:-Squidiff-lerp}"
 SQUIDIFF_METHOD="lerp"
 
@@ -32,7 +32,7 @@ DATA_FIG4="${DATA_FIG4:-/data/ppnm/data/PertDiffBench/data/fig4_task1}"
 TRAIN_H5="${TRAIN_H5:-${DATA_FIG4}/fig4_train.h5ad}"
 TEST_H5="${TEST_H5:-${DATA_FIG4}/fig4_test.h5ad}"
 
-# 独立 checkpoint（与 addition 分开，可并行训练）
+# standalone checkpoint (and addition , parallel training)
 CKPT_BASE="${CKPT_BASE:-checkpoints/fig4/squidiff_lerp_${NUM_GENES}}"
 SAMPLE_BASE="${SAMPLE_BASE:-samples/fig4/squidiff_lerp_${NUM_GENES}}"
 CSV_PATH="${SAMPLE_BASE}/metrics_${METHOD_NAME}_fig4.csv"

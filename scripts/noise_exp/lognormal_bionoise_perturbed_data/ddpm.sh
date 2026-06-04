@@ -13,9 +13,9 @@ NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
 BASE_DATA_DIR="${BASE_DATA_DIR:-data/add_lognormal_bionoise_output}"
 
-# 用于写入 CSV 的方法名（表头里的 Method 字段）
+# for CSV name (header Method )
 METHOD_NAME="${METHOD_NAME:-scRNA-DDPM-scRNA}"
-# 用于路径的最后一级目录名（不同方法只改这一层即可）
+# for path after leveldirectoryname ( can)
 METHOD_DIR="${METHOD_DIR:-scrna_ddpm_scrna}"
 
 BASE_CKPT_DIR="${BASE_CKPT_DIR:-checkpoints/lognormal_bionoise}"
@@ -34,10 +34,10 @@ for cell_type in "${CELL_TYPES[@]}"; do
     train_data_path="${BASE_DATA_DIR}/task1_train_${cell_type}_exp_lognorm_cv_${noise_level}.h5ad"
     valid_data_path="${BASE_DATA_DIR}/task1_valid_${cell_type}_exp_lognorm_cv_${noise_level}.h5ad"
 
-    # group_suffix 只跟 cell_type + noise 有关
+    # group_suffix cell_type + noise 
     group_suffix="${cell_type}_noise_${noise_level}"
 
-    # 这里的大路径只到 group_suffix，最后一层用 METHOD_DIR 区分不同方法
+    # here path to group_suffix, after using METHOD_DIR 
     base_weight_dir="${BASE_CKPT_DIR}/${group_suffix}/${METHOD_DIR}"
     base_samples_dir="${BASE_SAMPLES_DIR}/${group_suffix}/${METHOD_DIR}"
 
@@ -45,16 +45,16 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
     echo -e "\n--- Train + Eval ${NUM_RUNS} runs (${cell_type}, noise=${noise_level}) ---"
 
-    # 收集所有 run 的指标行，用来后面 awk 聚合
+    # all run , using after awk 
     ALL_OUTPUTS=""
 
-    # 统一的 grep pattern，用来从 eval 输出里抽指标行
+    # grep pattern, using from eval output 
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
 
     for (( run_id=1; run_id<=NUM_RUNS; run_id++ )); do
       echo -e "\n================ Run ${run_id}/${NUM_RUNS} ================"
 
-      # 每个 run 自己的目录，仍然挂在同一个方法目录下面
+      # each run owndirectory, still in directoryunder 
       run_weight_dir="${base_weight_dir}/run_${run_id}"
       run_samples_dir="${base_samples_dir}/run_${run_id}"
       mkdir -p "${run_weight_dir}" "${run_samples_dir}"
@@ -91,7 +91,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
       )"
       status=$?
 
-      # 完整输出到 log，方便 debug
+      # outputto log, debug
       printf "%s\n" "${EVAL_OUTPUT}" | tee "logs/eval_${cell_type}_noise_${noise_level}_run${run_id}.log"
 
       if (( status != 0 )); then
@@ -99,7 +99,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         exit "${status}"
       fi
 
-      # 只抽取包含指标的行，拼到 ALL_OUTPUTS 中
+      # contain , to ALL_OUTPUTS 
       run_tmp="$(mktemp)"
       grep -E "${pattern_re}" <<< "${EVAL_OUTPUT}" > "${run_tmp}" || true
       ALL_OUTPUTS+=$(cat "${run_tmp}")

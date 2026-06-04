@@ -28,7 +28,7 @@ from src.diffusion_baselines.models.scvi_latent_ddpm_mlp import ScviLatentDDPMML
 
 
 def _finite_pair_mask(true_arr: np.ndarray, pred_arr: np.ndarray) -> np.ndarray:
-    """逐细胞：仅保留真值与预测在全部基因上均为有限值的行。"""
+    """ cell: onlykeep valueand in geneon as value ."""
     return np.isfinite(true_arr).all(axis=1) & np.isfinite(pred_arr).all(axis=1)
 
 
@@ -98,7 +98,7 @@ def main():
         print(f"[Eval] Overriding cfg.model.ae.input_dim: {cfg.model.ae.input_dim} -> {adata.n_vars}")
         cfg.model.ae.input_dim = adata.n_vars
 
-    # 现在 cfg 的结构和训练时一致了，再建模型 & 加载权重
+    # in cfg structure trainwhen , & 
     model = ScviLatentDDPMMLP(cfg).to(device)
     # PyTorch 2.6+: default weights_only=True breaks checkpoints that pickle optim/schedulers.
     ckpt = torch.load(args.ckpt, map_location=device, weights_only=False)
@@ -170,11 +170,11 @@ def main():
         if n_bad > 0:
             print(
                 f"[Eval][{pert}] Warning: {n_bad}/{args.n_samples} synthetic cells have NaN/Inf in "
-                "gene predictions (DDPM/decoder 数值不稳定). Pseudobulk 使用 nanmean；"
-                "R2/E-distance/MMD 仅在双方均有限的细胞对上计算。"
+                "gene predictions (DDPM/decoder countvalue stable). Pseudobulk using nanmean; "
+                "R2/E-distance/MMD onlyin cellforon ."
             )
 
-        # 任意细胞在基因维出现 NaN 时，普通 mean 会把整列伪 bulk 变成 NaN；用 nanmean 更稳健
+        # cellingene NaN when, mean will cols bulk NaN; using nanmean 
         true_pert_pb = np.nanmean(true_pert, axis=0)
         pred_pert_pb = np.nanmean(pred_pert, axis=0)
         ctrl_pb = np.nanmean(ctrl_X_data, axis=0)

@@ -8,7 +8,7 @@ SEEDS=( '123' '345' '567' )
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scGen}"
 
-# 全局汇总（跨 seed）
+# ( seed)
 GLOBAL_SUMMARY="samples/fig2/task1/scgen/summary_all_seeds.csv"
 mkdir -p "$(dirname "$GLOBAL_SUMMARY")"
 
@@ -22,7 +22,7 @@ for seed in "${SEEDS[@]}"; do
   OUT_ROOT="samples/fig2/task1/scgen/seed${seed}"
   CKPT_ROOT="checkpoints/fig2/task1/scgen/seed${seed}/${train_ds}"
 
-  # 每个 seed 的单独 CSV（按你的范例）
+  # each seed separate CSV ( )
   CSV_PATH="${OUT_ROOT}/metrics_${METHOD_NAME}_${test_ds}.csv"
 
   mkdir -p "$LOG_ROOT" "$OUT_ROOT" "$CKPT_ROOT"
@@ -45,7 +45,7 @@ for seed in "${SEEDS[@]}"; do
     echo " ${run_tag}/${NUM_RUNS}: TRAIN+EVAL (${train_ds} -> ${test_ds})"
     echo "======================"
 
-    # 捕获 Python 的 stdout/stderr，一次性喂给 awk
+    # Python stdout/stderr, one-time awk
     output=$(
       python scripts/scGen_eval.py \
         --train_data_path "data/fig2/task1_unseen_pert/${train_ds}.h5ad" \
@@ -58,15 +58,15 @@ for seed in "${SEEDS[@]}"; do
         2>&1
     ) || true
 
-    # 累加给汇总解析
+    # parse
     all_outputs+="$output"$'\n'
   done
 
-  # ===== 解析并写出本 seed 的 CSV（完全按“范例”格式） =====
+  # ===== parseand seed CSV ( " " ) =====
   echo -e "$all_outputs" | awk -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${CSV_PATH}" '
     function to_num(x,   y){ y=x; gsub(/[^0-9eE+\-\.]/,"",y); return (y==""?0:y)+0 }
 
-    # 捕 11 项指标（允许前缀与空格/时间戳）
+    # 11 items ( before andempty /when )
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++]     = to_num($NF) }
     /Mean Absolute Error \(MAE\):/              { mae[c_mae++]     = to_num($NF) }
     /Differential Expression Score \(DES\):/    { des[c_des++]     = to_num($NF) }
@@ -85,7 +85,7 @@ for seed in "${SEEDS[@]}"; do
     function join_runs(a,n, nr,  r,res){ res=""; for(r=0;r<nr;r++) res = res sprintf(",%.4f", (r in a ? a[r] : 0)); return res }
 
     END{
-      # 统一列名（与范例完全一致，顺序不可变）
+      # colsname (and , can )
       metric_names[1]="PDS"
       metric_names[2]="MAE"
       metric_names[3]="DES"
@@ -115,7 +115,7 @@ for seed in "${SEEDS[@]}"; do
       row=row "," ms(pd50, c_pd50)
       row=row "," ms(pd100,c_pd100)
 
-      # 逐 run 原始值（不足 num_runs 的位置补 0）
+      # run originalvalue ( num_runs 0)
       row=row join_runs(pds,   c_pds,   num_runs)
       row=row join_runs(mae,   c_mae,   num_runs)
       row=row join_runs(des,   c_des,   num_runs)

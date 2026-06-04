@@ -25,7 +25,7 @@ for prefix in "${PREFIXES[@]}"; do
   LOG_ROOT="logs/fig1/task4_2/${eval_dataset}/scrna_ddpm_scrna"
   CSV_ROOT="samples/fig1/task4_2/${eval_dataset}/scrna_ddpm_scrna"
   CKPT_DIR="checkpoints/fig1/task4_2/${prefix}_control_to_ifn/scrna_ddpm_scrna"
-  METRICS_CSV="${CSV_ROOT}/metrics_${eval_dataset}.csv"   # 单一 CSV（mean±std + per-run）
+  METRICS_CSV="${CSV_ROOT}/metrics_${eval_dataset}.csv" # CSV (mean±std + per-run)
 
   mkdir -p "$LOG_ROOT" "$CSV_ROOT" "$CKPT_DIR"
 
@@ -35,11 +35,11 @@ for prefix in "${PREFIXES[@]}"; do
   echo "######################################################################"
 
   # -------------------- Step 0: Resolve data paths --------------------
-  # 训练数据：优先 task4_2，不存在则回退 task4
+  # traindata: task4_2, exist task4
   TRAIN_H5AD="data/fig1/task4_2/${train_dataset}.h5ad"
   [[ -f "$TRAIN_H5AD" ]] || TRAIN_H5AD="data/fig1/task4/${train_dataset}.h5ad"
 
-  # 评测数据：优先 task4_2，不存在则回退 task4
+  # evaldata: task4_2, exist task4
   EVAL_H5AD="data/fig1/task4_2/${eval_dataset}.h5ad"
   [[ -f "$EVAL_H5AD" ]] || EVAL_H5AD="data/fig1/task4/${eval_dataset}.h5ad"
 
@@ -55,7 +55,7 @@ for prefix in "${PREFIXES[@]}"; do
     echo "[$(date '+%F %T')] >>> Training finished (${train_dataset})"
   } 2>&1 | tee -a "$train_log"
 
-  # -------------------- Step 2: Eval（稳态抓取，仅 stdout，用文件聚合） --------------------
+  # -------------------- Step 2: Eval ( , only stdout, usingfile ) --------------------
   ALL_OUTPUTS=""
   CKPT_FILE="${CKPT_DIR}/scrna_ddpm_epoch1000.pt"
   if [[ ! -f "$CKPT_FILE" ]]; then
@@ -87,14 +87,14 @@ for prefix in "${PREFIXES[@]}"; do
       ALL_OUTPUTS+=$'\n'
     else
       echo "[ERROR] Evaluation ${run_tag} failed. See log: ${eval_log}" >&2
-      # 若想不中断其他 run，可将 exit 1 改为 continue
+      # other run, can exit 1 as continue
       exit 1
     fi
     rm -f "$run_tmp"
   done
 
   # -------------------- Step 3: Aggregate to ONE CSV --------------------
-  # 依赖评测端 11 个标签（每 run 打印一次）：
+  # eval 11 ( run ): 
   # PDS / MAE / DES / E-Distance / MMD / R2 / Pearson(all) /
   # Pearson Delta(all) / Pearson Delta(top 20 DE) / (top 50 DE) / (top 100 DE)
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${eval_dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
@@ -146,7 +146,7 @@ for prefix in "${PREFIXES[@]}"; do
     }
 
     BEGIN {
-      # 仅当 CSV 不存在时写表头
+      # only CSV existwhen header
       need_header = (system("[ -f " csv_path " ]") != 0)
       metric_names[1]="PDS";
       metric_names[2]="MAE";

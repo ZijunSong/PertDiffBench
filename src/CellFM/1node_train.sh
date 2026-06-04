@@ -22,19 +22,19 @@ cd $dir
 echo "start training"
 ttl=8
 port=8448
-export MS_WORKER_NUM=$ttl          # 设置集群中Worker进程数量为8
-export MS_SCHED_HOST=127.0.0.1  # 设置Scheduler IP地址为本地环路地址
-export MS_SCHED_PORT=$port       # 设置Scheduler端口
-# 循环启动8个Worker训练进程
-export MS_ROLE=MS_SCHED             # 设置启动的进程为MS_SCHED角色
+export MS_WORKER_NUM=$ttl # number of worker processes in the cluster (8)
+export MS_SCHED_HOST=127.0.0.1 # scheduler host (loopback)
+export MS_SCHED_PORT=$port # scheduler port
+# launch 8 worker training processes
+export MS_ROLE=MS_SCHED # run this process as MS_SCHED
 python ./$1.py --batch $2 --epoch $3 --dist --data $4 --load_pretrain --workpath  > scheduler.log 2>&1 &
 for((i=1;i<$ttl;i++));
 do
-    export MS_ROLE=MS_WORKER        # 设置启动的进程为MS_WORKER角色
-    export MS_NODE_ID=$i                      # 设置进程id，可选
+ export MS_ROLE=MS_WORKER # run this process as MS_WORKER
+ export MS_NODE_ID=$i # process id (optional)
     python ./$1.py --batch $2 --epoch $3  --dist --data $4 --load_pretrain > worker_$i.log 2>&1 &
     
 done
-export MS_ROLE=MS_WORKER        # 设置启动的进程为MS_WORKER角色
-export MS_NODE_ID=0                      # 设置进程id，可选
+export MS_ROLE=MS_WORKER # run this process as MS_WORKER
+export MS_NODE_ID=0 # process id (optional)
 python ./$1.py --batch $2 --epoch $3 --dist --data $4 --load_pretrain

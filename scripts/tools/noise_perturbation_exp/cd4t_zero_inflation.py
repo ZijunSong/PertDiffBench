@@ -9,7 +9,7 @@ import os
 
 def generate_zeroinflated_dropout_files(file_path, output_dir):
     """
-    使用基因特异的零膨胀 / dropout 模型来模拟技术性失捕（dropout）。
+     usinggene / dropout (dropout).
 
     Zero-inflation / dropout simulator:
       - For each gene j, estimate its mean expression m_j across cells.
@@ -31,17 +31,17 @@ def generate_zeroinflated_dropout_files(file_path, output_dir):
 
     # 1. Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
-    print(f"--- 输出文件将保存在: {output_dir} ---")
+    print(f"--- Output directory: {output_dir} ---")
 
     # 2. Load original h5ad file
-    print(f"--- 正在加载数据: {file_path} ---")
+    print(f"--- Loadingdata: {file_path} ---")
     adata_original = anndata.read_h5ad(file_path)
 
-    print("\n--- 原始数据格式如下 ---")
+    print("\n--- originaldata under ---")
     print(adata_original)
 
     is_sparse = sp.issparse(adata_original.X)
-    print(f"\n表达矩阵 (adata.X) 是否为稀疏矩阵: {is_sparse}")
+    print(f"\nexpressedmatrix (adata.X) whetherassparse matrix: {is_sparse}")
 
     # Convert to dense array if necessary
     # NOTE: For very large data, this may be memory-heavy.
@@ -53,7 +53,7 @@ def generate_zeroinflated_dropout_files(file_path, output_dir):
     n_cells, n_genes = original_data.shape
 
     # 3. Gene-wise mean expression as basis for dropout rate
-    print("\n--- 正在计算每个基因的平均表达量 (用于估计 dropout 概率) ---")
+    print("\n--- in eachgene expressedamount (for dropout ) ---")
     gene_means = np.asarray(original_data.mean(axis=0)).ravel()
     epsilon = 1e-8
     gene_means_safe = np.where(gene_means > 0, gene_means, epsilon)
@@ -65,7 +65,7 @@ def generate_zeroinflated_dropout_files(file_path, output_dir):
     #    We choose two anchor points:
     #       - low expression (10% quantile)  -> high dropout (p ≈ 0.8)
     #       - high expression (90% quantile) -> low dropout (p ≈ 0.2)
-    print("\n--- 正在构建基于 log(mean) 的 Logistic dropout 模型 ---")
+    print("\n--- in based on log(mean) Logistic dropout ---")
     x1 = np.quantile(log_m, 0.1)
     x2 = np.quantile(log_m, 0.9)
     p1 = 0.8
@@ -87,8 +87,8 @@ def generate_zeroinflated_dropout_files(file_path, output_dir):
         b = 0.0
     a = y1 - b * x1
 
-    print(f"Logistic 参数: a = {a:.6f}, b = {b:.6f}")
-    print("低表达基因 dropout 概率高，高表达基因 dropout 概率低。")
+    print(f"Logistic args: a = {a:.6f}, b = {b:.6f}")
+    print(" expressedgene dropout , expressedgene dropout .")
 
     # Base gene-specific dropout probability p_j
     base_logits = a + b * log_m
@@ -100,13 +100,13 @@ def generate_zeroinflated_dropout_files(file_path, output_dir):
     # 5. Define global strength factors to control overall dropout level
     #    s < 1: milder dropout; s > 1: stronger dropout.
     strength_factors = [0.3, 0.6, 1.0, 1.6, 2.2]
-    print(f"\n--- 将要使用的 dropout 强度倍数 (strength_factors): {strength_factors} ---")
+    print(f"\n--- must using dropout count (strength_factors): {strength_factors} ---")
 
     base_filename = os.path.splitext(os.path.basename(file_path))[0]
 
     # 6. Loop over strength factors and generate zero-inflated datasets
     for s in strength_factors:
-        print(f"\n========== 正在处理零膨胀噪声级别: strength = {s} ==========")
+        print(f"\n========== Processing noiselevel : strength = {s} ==========")
 
         # Gene-specific dropout probability under this strength
         p_level = np.clip(s * base_p, 0.0, 1.0)
@@ -114,7 +114,7 @@ def generate_zeroinflated_dropout_files(file_path, output_dir):
         # Reshape for broadcasting across cells
         p_row = p_level.reshape(1, -1)
 
-        print("--- 正在为每个 cell-gene 对采样 Bernoulli dropout 掩码 ---")
+        print("--- Runningeach cell-gene for Bernoulli dropout ---")
         # dropout_mask[i, j] = True means we drop this count (set to 0)
         dropout_mask = np.random.rand(n_cells, n_genes) < p_row
 
@@ -144,10 +144,10 @@ def generate_zeroinflated_dropout_files(file_path, output_dir):
         # Save to new h5ad file
         output_filename = f"{base_filename}_zeroinflation_strength_{s}.h5ad"
         output_path = os.path.join(output_dir, output_filename)
-        print(f"正在保存到: {output_path}")
+        print(f"Saving to: {output_path}")
         adata_noisy.write_h5ad(output_path)
 
-    print("\n--- 所有基于零膨胀 / dropout 的技术噪声模拟数据已成功生成！ ---")
+    print("\n--- allbased on / dropout noise data ! ---")
 
 
 if __name__ == "__main__":
@@ -156,12 +156,12 @@ if __name__ == "__main__":
 
     # When the original file does not exist, create a dummy dataset for testing
     if not os.path.exists(input_file):
-        print(f"未找到 '{input_file}'。正在创建一个用于测试的虚拟 h5ad 文件...")
+        print(f" found '{input_file}'.Creating for testing h5ad file...")
         n_obs, n_vars = 100, 500
         X_dummy = np.random.poisson(lam=5.0, size=(n_obs, n_vars)).astype(np.float32)
         dummy_adata = anndata.AnnData(X_dummy)
         dummy_adata.write(input_file)
-        print(f"已创建虚拟文件 '{input_file}'。")
+        print(f" file '{input_file}'.")
 
     output_directory = "/share/PertBench/data/add_zero_inflation_output"
 

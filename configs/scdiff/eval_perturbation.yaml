@@ -22,7 +22,7 @@ data:
         fname: ???
         save_processed: false
         post_cond_flag: true
-        # 评估时使用独立 test 文件，需将文件中刺激细胞标为 test，故 test: 1.0
+ # Eval uses a standalone test file; stimulated cells are marked as test, so test: 1.0
         splits:
           train: 0.0
           valid: 0.0
@@ -75,7 +75,7 @@ model:
     # Perturbation
     pert_flag: true
     pert_target_key: pert_target
-    # 关闭评估阶段绘图，避免大数据时 OOM（指标仍会计算并打印）
+ # Disable eval plotting to avoid OOM on large data (metrics still computed and logged)
     path_to_save_fig: null
     # -------------------------------------------------------------------------
     model_config:

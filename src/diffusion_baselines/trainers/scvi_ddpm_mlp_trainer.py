@@ -6,16 +6,16 @@ from .base_trainer import BaseTrainer
 
 class ScviDdpmMlpTrainer(BaseTrainer):
     """
-    将 scVI encoder + DDPM + MLP decoder 联合训练：
-      - diffusion loss: 在 latent 空间学习 z1|z0
-      - recon loss:   在 latent 空间学习 z0 → x0
+    Joint training of scVI encoder + DDPM + MLP decoder:
+        - diffusion loss: learn z1|z0 in latent space
+        - recon loss: learn z0 → x0 in gene space
     """
     def compute_loss(self, x0, x1):
         """
         x0: Control scRNA [B, G]
         x1: Perturbed scRNA [B, G]
         """
-        # 1) 获取各部分
+        # 1) encode both batches
         # scVI encoder + convert to latent
         z0 = self.model.encode_fn(x0)    # [B, L]
         z1 = self.model.encode_fn(x1)    # [B, L]
@@ -27,7 +27,7 @@ class ScviDdpmMlpTrainer(BaseTrainer):
         x0_pred = self.model.ddpm.decoder(z0)  # [B, G]
         recon_loss = F.mse_loss(x0_pred, x0)
 
-        # 4) 合成总 loss
+        # 4) combine total loss
         w = self.cfg.train.recon_weight
         loss = diff_loss + w * recon_loss
         return loss

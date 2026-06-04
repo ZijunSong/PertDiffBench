@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 
-# --- 1. 为三个图表准备数据 ---
+# --- 1. Data for three panels ---
 data1 = {
     'scGen': {
         'Pearson': 0.7360, 'Pearson Delta': 0.4216, 'Pearson Delta DEG 20': 0.6156,
@@ -73,20 +73,20 @@ data3 = {
     }
 }
 
-# 将所有数据和标题组合起来以便循环处理
+# alldata to handle
 all_data = [data1, data2, data3]
 dfs = [pd.DataFrame(d).T for d in all_data]
 
-# --- 2. 设置通用绘图参数 ---
-# 从第一个DataFrame中获取方法和指标的名称
+# --- 2. Common plot params ---
+# fromfirstDataFrame get name 
 methods = dfs[0].index.tolist()
 metrics = dfs[0].columns.tolist()
 
-# 每个指标一个角度
+# one angle per metric
 angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
-angles += angles[:1] # 闭合雷达图
+angles += angles[:1]  # close radar
 
-# 颜色映射
+# colormap
 color_map = {
     'scGen': '#ff6f00ff',
     'Squidiff': '#008ea0ff',
@@ -95,21 +95,21 @@ color_map = {
     'DDPM+MLP': '#3d3b25ff'
 }
 
-# --- 3. 绘图逻辑 ---
-# 创建一个包含1行3列子图的图表
+# --- 3. Plotting ---
+# contain1 3cols figpanels
 fig, axes = plt.subplots(figsize=(24, 8), nrows=1, ncols=3, subplot_kw=dict(polar=True))
 
-# 循环绘制每个子图
+# each fig
 for i, ax in enumerate(axes):
     df = dfs[i]
-    # 循环绘制每个方法的雷达图
+    # radar per method
     for method in methods:
         values = df.loc[method].values.flatten().tolist()
-        values += values[:1] # 闭合
+        values += values[:1]  # close
         ax.plot(angles, values, color=color_map[method], linewidth=2, linestyle='solid', label=method)
         ax.fill(angles, values, color=color_map[method], alpha=0.2)
 
-    # --- 4. 美化每个子图 ---
+    # --- 4. Style subplots ---
     ax.set_rscale('symlog', linthresh=0.01)
     
     tick_values = [0, 0.01, 0.1, 1.0]
@@ -123,16 +123,16 @@ for i, ax in enumerate(axes):
     
     ax.grid(True, color="grey", linestyle="--", linewidth=0.5)
 
-# --- 5. 添加共享图例 ---
-# 从第一个子图中获取图例句柄和标签
+# --- 5. Add shared legend ---
+# fromfirst fig getfig 
 handles, labels = axes[0].get_legend_handles_labels()
-# 在图表下方创建一个共享图例
+# inpanelsunder fig 
 fig.legend(handles, labels, loc='lower center', ncol=len(methods), bbox_to_anchor=(0.5, -0.05), fontsize=16)
 
-# 调整布局以防止图例重叠
+# to fig 
 plt.tight_layout(rect=[0, 0.05, 1, 1])
 
-# --- 6. 保存图像 ---
+# --- 6. Save figure ---
 os.makedirs('figs/fig2', exist_ok=True)
 plt.savefig('figs/fig2/fig2_task3_radar_combined.svg', dpi=300, bbox_inches='tight')
 

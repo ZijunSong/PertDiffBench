@@ -60,7 +60,7 @@ for seed in "${SEEDS[@]}"; do
     )" || { echo "[ERROR] evaluation failed for ${run_tag}" >&2; exit 1; }
     printf "%s\n" "$EVAL_OUTPUT"
 
-    # 只抽取可解析指标行（使用 HEREDOC，避免引号问题）
+    # canparse ( using HEREDOC, id )
     run_tmp="$(mktemp)"
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
     grep -E "$pattern_re" <<< "$EVAL_OUTPUT" > "$run_tmp" || true
@@ -69,7 +69,7 @@ for seed in "${SEEDS[@]}"; do
     rm -f "$run_tmp"
   done
 
-  # 用 HEREDOC 喂给 awk，完全避开外层单引号
+  # using HEREDOC awk, outside id
   awk -v ds="${eval_dataset_name}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
 BEGIN{
   c_pds=c_mae=c_des=c_edist=c_mmd=c_r2=c_p_all=c_pd_all=c_pd20=c_pd50=c_pd100=0
@@ -142,7 +142,7 @@ END {
   for(i=1;i<=11;i++) row=row "," mean_std(i);
   for(r=0;r<num_runs;r++) for(i=1;i<=11;i++) row=row sprintf(",%.6f", val(i,r)+0);
 
-  # 每个 seed 覆盖写表头，仅一行结果
+  # each seed header, only results
   print header > csv_path;
   print row    >> csv_path;
   close(csv_path);

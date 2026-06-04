@@ -12,28 +12,28 @@ NUM_GENES="2969"
 NUM_RUNS=3
 METHOD_NAME="scDiffusion"
 
-# 日志输出根目录
+# output directory
 LOG_ROOT="${LOG_ROOT:-logs/scdiffusion_task2}"
 mkdir -p "${LOG_ROOT}"
 
-# 数据根目录（按你原始相对路径）
+# data root ( originalrelative path)
 DATA_ROOT="data/fig1/task2"
 
-# 统一的 checkpoint / sample 路径前缀
+# checkpoint / sample pathbefore 
 VAE_ROOT="checkpoints/scdiffusion/vae_checkpoint"
 DIFF_ROOT="checkpoints/scdiffusion/diffusion_checkpoint"
 CLF_ROOT="checkpoints/scdiffusion/classifier_checkpoint/2-classifier"
 SAMPLE_ROOT="samples/fig1/task2"
 
-# 预训练字典（按你原脚本保持不变）
+# pretrain ( )
 ANNOT_SD="checkpoints/annotation_model_v1"
 
-# 训练/评测产物的文件名（保持与你原始代码一致的命名）
+# train/eval filename ( and original name)
 VAE_FILE="model_seed=0_step=9999.pt"
 DIFF_FILE="my_diffusion/model010000.pt"
 CLF_FILE="model009999.pt"
 
-# 采样数量
+# countamount
 N_SAMPLES=6
 
 # ---------- Main Loop ----------
@@ -48,23 +48,23 @@ for dataset in "${DATASETS[@]}"; do
   DATASET_LOG="${LOG_ROOT}/${dataset}.log"
   echo -e "\n==== $(date '+%F %T') | Begin dataset=${dataset} ====\n" | tee -a "${DATASET_LOG}"
 
-  # 收集所有 run 的评测输出文本
+  # all run evaloutput 
   all_outputs=""
 
-  # ===== 3 runs: 每次都重训 + 评测 =====
+  # ===== 3 runs: each run + eval =====
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo -e "\n======================="              | tee -a "${DATASET_LOG}"
     echo -e " Run ${i}/${NUM_RUNS} : ${dataset}"    | tee -a "${DATASET_LOG}"
     echo -e "======================="              | tee -a "${DATASET_LOG}"
 
-    # 为本次 run 准备独立输出目录
+    # as run preparestandaloneoutput dir
     VAE_DIR="${VAE_ROOT}/${dataset}/run${i}"
     DIFF_DIR="${DIFF_ROOT}/${dataset}/run${i}"
     CLF_DIR="${CLF_ROOT}/${dataset}/run${i}"
     SAMPLE_DIR="${SAMPLE_ROOT}/${dataset}/scDiffusion_1000/run${i}"
     mkdir -p "${VAE_DIR}" "${DIFF_DIR}" "${CLF_DIR}" "${SAMPLE_DIR}"
 
-    VAE_CKPT_REL="../../${VAE_DIR}/${VAE_FILE}"               # 对 src/scDiffusion 下脚本的相对路径
+    VAE_CKPT_REL="../../${VAE_DIR}/${VAE_FILE}" # for src/scDiffusion under relative path
     DIFF_CKPT_REL="../../${DIFF_DIR}/${DIFF_FILE}"
     CLF_CKPT_REL="../../${CLF_DIR}/${CLF_FILE}"
 
@@ -112,12 +112,12 @@ for dataset in "${DATASETS[@]}"; do
       --init_cell_path "../../${TEST_H5}" 2>&1) || true
     popd >/dev/null
 
-    # 打印并写入日志；累积统计文本
+    # print and log; stats 
     echo "${output}" | tee -a "${DATASET_LOG}"
     all_outputs+="${output}\n"
   done
 
-  # ===== Step 5: 统计并写 CSV =====
+  # ===== Step 5: statsand CSV =====
   CSV_DIR="${SAMPLE_ROOT}/${dataset}/scDiffusion_1000"
   CSV_FILE="${CSV_DIR}/metrics_scdiffusion_${dataset}_gene_${NUM_GENES}.csv"
   mkdir -p "${CSV_DIR}"

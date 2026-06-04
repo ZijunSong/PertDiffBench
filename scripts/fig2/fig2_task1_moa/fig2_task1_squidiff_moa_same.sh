@@ -13,7 +13,7 @@ OUTPUT_DIM="${OUTPUT_DIM:-3000}"
 N_SAMPLES="${N_SAMPLES:-100}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 BATCH_SIZE="${BATCH_SIZE:-3072}"
-# 断点续跑：只运行从该 MOA 开始的实验（含）；留空则全部运行。例: START_FROM_MOA=Antioxidant
+# Resume MOAs from START_FROM_MOA (inclusive); empty=all. e.g. START_FROM_MOA=Antioxidant
 START_FROM_MOA="${START_FROM_MOA:-}"
 
 DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA/control_plus_ifn_with_smiles}"
@@ -21,7 +21,7 @@ SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
 CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
 DATA_ROOT="${DATA_ROOT:-${DATA_BASE}/control_plus_ifn/unseen_same_moa}"
-# 控制样本由 merge_control_with_each_ifn.py 写到 DATA_OUT/control_merged.h5ad
+# Control from merge_control_with_each_ifn.py at DATA_OUT/control_merged.h5ad
 # DATA_OUT = /data/ppnm/data/PertDiffBench/data/fig2/task1_unseenMOA
 CONTROL_DATA_PATH="${CONTROL_DATA_PATH:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA/control_merged.h5ad}"
 [[ -f "${CONTROL_DATA_PATH}" ]] || { echo "[ERROR] Control file not found: ${CONTROL_DATA_PATH}" >&2; exit 1; }

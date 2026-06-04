@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run from PertDiffBench repo root. CSV 来自 data_ori；合并后的 H5AD 写入 data/fig1_task4（与 fig1_task1–3 一致）
+# Run from PertDiffBench repo root. CSV from data_ori; merged H5AD written to data/fig1_task4 (same as fig1_task1–3)
 DATA_ORI="/data/ppnm/data/PertDiffBench/data_ori/fig1/task4"
 DATA_OUT="/data/ppnm/data/PertDiffBench/data/fig1_task4"
 mkdir -p "$DATA_OUT"

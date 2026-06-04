@@ -1,13 +1,13 @@
 #!/bin/bash
-# 三次运行（训练+测评），每次独立 checkpoint；统计写入 log 与 csv
+# (train+eval), each runstandalone checkpoint; stats log and csv
 
 set -e
 trap "echo ERROR && exit 1" ERR
 
-# ------------ 配置 ------------
+# ------------ ------------
 NUM_GENES=1000
 NUM_RUNS=3
-METHOD_NAME="SquiDiff"         # CSV 第一列的方法名
+METHOD_NAME="SquiDiff" # CSV firstcols name
 N_SAMPLES=100
 
 MIX_TYPES=('mix2' 'mix3' 'mix4' 'mix5' 'mix6' 'mix7')
@@ -18,7 +18,7 @@ LOG_ROOT="logs/squidiff"
 SAMPLE_ROOT="samples/fig1/task3"
 mkdir -p "${CKPT_ROOT}" "${LOG_ROOT}" "${SAMPLE_ROOT}"
 
-# ------------ 主循环 ------------
+# ------------ ------------
 for mix_type in "${MIX_TYPES[@]}"; do
   echo "######################################################################"
   echo "###   Starting to process mix type (Task 3): ${mix_type}"
@@ -27,31 +27,31 @@ for mix_type in "${MIX_TYPES[@]}"; do
   TRAIN_H5="${DATA_ROOT}/${mix_type}_train_HVG_${NUM_GENES}.h5ad"
   TEST_H5="${DATA_ROOT}/${mix_type}_test_HVG_${NUM_GENES}.h5ad"
 
-  # 数据集级别输出目录
+  # data level output dir
   OUT_BASE="${SAMPLE_ROOT}/${mix_type}/squidiff_1000"
   mkdir -p "${OUT_BASE}"
   LOG_FILE="${OUT_BASE}/pipeline_${mix_type}.log"
   : > "${LOG_FILE}"
 
-  # 保存三次“评测阶段”的汇总输出，供 AWK 统计
+  # "eval " output, AWK stats
   all_outputs=""
 
-  # -------- 三次（训练+测评） --------
+  # -------- (train+eval) --------
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo -e "\n======================"       | tee -a "${LOG_FILE}"
     echo -e " Run ${i}/${NUM_RUNS} "        | tee -a "${LOG_FILE}"
     echo -e "======================"       | tee -a "${LOG_FILE}"
 
-    # 本次 run 的路径
+    # run path
     RUN_CKPT_DIR="${CKPT_ROOT}/${mix_type}_${NUM_GENES}/run${i}"
     RUN_LOG_DIR="${LOG_ROOT}/${mix_type}_train_HVG_${NUM_GENES}/run${i}"
     RUN_SAMPLE_DIR="${OUT_BASE}/run${i}"
     mkdir -p "${RUN_CKPT_DIR}" "${RUN_LOG_DIR}" "${RUN_SAMPLE_DIR}"
 
-    # 约定训练后模型文件名（若你的训练产物不同，请改这里）
+    # trainafter filename ( train , here)
     MODEL_PT="${RUN_CKPT_DIR}/model.pt"
 
-    # --- 训练 ---
+    # --- train ---
     echo -e "\n--- Training model for ${mix_type} (run=${i}) ---" | tee -a "${LOG_FILE}"
     python src/Squidiff/train_squidiff.py \
       --logger_path "${RUN_LOG_DIR}" \
@@ -62,9 +62,9 @@ for mix_type in "${MIX_TYPES[@]}"; do
 
     echo "--- Training for ${mix_type} (run=${i}) complete. ---" | tee -a "${LOG_FILE}"
 
-    # --- 采样/评测 ---
+    # --- /eval ---
     echo -e "\n--- Sampling & Evaluation for ${mix_type} (run=${i}) ---" | tee -a "${LOG_FILE}"
-    # 确保上游目录存在
+    # Ensureon directoryexist
     mkdir -p "${RUN_SAMPLE_DIR}"
 
     output=$(python src/Squidiff/sample_squidiff.py \
@@ -81,12 +81,12 @@ for mix_type in "${MIX_TYPES[@]}"; do
     all_outputs+="$output\n"
   done
 
-  # -------- 统计 + CSV --------
+  # -------- stats + CSV --------
   echo -e "\n" | tee -a "${LOG_FILE}"
   CSV_FILE="${OUT_BASE}/metrics_${METHOD_NAME}_${mix_type}_gene_${NUM_GENES}.csv"
 
   echo -e "$all_outputs" | awk -v dataset="${mix_type}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${CSV_FILE}" '
-    # 抓 11 项指标
+    # 11 items 
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
     /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
     /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
@@ -130,7 +130,7 @@ for mix_type in "${MIX_TYPES[@]}"; do
       return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
     }
 
-    # 取第 j 次（0-based）的数值
+    # j (0-based)countvalue
     function val(idx, j, v){
       if (idx==1) v=pds[j];
       else if(idx==2) v=mae[j];
@@ -159,7 +159,7 @@ for mix_type in "${MIX_TYPES[@]}"; do
     }
 
     END{
-      # 漂亮打印
+      # 
       print "==================================================================";
       printf " Final statistics for dataset %s (%d runs)\n", dataset, num_runs;
       print "==================================================================";
@@ -178,7 +178,7 @@ for mix_type in "${MIX_TYPES[@]}"; do
       print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
       print "==================================================================\n";
 
-      # CSV：表头 + 一行数值（11 个 mean±std + 3*11 个单次值）
+      # CSV: header + countvalue (11 mean±std + 3*11 value)
       metric_names[1]="PDS";
       metric_names[2]="MAE";
       metric_names[3]="DES";

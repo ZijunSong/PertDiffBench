@@ -1,13 +1,13 @@
 #!/bin/bash
-# CellFM+DDPM pipeline: 扰动前 scRNA -> CellFM encoder -> DDPM -> 扰动后 scRNA
-# 用法: 在 PertBench 仓库根目录执行 bash scripts/encoder_exp/cellfm/cellfm_ddpm.sh
+# CellFM+DDPM pipeline: before scRNA -> CellFM encoder -> DDPM -> after scRNA
+# using : in PertBench directory bash scripts/encoder_exp/cellfm/cellfm_ddpm.sh
 set -e
 
-# 固定到仓库根目录（脚本在 scripts/encoder_exp/cellfm/，需上三级）
+# to directory ( in scripts/encoder_exp/cellfm/, needon level)
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$REPO_ROOT"
 
-# 若未在 cellfm/cellfm_cuda11 环境中（例如 nohup 未继承 conda），尝试自动激活
+# in cellfm/cellfm_cuda11 (e.g. nohup conda), 
 _env_name=""
 if [ -n "${CONDA_PREFIX}" ]; then
   _env_name="$(basename "${CONDA_PREFIX}" 2>/dev/null)"
@@ -25,14 +25,14 @@ if [ -z "${CONDA_PREFIX}" ] || [ "$_env_name" != "cellfm" ] && [ "$_env_name" !=
 fi
 
 export HF_ENDPOINT=https://hf-mirror.com
-# 降低 MindSpore 日志刷屏（ERROR 级别）
+# MindSpore (ERROR level )
 export GLOG_minloglevel=2
 export MS_LOG_LEVEL=3 2>/dev/null || true
 
-# MindSpore GPU 需能找到 libcuda.so / libcudnn.so / libcublas.so
-# 无 sudo 时可用 conda 安装 CUDA/cuDNN，库在 $CONDA_PREFIX/lib，此处优先使用
-# 注意：conda lib 必须在最前，避免加载到系统 CUDA 13（MindSpore 需要 CUDA 11）
-# 构建新的 LD_LIBRARY_PATH，确保 conda lib 在最前
+# MindSpore GPU need found libcuda.so / libcudnn.so / libcublas.so
+# sudo whencanusing conda CUDA/cuDNN, in $CONDA_PREFIX/lib, using
+# : conda lib in front, to CUDA 13 (MindSpore must CUDA 11)
+# LD_LIBRARY_PATH, Ensure conda lib in front
 _ld_paths=()
 if [ -n "${CONDA_PREFIX}" ] && [ -d "${CONDA_PREFIX}/lib" ]; then
   _ld_paths+=("${CONDA_PREFIX}/lib")
@@ -40,21 +40,21 @@ fi
 if [ -d /usr/lib/x86_64-linux-gnu ]; then
   _ld_paths+=("/usr/lib/x86_64-linux-gnu")
 fi
-# 仅当无 conda CUDA 时才加系统 CUDA，避免加载到 libcublas.so.12/13
+# only conda CUDA when CUDA, to libcublas.so.12/13
 if [ -z "${CONDA_PREFIX}" ] || [ ! -d "${CONDA_PREFIX}/lib" ]; then
   if [ -d /usr/local/cuda/lib64 ]; then
     _ld_paths+=("/usr/local/cuda/lib64")
   fi
 fi
-# 设置 LD_LIBRARY_PATH：新的路径优先，然后添加旧的路径（但排除系统 CUDA 和已包含的路径）
+# LD_LIBRARY_PATH: path , afteradd path ( CUDA containpath)
 if [ ${#_ld_paths[@]} -gt 0 ]; then
   _new_ld="$(IFS=:; echo "${_ld_paths[*]}")"
   _final_ld="${_new_ld}"
   if [ -n "${LD_LIBRARY_PATH}" ]; then
-    # 从旧的 LD_LIBRARY_PATH 中提取不在新路径列表中的路径
+    # from LD_LIBRARY_PATH in pathcols path
     _old_paths=$(echo "${LD_LIBRARY_PATH}" | tr ':' '\n')
     for _old_path in $_old_paths; do
-      # 跳过空路径、系统 CUDA 路径、以及已在新路径列表中的路径
+      # skipemptypath, CUDA path, toand in pathcols path
       [ -z "${_old_path}" ] && continue
       echo "${_new_ld}" | tr ':' '\n' | grep -q "^${_old_path}$" && continue
       echo "${_old_path}" | grep -q "^/usr/local/cuda" && continue
@@ -62,7 +62,7 @@ if [ ${#_ld_paths[@]} -gt 0 ]; then
     done
   fi
   export LD_LIBRARY_PATH="${_final_ld}"
-  # 确保LD_LIBRARY_PATH在子进程中可用（MindSpore在import时检查库）
+  # EnsureLD_LIBRARY_PATHin canusing (MindSporeinimportwhencheck )
   export LD_LIBRARY_PATH
 fi
 
@@ -70,7 +70,7 @@ CELL_TYPE="CD4T"
 NUM_RUNS=3
 METHOD_NAME="cellfm_ddpm"
 
-# 全部使用绝对路径，避免 cwd 导致找不到文件
+# usingabsolute path, cwd tofile
 TRAIN_H5="${REPO_ROOT}/data/fig1/raw_task1/task1_train_${CELL_TYPE}_exp.h5ad"
 VALID_H5="${REPO_ROOT}/data/fig1/raw_task1/task1_valid_${CELL_TYPE}_exp.h5ad"
 TRAIN_H5_WITH_LATENT="${REPO_ROOT}/samples/encoder_exp/cellfm_ddpm/task1_train_${CELL_TYPE}_with_cellfm_latent.h5ad"
@@ -108,7 +108,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   RUN_DDPM_DIR="${LATENT_DDPM_BASE_DIR}/run_${run}"
   mkdir -p "${RUN_DDPM_DIR}"
 
-  # 若输入数据不存在则直接报错退出
+  # inputdata exist directly 
   if [ ! -f "${TRAIN_H5}" ]; then
     echo "[ERROR] Train input not found: ${TRAIN_H5}"
     echo "Please prepare task1 data (see Readme) and re-run."
@@ -119,7 +119,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
     exit 1
   fi
 
-  # 过滤 MindSpore 刷屏（不过滤 “Load dynamic library ... failed”，以便看到真实错误）
+  # filter MindSpore ( filter "Load dynamic library ... failed", to to )
   _filter_ms() {
     grep -v -e "libcuda.so.*not found" -e "libcudnn.so.*not found" \
              -e "device_target.*will be deprecated" \
@@ -129,8 +129,8 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   }
 
   echo -e "\n--- [1/4] Encode train_${CELL_TYPE} with CellFM (run ${run}) ---"
-  # 确保LD_LIBRARY_PATH在Python进程启动时就设置好（MindSpore在import时检查库）
-  # 使用env命令确保环境变量在进程启动时设置
+  # EnsureLD_LIBRARY_PATHinPython when (MindSporeinimportwhencheck )
+  # usingenv Ensure amountin when 
   LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" python scripts/encoder_exp/cellfm/apply_cellfm_encoder.py \
     --data-path "${TRAIN_H5}" \
     --out-h5ad "${TRAIN_H5_WITH_LATENT}" \
@@ -140,8 +140,8 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   [ "${ENC_EXIT}" -ne 0 ] && { echo "[ERROR] [1/4] Encode train failed (exit ${ENC_EXIT}). Check ${LOG_DIR}/encode_train_${CELL_TYPE}_run_${run}.log"; exit 1; }
 
   echo -e "\n--- [2/4] Encode valid_${CELL_TYPE} with CellFM (run ${run}) ---"
-  # 确保LD_LIBRARY_PATH在Python进程启动时就设置好（MindSpore在import时检查库）
-  # 使用env命令确保环境变量在进程启动时设置
+  # EnsureLD_LIBRARY_PATHinPython when (MindSporeinimportwhencheck )
+  # usingenv Ensure amountin when 
   LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" python scripts/encoder_exp/cellfm/apply_cellfm_encoder.py \
     --data-path "${VALID_H5}" \
     --out-h5ad "${VALID_H5_WITH_LATENT}" \

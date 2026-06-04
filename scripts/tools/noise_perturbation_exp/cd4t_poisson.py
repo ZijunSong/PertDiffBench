@@ -9,7 +9,7 @@ import os
 
 def generate_poisson_technoise_files(file_path, output_dir):
     """
-    使用 Poisson 重新采样来模拟测序技术噪声（shot noise）。
+     using Poisson noise (shot noise).
 
     Technical noise simulator:
       - Assume the current expression matrix contains ideal expected counts λ0_ij
@@ -25,17 +25,17 @@ def generate_poisson_technoise_files(file_path, output_dir):
 
     # 1. Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
-    print(f"--- 输出文件将保存在: {output_dir} ---")
+    print(f"--- Output directory: {output_dir} ---")
 
     # 2. Load original h5ad file
-    print(f"--- 正在加载数据: {file_path} ---")
+    print(f"--- Loadingdata: {file_path} ---")
     adata_original = anndata.read_h5ad(file_path)
 
-    print("\n--- 原始数据格式如下 ---")
+    print("\n--- originaldata under ---")
     print(adata_original)
 
     is_sparse = sp.issparse(adata_original.X)
-    print(f"\n表达矩阵 (adata.X) 是否为稀疏矩阵: {is_sparse}")
+    print(f"\nexpressedmatrix (adata.X) whetherassparse matrix: {is_sparse}")
 
     # Convert to dense array if necessary
     # NOTE: For very large data, this may be memory-heavy.
@@ -47,14 +47,14 @@ def generate_poisson_technoise_files(file_path, output_dir):
     # 3. Define different "sequencing depth" factors to control technical noise level
     #    Smaller depth => lower counts => higher relative shot noise
     depth_factors = [0.25, 0.5, 1.0, 2.0, 4.0]
-    print(f"\n--- 将要使用的测序深度倍数 (depth_factors): {depth_factors} ---")
+    print(f"\n--- must using count (depth_factors): {depth_factors} ---")
 
     n_cells, n_genes = original_data.shape
     base_filename = os.path.splitext(os.path.basename(file_path))[0]
 
     # 4. Loop over depth factors and generate Poisson-resampled datasets
     for depth in depth_factors:
-        print(f"\n========== 正在处理技术噪声级别: depth factor = {depth} ==========")
+        print(f"\n========== Processing noiselevel : depth factor = {depth} ==========")
 
         # Expected counts matrix λ_ij under this sequencing depth
         lam = original_data * depth
@@ -62,7 +62,7 @@ def generate_poisson_technoise_files(file_path, output_dir):
         # Avoid numerical problems: enforce non-negativity
         lam = np.maximum(lam, 0.0)
 
-        print("--- 根据当前 λ 矩阵从 Poisson 分布采样观测计数 ---")
+        print("--- based oncurrent λ matrixfrom Poisson counts ---")
         noisy_counts = np.random.poisson(lam=lam).astype(np.float32)
 
         # Construct new AnnData object
@@ -83,10 +83,10 @@ def generate_poisson_technoise_files(file_path, output_dir):
         # Save to new h5ad file
         output_filename = f"{base_filename}_poisson_depth_{depth}.h5ad"
         output_path = os.path.join(output_dir, output_filename)
-        print(f"正在保存到: {output_path}")
+        print(f"Saving to: {output_path}")
         adata_noisy.write_h5ad(output_path)
 
-    print("\n--- 所有基于 Poisson 抽样的技术噪声模拟数据已成功生成！ ---")
+    print("\n--- allbased on Poisson noise data ! ---")
 
 
 if __name__ == "__main__":
@@ -95,13 +95,13 @@ if __name__ == "__main__":
 
     # When the original file does not exist, create a dummy dataset for testing
     if not os.path.exists(input_file):
-        print(f"未找到 '{input_file}'。正在创建一个用于测试的虚拟 h5ad 文件...")
+        print(f" found '{input_file}'.Creating for testing h5ad file...")
         n_obs, n_vars = 100, 500
         # Use Poisson-distributed dummy counts as a realistic starting point
         X_dummy = np.random.poisson(lam=5.0, size=(n_obs, n_vars)).astype(np.float32)
         dummy_adata = anndata.AnnData(X_dummy)
         dummy_adata.write(input_file)
-        print(f"已创建虚拟文件 '{input_file}'。")
+        print(f" file '{input_file}'.")
 
     output_directory = "/share/PertBench/data/add_poisson_technoise_output"
 

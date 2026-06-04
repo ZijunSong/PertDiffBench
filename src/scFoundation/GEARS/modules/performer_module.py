@@ -512,7 +512,7 @@ class RandomPositionalEmbedding(nn.Module):
 
     def forward(self, x, data_labels=None):
         """
-        data_labels True 表面使用了当前数据，False 表明未使用
+        data_labels: True when using current data; False when not in use.
         """
         t = torch.arange(x.shape[1], device=x.device)
         if data_labels is not None:

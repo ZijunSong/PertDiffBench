@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run from PertDiffBench repo root. 输入/输出均为 fig1_task4 目录下的 H5AD
+# Run from PertDiffBench repo root. Input/output under fig1_task4 H5AD directory
 DATA_OUT="/data/ppnm/data/PertDiffBench/data/fig1_task4"
 mkdir -p "$DATA_OUT"
 

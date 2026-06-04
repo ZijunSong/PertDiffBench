@@ -3,8 +3,8 @@ import numpy as np
 import os
 from matplotlib.ticker import FixedLocator, FixedFormatter
 
-# --- 1. 数据准备 ---
-# 数据保持不变
+# --- 1. Data prep ---
+# data 
 data = {
     'mix2': {
         'scGen': (1.0000, 0.0000),
@@ -56,13 +56,13 @@ data = {
     },
 }
 
-# --- 2. 设置绘图顺序和颜色 ---
-# x轴上细胞簇的顺序
+# --- 2. Plot order and colors ---
+# cluster order on x-axis
 x_labels = ['mix2', 'mix3', 'mix4', 'mix5', 'mix6', 'mix7']
-# 每个簇内，不同方法的顺序
+# method order within cluster
 method_order = ['scGen', 'scDiff', 'Squidiff', 'scDiffusion', 'DDPM', 'DDPM+MLP']
 
-# 颜色映射保持不变
+# colormap 
 color_map = {
     'scGen': '#ff6f00ff',      
     'scDiff': '#c71000ff',      
@@ -72,28 +72,28 @@ color_map = {
     'DDPM+MLP': '#ff6348ff'     
 }
 
-# --- 3. 绘图逻辑 ---
-# 创建图和坐标轴
+# --- 3. Plotting ---
+# fig 
 fig, ax = plt.subplots(figsize=(10, 7))
-x = np.arange(len(x_labels)) # x轴的位置
+x = np.arange(len(x_labels)) # x 
 
-# 循环绘制每个方法的折线
+# line plot per method
 for method in method_order:
-    # 提取当前方法在所有细胞簇上的均值和误差
+    # per-cluster mean and error
     means = np.array([data[label][method][0] for label in x_labels])
     errors = np.array([data[label][method][1] for label in x_labels])
 
-    # 绘制折线图
+    # fig
     ax.plot(x, means, marker='o', linestyle='-', label=method, color=color_map[method])
     
-    # 填充误差范围
+    # 
     ax.fill_between(x, means - errors, means + errors, color=color_map[method], alpha=0.2)
 
-# --- 4. 美化图表 ---
+# --- 4. Style plots ---
 ax.set_yscale('symlog', linthresh=0.1)
 tick_locations = [-0.01, 0, 0.01, 0.1, 1]
 ax.set_yticks(tick_locations)
-# 对于symlog，有时需要手动设置标签以确保格式正确
+# symlog: set tick labels manually if needed
 ax.yaxis.set_major_formatter(FixedFormatter([str(tick) for tick in tick_locations]))
 ax.set_ylabel('Pearson Correlation', fontsize=15)
 ax.set_xticks(x)
@@ -102,14 +102,14 @@ ax.grid(axis='y', linestyle='--', alpha=0.6)
 ax.axhline(0, color='grey', linewidth=0.8)
 ax.tick_params(axis='y', labelsize=12)
 
-# 调整图例位置，使其不与图表重叠
+# legend without overlap
 # ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
 #           ncol=3, fancybox=True, shadow=False, frameon=False, fontsize=12)
 
-plt.tight_layout(rect=[0, 0, 1, 0.95]) # 调整布局为图例留出空间
+plt.tight_layout(rect=[0, 0, 1, 0.95]) # layout room for legend
 
-# --- 5. 保存图像 ---
-# 确保目录存在
+# --- 5. Save figures ---
+# Ensuredirectoryexist
 os.makedirs('figs/fig1', exist_ok=True)
-# 保存图像
+# save figure
 plt.savefig('figs/fig1/fig1_task3.svg', dpi=300, bbox_inches='tight')

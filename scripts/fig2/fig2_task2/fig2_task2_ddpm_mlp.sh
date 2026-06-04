@@ -9,12 +9,12 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 
 TARGET_CELL_TYPES=( "B" "NK" )
 NUM_GENES="${NUM_GENES:-6998}"
-N_SAMPLES="${N_SAMPLES:-54}"          # 题中给定，若需按 cell 自适配可改成映射表
+N_SAMPLES="${N_SAMPLES:-54}" # , need cell can 
 NUM_RUNS=3
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
 METHOD_NAME="${METHOD_NAME:-mlp_ddpm_mlp}"
 
-# 完全关闭 W&B（兜底）
+# W&B ( )
 export WANDB_DISABLED=true
 export WANDB_MODE=disabled
 
@@ -29,7 +29,7 @@ CKPT_ROOT="checkpoints/fig2/task2/pretrain_CD4T/${METHOD_NAME}"
 OUT_ROOT="samples/fig2/task2_unseen_celltype/pretrain_CD4T/${METHOD_NAME}"
 mkdir -p "${CKPT_ROOT}" "${OUT_ROOT}"
 
-# 全局 CSV（聚合所有 target）
+# CSV ( all target)
 GLOBAL_CSV="${OUT_ROOT}/metrics_all.csv"
 if [[ ! -f "${GLOBAL_CSV}" ]]; then
   {
@@ -46,21 +46,21 @@ if [[ ! -f "${GLOBAL_CSV}" ]]; then
   } > "${GLOBAL_CSV}"
 fi
 
-# ================== 3x (训练+测评) ==================
+# ================== 3x (train+eval) ==================
 for (( run=1; run<=NUM_RUNS; run++ )); do
   echo
   echo "======================"
   echo " Run ${run}/${NUM_RUNS}  (train on CD4T, then eval all targets)"
   echo "======================"
 
-  # 本次 run 的 ckpt 与输出目录
+  # run ckpt andoutput dir
   RUN_CKPT_DIR="${CKPT_ROOT}/run${run}"
   RUN_OUT_DIR="${OUT_ROOT}/run${run}"
   mkdir -p "${RUN_CKPT_DIR}" "${RUN_OUT_DIR}"
 
   CKPT_PATH="${RUN_CKPT_DIR}/model_epoch_1000.pth"
 
-  # ---- Step 1: 训练（CD4T 预训练）----
+  # ---- Step 1: train (CD4T pretrain)----
   echo "######################################################################"
   echo "###   Step 1 (Run ${run}): Training model on pretrain_CD4T data"
   echo "######################################################################"
@@ -70,7 +70,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
     --save-weight-dir "${RUN_CKPT_DIR}" \
     --gene-nums "${NUM_GENES}"
 
-  # ---- Step 2: 对所有目标 cell 做评测（使用本 run 的 ckpt）----
+  # ---- Step 2: forall cell eval ( using run ckpt)----
   for cell_type in "${TARGET_CELL_TYPES[@]}"; do
     VALID_H5="data/fig1/raw_task1/task1_valid_${cell_type}_exp.h5ad"
     CELL_OUT_DIR="${OUT_ROOT}/${cell_type}/run${run}"
@@ -80,9 +80,9 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
     echo "###   Step 2 (Run ${run}): Evaluating on target: ${cell_type}"
     echo "######################################################################"
 
-    # 单 cell 的 all_outputs（本 run 的一次评测输出）
-    # 注：你原脚本对同一 cell 连跑 NUM_RUNS 次；这里“同样要求=三次训练+测评”，
-    #     我们把“次数”体现在 run 维度，每个 run 对每个 cell 评测 1 次（总计 3 次）。
+    # cell all_outputs ( run evaloutput)
+    # : for cell NUM_RUNS ; here" requires= train+eval", 
+    # we" count" in run , each run foreach cell eval 1 ( 3 ).
     run_output="$(
       python scripts/baseline/eval_mlp_ddpm_mlp.py \
         --config "${CONFIG_FILE}" \
@@ -97,8 +97,8 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
 
     echo "${run_output}"
 
-    # 将本次 run 的指标行，追加进这个 cell 的“聚合缓冲文件”
-    # （最后所有 run 结束后再统一聚合写入 CSV）
+    # run , cell " file"
+    # ( afterall run after CSV)
     CELL_BUF="${OUT_ROOT}/${cell_type}/_agg_buffer.txt"
     mkdir -p "$(dirname "${CELL_BUF}")"
     {
@@ -110,12 +110,12 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   done
 done
 
-# ================== 聚合到全局 CSV ==================
+# ================== to CSV ==================
 for cell_type in "${TARGET_CELL_TYPES[@]}"; do
   CELL_BUF="${OUT_ROOT}/${cell_type}/_agg_buffer.txt"
   [[ -f "${CELL_BUF}" ]] || { echo "[WARN] No outputs for ${cell_type}, skip."; continue; }
 
-  # 读取三次 run 的指标，写入一行到 GLOBAL_CSV
+  # run , to GLOBAL_CSV
   awk -v ds="${cell_type}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}(${NUM_GENES})" -v csv_path="${GLOBAL_CSV}" '
     function to_num(x){ gsub(/[^0-9eE+\-\.]/,"",x); return x+0 }
 

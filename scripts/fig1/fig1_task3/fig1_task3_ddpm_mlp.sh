@@ -10,7 +10,7 @@ NUM_GENES="${NUM_GENES:-1000}"
 N_SAMPLES="${N_SAMPLES:-100}"
 NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
-METHOD_NAME="${METHOD_NAME:-DDPM-MLP}"   # CSV第一列方法名，可自定义
+METHOD_NAME="${METHOD_NAME:-DDPM-MLP}" # CSVmethod column name, can define
 
 LOGROOT="${LOGROOT:-logs/task3_mlp_ddpm_mlp}"
 CKPT_ROOT="${CKPT_ROOT:-checkpoints/ddpm_mlp}"
@@ -35,7 +35,7 @@ for dataset in "${DATASETS[@]}"; do
     echo -e " Run ${run_idx}/${NUM_RUNS} : ${dataset}" | tee -a "${DATASET_LOG}"
     echo -e "======================"            | tee -a "${DATASET_LOG}"
 
-    # 每次run的独立目录
+    # each runrunstandalonedirectory
     checkpoint_dir="${CKPT_ROOT}/${dataset}_${NUM_GENES}/run${run_idx}"
     samples_dir="${SAMPLE_ROOT}/${dataset}/mlp_ddpm_mlp_1000/run${run_idx}"
     mkdir -p "${checkpoint_dir}" "${samples_dir}"

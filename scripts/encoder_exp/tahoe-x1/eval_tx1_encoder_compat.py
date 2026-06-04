@@ -163,7 +163,7 @@ def main():
         all_pred_pb.append(pred_pert_pb)
         all_ctrl_pb.append(ctrl_pb)
 
-        # metrics (全部在 gene 空间)
+        # metrics ( in gene empty )
         metrics_results["mae"].append(compute_mae(true_pert_pb, pred_pert_pb))
         metrics_results["r2"].append(compute_r2(true_pert, pred_pert))
         metrics_results["edistance"].append(compute_edistance(true_pert, pred_pert))
@@ -182,7 +182,7 @@ def main():
             compute_pearson_delta_de(true_pert_pb, pred_pert_pb, ctrl_pb, k=100)
         )
 
-        # DES (gene 空间)
+        # DES (gene empty )
         delta_true_pb = true_pert_pb - ctrl_pb
         de_genes_indices = np.argsort(np.abs(delta_true_pb))[::-1][:100]
         true_de_genes = set(adata.var_names[de_genes_indices].tolist())
@@ -196,7 +196,7 @@ def main():
             compute_des(true_de_genes, pred_de_genes, pred_gene_fold_changes)
         )
 
-        # optional: 保存 synthetic AnnData
+        # optional: synthetic AnnData
         if args.out_h5ad:
             obs = pd.DataFrame(
                 {
@@ -242,7 +242,7 @@ def main():
     print(f"Pearson Delta(top 100 DE genes): {np.mean(metrics_results['pearson_delta_de100']):.4f}")
     print("=" * 50)
 
-    # 保存 synthetic AnnData（可选）
+    # synthetic AnnData (optional)
     if args.out_h5ad and len(all_synthetic_adata) > 0:
         adata_synth = sc.concat(all_synthetic_adata, join="outer", index_unique=None)
         out_path = args.out_h5ad

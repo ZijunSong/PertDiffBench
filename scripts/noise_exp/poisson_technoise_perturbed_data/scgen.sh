@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# 如果任何命令以非零状态退出，则立即退出脚本。
+# Exit immediately if any command fails.
 set -e
 
-# -------------------- 配置 --------------------
+# -------------------- Config --------------------
 CELL_TYPES=(
   'CD4T'
 )
 
-# 噪声标准差
+# noise std
 NOISE_LEVELS=(
   '0.25'
   '0.5'
@@ -17,36 +17,36 @@ NOISE_LEVELS=(
   '4.0'
 )
 
-# 重复次数（训练+评估）
+# train+eval repetitions
 NUM_RUNS="${NUM_RUNS:-3}"
-NUM_GENES="${NUM_GENES:-6998}"             # 仅用于标签，不参与路径 now
-METHOD_NAME="${METHOD_NAME:-scGen-${NUM_GENES}}"  # CSV 中的方法名标签
-METHOD_DIR="${METHOD_DIR:-scgen}"          # 路径最后一级子目录名（方法名）
+NUM_GENES="${NUM_GENES:-6998}" # onlyfor , andpath now
+METHOD_NAME="${METHOD_NAME:-scGen-${NUM_GENES}}" # CSV name 
+METHOD_DIR="${METHOD_DIR:-scgen}" # path after levelsubdirname ( name)
 
 mkdir -p logs
 
-# -------------------- 主循环 --------------------
+# -------------------- Main loop --------------------
 for cell_type in "${CELL_TYPES[@]}"; do
   for noise_level in "${NOISE_LEVELS[@]}"; do
     echo "######################################################################"
-    echo "###  处理细胞类型: $cell_type | 噪声等级: $noise_level ($NUM_RUNS 次运行)"
+    echo "### Processing cell type: $cell_type | noise level: $noise_level ($NUM_RUNS )"
     echo "######################################################################"
 
-    # 组合级统一后缀（保证和其它方法一致：cell_noise_noiseLevel）
+    # level suffix ( : cell_noise_noiseLevel)
     group_suffix="${cell_type}_noise_${noise_level}"
 
-    # train 数据路径（带 lognormal 噪声）
+    # train data path ( lognormal noise)
     train_data_file="data/add_poisson_technoise_output/task1_train_${cell_type}_exp_poisson_depth_${noise_level}.h5ad"
-    # test 仍然用原 fig1 验证集（与你原脚本一致）
+    # test stillusing fig1 validate (and )
     test_data_file="data/add_poisson_technoise_output/task1_valid_${cell_type}_exp_poisson_depth_${noise_level}.h5ad"
 
-    # 检查文件是否存在，不存在则跳过该噪声等级
+    # checkfilewhetherexist, exist skip noise level
     if [ ! -f "$train_data_file" ]; then
-      echo "警告: 未找到训练数据文件 '$train_data_file'。将跳过此组合。"
+      echo " : Training data file not found '$train_data_file'.skip this combo."
       continue
     fi
 
-    # 统一的大路径：只在最后一级用 METHOD_DIR 区分方法
+    # shared base path: only at last level use METHOD_DIR distinguish methods
     base_weight_dir="checkpoints/poisson_technoise/${group_suffix}/${METHOD_DIR}"
     base_samples_dir="samples/poisson_technoise/${group_suffix}/${METHOD_DIR}"
     mkdir -p "$base_weight_dir" "$base_samples_dir"
@@ -54,14 +54,14 @@ for cell_type in "${CELL_TYPES[@]}"; do
     all_outputs=""
 
     for (( i=1; i<=NUM_RUNS; i++ )); do
-      echo -e "\n--- 正在为 $cell_type (噪声: $noise_level) 运行第 $i/$NUM_RUNS 次迭代 ---"
+      echo -e "\n--- Running $cell_type (noise: $noise_level) run $i/$NUM_RUNS ---"
 
-      # 每轮独立输出/权重目录，挂在同一个方法目录下面
+      # standaloneoutput/ directory, in directoryunder 
       model_save_dir="${base_weight_dir}/run_${i}"
       samples_dir="${base_samples_dir}/run_${i}"
       mkdir -p "$model_save_dir" "$samples_dir"
 
-      # 训练 + 评估（评估失败不终止整条流水线）
+      # train + eval (eval rows )
       output=$(python scripts/scGen_eval.py \
           --train_data_path "$train_data_file" \
           --test_data_path "$test_data_file" \
@@ -75,14 +75,14 @@ for cell_type in "${CELL_TYPES[@]}"; do
       all_outputs+="${output}"$'\n'
     done
 
-    # -------------------- 统计与 CSV 输出 --------------------
+    # -------------------- stats and CSV output --------------------
     CSV_PATH="${base_samples_dir}/metrics_${group_suffix}.csv"
     mkdir -p "$(dirname "$CSV_PATH")"
 
     echo -e "\n"
-    # 提示：如遇到 mawk 兼容性问题，可将 awk 替换为 gawk
+    # : to mawk , can awk as gawk
     echo "$all_outputs" | awk -v dataset="$cell_type" -v noise="$noise_level" -v num_runs="$NUM_RUNS" -v method="$METHOD_NAME" -v csv_path="$CSV_PATH" '
-      # ---------- 顶层函数定义（不能放在 END{} 里） ----------
+      # ---------- countdefine ( in END{} ) ----------
       function print_stat(name, arr, cnt,    i,sum,mean,ssd,sd,tmp){
         if (cnt > 0){
           sum=0
@@ -93,7 +93,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           sd=(cnt>1)? sqrt(ssd/(cnt-1)) : 0
           printf "%-40s: %.4f ± %.4f\n", name, mean, sd
         } else {
-          printf "%-40s: N/A (未收集到数据)\n", name
+          printf "%-40s: N/A (no data collected)\n", name
         }
       }
 
@@ -150,7 +150,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         return sprintf("%.4f±%.4f", parts[1]+0, parts[2]+0)
       }
 
-      # ---------- 收集指标 ----------
+      # ---------- collect metrics ----------
       /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF+0 }
       /Mean Absolute Error \(MAE\):/             { mae[c_mae++] = $NF+0 }
       /Differential Expression Score \(DES\):/   { des[c_des++] = $NF+0 }
@@ -165,7 +165,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
       END{
         print "=================================================================="
-        printf " %s (噪声: %s) 的最终统计结果 (%d 次运行)\n", dataset, noise, num_runs
+        printf " %s (noise: %s) final stats (%d )\n", dataset, noise, num_runs
         print "=================================================================="
 
         print_stat("Perturbation Discrimination (PDS)", pds, c_pds)
@@ -184,7 +184,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
         print "==================================================================\n"
 
-        # -------- 写 CSV（Dataset, Noise, Method + mean±std 与逐轮原始值）--------
+        # -------- CSV (Dataset, Noise, Method + mean±std and originalvalue)--------
         metric_names[1]="PDS"
         metric_names[2]="MAE"
         metric_names[3]="DES"
@@ -218,10 +218,10 @@ for cell_type in "${CELL_TYPES[@]}"; do
       }
     '
 
-    echo -e "\n--- 完成细胞类型: $cell_type | 噪声等级: $noise_level 的流程 ---\n"
+    echo -e "\n--- Done: $cell_type | noise: $noise_level ---\n"
   done
 done
 
 echo "######################################################################"
-echo "###   所有细胞类型和噪声等级的处理已全部完成！                 ###"
+echo "###   All cell types and noise levels finished!                 ###"
 echo "######################################################################"

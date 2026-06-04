@@ -3,7 +3,7 @@ import numpy as np
 import os
 from matplotlib.ticker import FixedLocator, FixedFormatter
 
-# --- 1. 所有数据准备 ---
+# --- 1. Prepare all data ---
 
 data2 = {
     'mix2': {
@@ -93,31 +93,31 @@ x_labels1 = ['6998', '6000', '5000', '4000', '3000', '2000', '1000']
 method_order1 = ['scGen', 'scDiff', 'Squidiff', 'scDiffusion', 'DDPM+MLP', 'DDPM']
 
 
-# --- 2. 统一设置绘图顺序和颜色 ---
-# 注意：确保所有图的方法名称和颜色映射一致
+# --- 2. Unified plot order/colors ---
+# : Ensureallfig name colormap 
 method_order = ['scGen', 'scDiff', 'Squidiff', 'scDiffusion', 'DDPM', 'DDPM+MLP']
 color_map = {
     'scGen': '#ff6f00ff',
     'scDiff': '#c71000ff',
     'Squidiff': '#0099a6ff',
-    'scDiffusion': '#8a4198ff', # 图1中的颜色
-    'DDPM': '#6bc7d5ff',       # 图1中的颜色
+    'scDiffusion': '#8a4198ff', # fig1 
+    'DDPM': '#6bc7d5ff', # fig1 
     'DDPM+MLP': '#ff95a8ff'
 }
 
-# --- 3. 封装绘图函数 ---
+# --- 3. Plot helpers ---
 def plot_subplot(ax, data, x_labels, method_order, color_map, title, is_first_plot=False):
     """
-    在指定的坐标轴上绘制一个子图。
+    inspecify on fig.
     
-    参数:
-    ax: Matplotlib 的坐标轴对象
-    data: 该子图的数据
-    x_labels: x轴的标签
-    method_order: 方法的绘制顺序
-    color_map: 颜色映射
-    title: 子图的标题
-    is_first_plot: 是否为第一个子图（用于决定是否显示y轴标签）
+    args:
+    ax: Matplotlib object
+    data: figdata
+    x_labels: x labels
+    method_order: 
+    color_map: colormap
+    title: fig 
+    is_first_plot: whetherasfirst fig (for whether y )
     """
     x = np.arange(len(x_labels))
     
@@ -128,7 +128,7 @@ def plot_subplot(ax, data, x_labels, method_order, color_map, title, is_first_pl
         ax.plot(x, means, marker='o', linestyle='-', label=method, color=color_map[method])
         ax.fill_between(x, means - errors, means + errors, color=color_map[method], alpha=0.2)
         
-    # --- 美化图表 ---
+    # --- style plots ---
     ax.set_yscale('symlog', linthresh=0.1)
     tick_locations = [-0.01, 0, 0.01, 0.1, 1]
     ax.set_yticks(tick_locations)
@@ -138,37 +138,37 @@ def plot_subplot(ax, data, x_labels, method_order, color_map, title, is_first_pl
         ax.set_ylabel('Pearson Correlation', fontsize=15)
         
     ax.set_xticks(x)
-    ax.set_xticklabels(x_labels, fontsize=15) # 旋转x轴标签以防重叠
+    ax.set_xticklabels(x_labels, fontsize=15) # x to 
     ax.grid(axis='y', linestyle='--', alpha=0.6)
     ax.axhline(0, color='grey', linewidth=0.8)
     ax.tick_params(axis='y', labelsize=12)
     ax.set_title(title, fontsize=16)
 
 
-# --- 4. 绘图逻辑 ---
-# 创建一个 1x3 的子图网格，并设置整个图的大小
-# 宽度增加以容纳三个子图
-fig, axes = plt.subplots(1, 3, figsize=(24, 7), sharey=True) # sharey=True 使y轴范围相同
+# --- 4. Plotting ---
+# 1x3 fig , and fig 
+# to three fig
+fig, axes = plt.subplots(1, 3, figsize=(24, 7), sharey=True) # sharey=True y 
 
-# 绘制三个子图
+# three fig
 plot_subplot(axes[0], data1, x_labels1, method_order1, color_map, title="Task 3 Performance", is_first_plot=True)
 plot_subplot(axes[1], data2, x_labels2, method_order2, color_map, title="Gaussian Noise Performance")
 plot_subplot(axes[2], data3, x_labels3, method_order3, color_map, title="High Variable Genes Performance")
 
-# --- 5. 创建并调整共享图例 ---
-# 从第一个子图获取图例的句柄和标签
+# --- 5. Shared legend ---
+# fromfirst figgetfig 
 handles, labels = axes[0].get_legend_handles_labels()
-# 在图的上方创建一个居中的共享图例
+# infigon fig 
 fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.05),
            ncol=6, fancybox=True, shadow=False, frameon=False, fontsize=14)
 
-# --- 6. 调整整体布局并保存 ---
-# 调整布局以防止标题和图例重叠
-plt.tight_layout(rect=[0, 0, 1, 0.92]) # rect=[left, bottom, right, top] 为图例留出空间
+# --- 6. Layout and save ---
+# to fig 
+plt.tight_layout(rect=[0, 0, 1, 0.92]) # rect=[left, bottom, right, top] asfig empty 
 
-# 确保保存目录存在
+# Ensure directoryexist
 os.makedirs('figs/fig_plus', exist_ok=True)
-# 保存合并后的大图
+# andafter fig
 plt.savefig('figs/fig_plus/combined_figure.svg', dpi=300, bbox_inches='tight')
 
-plt.show() # 在屏幕上显示图像
+plt.show() # in on fig 

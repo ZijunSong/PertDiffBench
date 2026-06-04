@@ -27,7 +27,7 @@ from typing import Optional, Tuple, List
 import pandas as pd
 import anndata as ad
 
-# 原始数据与处理后数据的根路径（可从项目根目录运行脚本）
+# Raw and processed data roots (script can be run from repo root)
 DATA_ORI = Path("/data/ppnm/data/PertDiffBench/data_ori/fig2/task1_unseenMOA")
 DATA_OUT = Path("/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA")
 

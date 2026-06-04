@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Fig4: 生成带 treatment_time 的 h5ad 供 eval_fig4_time_conditioned 使用。
-当前 DDPM+MLP 无时间条件，使用 train 中 0h 细胞作为 control 采样，
-将同一批生成结果分别标为 4h 和 6h 以跑通流程；后续可改为真实时间条件采样。
+Fig4: treatment_time h5ad eval_fig4_time_conditioned using.
+current DDPM+MLP when rows , using train 0h cell as control , 
+ results as 4h 6h to ; after can as when rows .
 """
 import os
 import sys
@@ -52,7 +52,7 @@ def main():
     with torch.no_grad():
         pred = model.sample(X).cpu().numpy()
 
-    # 同一批生成结果分别标为 4h 和 6h（各 n 个），便于 eval 按时间分组
+    # results as 4h 6h ( n ), eval when 
     half = n // 2
     obs_4h = [{"treatment_time": "4h"} for _ in range(half)]
     obs_6h = [{"treatment_time": "6h"} for _ in range(n - half)]

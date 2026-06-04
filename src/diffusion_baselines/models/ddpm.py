@@ -80,8 +80,8 @@ class ScrnaDDPM(ScRNADDPM):
     def __init__(self, cfg):
         T      = cfg.model.unet.T
         betas  = torch.linspace(cfg.model.beta_1, cfg.model.beta_T, T)
-        input_dim  = cfg.model.input_dim        # 例如 2000
-        hidden_dim = cfg.model.hidden_dim       # 在 cfg 里指定
+        input_dim = cfg.model.input_dim   # e.g. 2000
+        hidden_dim = cfg.model.hidden_dim  # set in config
         super().__init__(T, betas, input_dim, hidden_dim)
 
         # Trainer & Sampler

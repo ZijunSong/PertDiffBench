@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # State + DDPM encoder-exp pipeline
-# Pipeline: 扰动前 scRNA -> State SE encoder -> DDPM -> 扰动后 scRNA
+# Pipeline: before scRNA -> State SE encoder -> DDPM -> after scRNA
 #
 # Prerequisites:
 #   1. Install State: uv tool install arc-state
@@ -18,11 +18,11 @@ CELL_TYPE="CD4T"
 NUM_RUNS=3
 METHOD_NAME="state_ddpm"
 
-########################## State SE 模型路径 ##########################
+########################## State SE path ##########################
 STATE_MODEL_DIR="${STATE_MODEL_DIR:-/share/PertBench/checkpoints/SE-600M}"
 export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
 
-# 查找 state 命令（uv tool install 通常安装到 ~/.local/bin）
+# state (uv tool install to ~/.local/bin)
 if command -v state >/dev/null 2>&1; then
   STATE_CMD="state"
 elif [ -f "$HOME/.local/bin/state" ]; then
@@ -40,7 +40,7 @@ fi
 STATE_CMD="${STATE_CMD:-state}"
 echo "[INFO] Using State CLI: $STATE_CMD"
 
-# 下载 SE-600M：若目录中已有 .ckpt 则跳过；否则下载，失败时用 --force-download 重试
+# under SE-600M: directory .ckpt skip; elseunder , whenusing --force-download 
 _se_ckpt_exists() {
   [ -d "$1" ] && ls "$1"/*.ckpt 1>/dev/null 2>&1
 }
@@ -55,19 +55,19 @@ else
   echo "[INFO] SE-600M checkpoint already exists in $STATE_MODEL_DIR. Skipping download."
 fi
 
-########################## 基础路径设置 ##########################
+########################## path ##########################
 
 TRAIN_H5="data/fig1/raw_task1/task1_train_${CELL_TYPE}_exp.h5ad"
 VALID_H5="data/fig1/raw_task1/task1_valid_${CELL_TYPE}_exp.h5ad"
 
-# SE-600M 路径（上已设置 STATE_MODEL_DIR）
-STATE_CHECKPOINT="${STATE_CHECKPOINT:-}"   # 留空则自动从 model dir 中选择 .ckpt
+# SE-600M path (on STATE_MODEL_DIR)
+STATE_CHECKPOINT="${STATE_CHECKPOINT:-}" # empty from model dir .ckpt
 
-# 编码后的 h5ad（带 X_state latent）
+# after h5ad ( X_state latent)
 STATE_TRAIN_WITH_LATENT="samples/encoder_exp/state_ddpm/task1_train_${CELL_TYPE}_with_state_latent.h5ad"
 STATE_VALID_WITH_LATENT="samples/encoder_exp/state_ddpm/task1_valid_${CELL_TYPE}_with_state_latent.h5ad"
 
-########################## DDPM & 评估路径 ##########################
+########################## DDPM & evalpath ##########################
 
 LATENT_DDPM_CKPT_BASE="checkpoints/state_ddpm/latent_ddpm"
 EVAL_OUT_PREFIX="samples/encoder_exp/state_ddpm/state_latent_ddpm_mlp_task1_${CELL_TYPE}_preds"
@@ -76,7 +76,7 @@ CSV_PATH="samples/encoder_exp/state_ddpm/metrics_${CELL_TYPE}.csv"
 CONFIG_PATH="configs/baselines/state_ddpm_mlp.yaml"
 LOG_DIR="logs/state_ddpm"
 
-########################## 创建目录 ##########################
+########################## directory ##########################
 
 echo "[INFO] Creating directories for State+DDPM pipeline..."
 mkdir -p \
@@ -102,7 +102,7 @@ echo "######################################################################"
 ALL_OUTPUTS=""
 
 ########################################################################
-# Stage 0) State SE 编码 train/valid（一次性，支持 resume）
+# Stage 0) State SE train/valid (one-time, support resume)
 ########################################################################
 
 echo
@@ -153,7 +153,7 @@ else
 fi
 
 ########################################################################
-# Stage 1) 多 run：DDPM 训练 + 评估
+# Stage 1) multi-run: DDPM train + eval
 ########################################################################
 
 for (( run=1; run<=NUM_RUNS; run++ )); do
@@ -167,7 +167,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "[RUN ${run}] RUN_CKPT_DIR = ${RUN_CKPT_DIR}"
 
   ########################################
-  # 1) 训练 latent DDPM+decoder
+  # 1) train latent DDPM+decoder
   ########################################
   echo -e "\n--- [1/2] Train State-latent DDPM+decoder for ${CELL_TYPE} (run ${run}) ---"
 
@@ -185,7 +185,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   fi
 
   ########################################
-  # 2) 评测
+  # 2) eval
   ########################################
   echo -e "\n--- [2/2] Evaluate State-latent model on valid_${CELL_TYPE} (run ${run}) ---"
 
@@ -212,7 +212,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   ALL_OUTPUTS+="${OUTPUT}"$'\n'
 done
 
-########################## 聚合 metrics 到 CSV ##########################
+########################## metrics to CSV ##########################
 
 echo -e "\n--- Aggregating metrics to CSV: ${CSV_PATH} ---\n"
 

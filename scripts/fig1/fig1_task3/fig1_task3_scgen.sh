@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# 三次运行（训练+测评），统计写入 log 与 csv
+# 3 train+eval runs; stats to log/csv
 set -e
 trap "echo ERROR && exit 1" ERR
 
-# ---------- 配置 ----------
+# ---------- ----------
 NUM_GENES=1000
 NUM_RUNS=3
-METHOD_NAME="scGen"               # CSV 第一列展示的方法名
-N_SAMPLES=100                     # 与原调用保持一致
+METHOD_NAME="scGen" # CSV firstcols name
+N_SAMPLES=100 # and callstay consistent
 
 DATASETS=(
   'mix2'
@@ -23,7 +23,7 @@ TRAIN_ROOT="data/fig1/hvg_task3"
 TEST_ROOT="data/fig1/hvg_task3"
 CKPT_ROOT="checkpoints/scgen"
 
-# ---------- 主循环 ----------
+# ---------- ----------
 for dataset in "${DATASETS[@]}"; do
   echo "######################################################################"
   echo "###   Starting to process dataset: ${dataset} (${NUM_RUNS} runs total)"
@@ -35,17 +35,17 @@ for dataset in "${DATASETS[@]}"; do
   LOG_FILE="${OUT_ROOT}/${dataset}_pipeline.log"
   : > "${LOG_FILE}"
 
-  # 累积3次运行的stdout，供AWK统计
+  # 3 stdout, AWKstats
   all_outputs=""
 
-  # ---------- 多次运行 ----------
+  # ---------- ----------
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo -e "\n--- Running iteration ${i}/${NUM_RUNS} for ${dataset} ---" | tee -a "${LOG_FILE}"
 
-    # 确保输出与模型目录存在
+    # Ensureoutputand directoryexist
     mkdir -p "${CKPT_ROOT}/${dataset}_${NUM_GENES}"
 
-    # 运行（训练+评测），捕获输出
+    # (train+eval), output
     output=$(python scripts/scGen_eval.py \
       --train_data_path "${TRAIN_ROOT}/${dataset}_train_HVG_${NUM_GENES}.h5ad" \
       --test_data_path  "${TEST_ROOT}/${dataset}_test_HVG_${NUM_GENES}.h5ad" \
@@ -55,17 +55,17 @@ for dataset in "${DATASETS[@]}"; do
       --n_samples       "${N_SAMPLES}" \
       --celltype_to_predict "${dataset}" 2>&1) || true
 
-    # 打印并追加到日志/累积
+    # and to / 
     echo "$output" | tee -a "${LOG_FILE}"
     all_outputs+="$output\n"
   done
 
-  # ---------- 统计 + CSV ----------
+  # ---------- stats + CSV ----------
   echo -e "\n" | tee -a "${LOG_FILE}"
   CSV_FILE="${OUT_ROOT}/metrics_${METHOD_NAME}_${dataset}_gene_${NUM_GENES}.csv"
 
   echo -e "$all_outputs" | awk -v dataset="${dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${CSV_FILE}" '
-    # 抓 11 项指标
+    # 11 items 
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
     /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
     /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
@@ -109,7 +109,7 @@ for dataset in "${DATASETS[@]}"; do
       return (n>1)? mu "|" sqrt(ss/(n-1)) : mu "|0";
     }
 
-    # 取第 j 次（0-based）的数值
+    # j (0-based)countvalue
     function val(idx, j, v){
       if (idx==1) v=pds[j];
       else if(idx==2) v=mae[j];
@@ -138,7 +138,7 @@ for dataset in "${DATASETS[@]}"; do
     }
 
     END{
-      # 控制台/日志打印
+      # / 
       print "==================================================================";
       printf " Final statistics for dataset %s (%d runs)\n", dataset, num_runs;
       print "==================================================================";
@@ -157,7 +157,7 @@ for dataset in "${DATASETS[@]}"; do
       print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
       print "==================================================================\n";
 
-      # CSV：表头 + 一行数值（先 11 个 mean±std，再 3*11 个单次值）
+      # CSV: header + countvalue ( 11 mean±std, 3*11 value)
       metric_names[1]="PDS";
       metric_names[2]="MAE";
       metric_names[3]="DES";

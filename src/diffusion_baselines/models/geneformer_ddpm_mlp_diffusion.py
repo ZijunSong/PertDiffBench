@@ -95,7 +95,7 @@ class MLPDDPMMLPGeneFormer(DiffusionModel):
         model_name = cfg.model.geneformer.model_name
         self.geneformer_model = AutoModelForMaskedLM.from_pretrained(model_name).to(device)
         tk = TranscriptomeTokenizer({"cell_type": "cell_type", "organ_major": "organ"}, nproc=4)
-        tk.tokenize_data("你的输入数据目录/", "你的输出目录/", "输出文件前缀")
+        tk.tokenize_data("/path/to/input", "/path/to/output", "output_prefix")
         
         # REMOVED: The hook registration for scGPT is no longer applicable.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Fig4 Squidiff — 原文 addition（Δz_sem + DDIM 条件解码）
-# 单卡 GPU 0 | H20 大 batch 加速
+# Fig4 Squidiff - addition (Δz_sem + DDIM conditional decode)
+# single GPU 0 | H20 large batch speedup
 set -euo pipefail
 export PYTHONUNBUFFERED=1
 trap 'echo "[ERROR] command failed at line ${LINENO}" >&2' ERR
@@ -16,14 +16,14 @@ fi
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 
-# ---------- H20 141GB 推荐参数 ----------
+# ---------- H20 141GB recommendedargs ----------
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-1200}"          # 2h/8h 各 ~1.2k 细胞，尽量用满
-BATCH_SIZE="${BATCH_SIZE:-4096}"        # 训练 batch
+N_SAMPLES="${N_SAMPLES:-1200}" # 2h/8h ~1.2k cell, amountusing 
+BATCH_SIZE="${BATCH_SIZE:-4096}"        # train batch
 SAMPLE_BATCH="${SAMPLE_BATCH:-512}"       # DDIM decode batch
 LR_ANNEAL_STEPS="${LR_ANNEAL_STEPS:-100000}"
-USE_FP16="${USE_FP16:-False}"   # MLPModel 不支持 convert_to_fp16，须保持 False
+USE_FP16="${USE_FP16:-False}" # MLPModel support convert_to_fp16, False
 METHOD_NAME="${METHOD_NAME:-Squidiff-addition}"
 SQUIDIFF_METHOD="addition"
 

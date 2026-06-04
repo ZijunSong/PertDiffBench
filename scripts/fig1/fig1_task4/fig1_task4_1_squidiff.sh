@@ -3,7 +3,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # ====================== Config ======================
-# 数据集 -> 基因数
+# data -> genecount
 declare -A DATASETS=(
   ["ACTA2_control_coculture"]="4614"
   ["ACTA2_control_ifn"]="4559"
@@ -11,7 +11,7 @@ declare -A DATASETS=(
   ["B2M_control_ifn"]="4566"
 )
 
-# 数据集 -> 评测采样条数
+# data -> eval rowscount
 declare -A SAMPLE_SIZES=(
   ["ACTA2_control_coculture"]="82"
   ["ACTA2_control_ifn"]="82"
@@ -19,22 +19,22 @@ declare -A SAMPLE_SIZES=(
   ["B2M_control_ifn"]="73"
 )
 
-NUM_RUNS="${NUM_RUNS:-3}"                       # 评测重复次数（可用环境变量覆盖）
+NUM_RUNS="${NUM_RUNS:-3}" # eval count (canusing amount )
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 export CUDA_VISIBLE_DEVICES
 
-METHOD_NAME="${METHOD_NAME:-Squidiff}"          # 与范例一致：写入 CSV 的方法名
+METHOD_NAME="${METHOD_NAME:-Squidiff}" # and : CSV name
 # ====================================================
 
 for dataset in "${!DATASETS[@]}"; do
   gene_size="${DATASETS[$dataset]}"
   n_samples="${SAMPLE_SIZES[$dataset]}"
 
-  # 目录布局（保持 fig1/task4_1 层级）
+  # directory ( fig1/task4_1 level)
   LOG_ROOT="logs/fig1/task4_1/${dataset}/squidiff"
   CSV_ROOT="samples/fig1/task4_1/${dataset}/squidiff"
-  SAMPLES_DIR="${CSV_ROOT}"              # 产物直接放在该目录
-  METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv"   # ✅ 单数据集唯一 CSV（含 mean±std + per-run 值）
+  SAMPLES_DIR="${CSV_ROOT}" # directly in directory
+  METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv" # ✅ data CSV (with mean±std + per-run value)
 
   CKPT_DIR="checkpoints/squidiff/task4/${dataset}"
   TRAIN_H5="data/fig1/task4/task4_${dataset}_train.h5ad"
@@ -47,7 +47,7 @@ for dataset in "${!DATASETS[@]}"; do
   echo "###   ${dataset} | gene_size=${gene_size} | n_samples=${n_samples}"
   echo "######################################################################"
 
-  # -------------------- 训练（每个数据集 1 次） --------------------
+  # -------------------- train (eachdata 1 ) --------------------
   train_log="${LOG_ROOT}/${dataset}_train.log"
   {
     echo "[$(date '+%F %T')] >>> Train start: ${dataset}"
@@ -60,8 +60,8 @@ for dataset in "${!DATASETS[@]}"; do
     echo "[$(date '+%F %T')] >>> Train done:  ${dataset}"
   } 2>&1 | tee "${train_log}"
 
-  # -------------------- 评测（重复 NUM_RUNS 次） --------------------
-  ALL_OUTPUTS=""   # ✅ 累积所有评测标准输出，供 AWK 统一解析
+  # -------------------- eval ( NUM_RUNS ) --------------------
+  ALL_OUTPUTS="" # ✅ alleval output, AWK parse
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
     echo -e "\n--- Eval ${i}/${NUM_RUNS} for ${dataset} ---"
@@ -70,7 +70,7 @@ for dataset in "${!DATASETS[@]}"; do
     umap_png="${SAMPLES_DIR}/${dataset}_umap_comparison_${i}.png"
 
     echo "[$(date '+%F %T')] >>> Eval start: ${dataset}, run${i}" | tee "${log_file}"
-    # ✅ 捕获评测输出到变量，同时 tee 到日志
+    # ✅ evaloutputto amount, when tee to 
     eval_output="$(
       python src/Squidiff/sample_squidiff.py \
         --model_path "${MODEL_PT}" \
@@ -85,11 +85,11 @@ for dataset in "${!DATASETS[@]}"; do
     )"
     echo "[$(date '+%F %T')] >>> Eval done:  ${dataset}, run${i}" | tee -a "${log_file}"
 
-    # 累积
+    # 
     ALL_OUTPUTS+="${eval_output}\n"
   done
 
-  # 仅依赖以下 11 个标签行（需与评测脚本输出一致）：
+  # only tounder 11 (needandeval output ): 
   # Perturbation Discrimination Score (PDS): <num>
   # Mean Absolute Error (MAE): <num>
   # Differential Expression Score (DES): <num>
@@ -102,7 +102,7 @@ for dataset in "${!DATASETS[@]}"; do
   # Pearson Delta (top 50 DE genes): <num>
   # Pearson Delta (top 100 DE genes): <num>
 
-  # -------------------- 统一生成 metrics_${dataset}.csv --------------------
+  # -------------------- metrics_${dataset}.csv --------------------
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF + 0 }
     /Mean Absolute Error \(MAE\):/               { mae[c_mae++] = $NF + 0 }
@@ -188,8 +188,8 @@ for dataset in "${!DATASETS[@]}"; do
         for (i=1;i<=11;i++) row = row sprintf(",%.6f", val(i, r));
       }
 
-      print header > csv_path;   # 覆盖写入表头
-      print row    >> csv_path;  # 追加单行数据
+      print header > csv_path; # header
+      print row >> csv_path; # data
       close(csv_path);
       printf("CSV written: %s\n", csv_path);
     }

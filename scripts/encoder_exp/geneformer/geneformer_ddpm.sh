@@ -2,42 +2,42 @@
 
 set -e
 
-########################## 基本配置 ##########################
+########################## ##########################
 
 CELL_TYPE="CD4T"
 NUM_RUNS=3
 METHOD_NAME="geneformer_ddpm"
 
-# PertBench data（相对路径是相对你运行脚本时的工作目录）
+# PertBench data (relative path for when directory)
 TRAIN_H5="data/fig1/raw_task1/task1_train_${CELL_TYPE}_exp.h5ad"
 VALID_H5="data/fig1/raw_task1/task1_valid_${CELL_TYPE}_exp.h5ad"
 
-# Geneformer repo root（包含 config.json / model.safetensors 等）
-GENEFORMER_ROOT="/share/PertBench/src/Geneformer"   # TODO: 改成你自己的路径
+# Geneformer repo root (contain config.json / model.safetensors )
+GENEFORMER_ROOT="/share/PertBench/src/Geneformer" # TODO: ownpath
 
-# Geneformer encoder 输出目录（.dataset, embeddings, encoded h5ad）
+# Geneformer encoder output dir (.dataset, embeddings, encoded h5ad)
 ENCODER_OUT_DIR="samples/encoder_exp/geneformer_ddpm/encoder"
 
-# 预编码后的 h5ad（precompute_geneformer_latent.py 默认写这个命名）
+# after h5ad (precompute_geneformer_latent.py default name)
 GENE_TRAIN_LATENT_H5="${ENCODER_OUT_DIR}/task1_train_${CELL_TYPE}_geneformer_latent.h5ad"
 GENE_VALID_LATENT_H5="${ENCODER_OUT_DIR}/task1_valid_${CELL_TYPE}_geneformer_latent.h5ad"
 
-# DDPM checkpoint & eval 输出（每个 run 有自己的子目录）
+# DDPM checkpoint & eval output (each run ownsubdir)
 LATENT_DDPM_CKPT_BASE="checkpoints/geneformer_ddpm/latent_ddpm"
 EVAL_OUT_PREFIX="samples/encoder_exp/geneformer_ddpm/geneformer_latent_ddpm_mlp_task1_${CELL_TYPE}_preds"
 CSV_PATH="samples/encoder_exp/geneformer_ddpm/metrics_${CELL_TYPE}.csv"
 
-# Python 脚本路径
+# Python path
 PRECOMP_SCRIPT="scripts/encoder_exp/geneformer/precompute_geneformer_latent.py"
 TRAIN_SCRIPT="scripts/encoder_exp/geneformer/train_geneformer_latent_ddpm_mlp.py"
 EVAL_SCRIPT="scripts/encoder_exp/geneformer/eval_geneformer_latent_ddpm_mlp.py"
 
-# 使用的 config（你可以单独拷一份 geneformer 的 yaml）
+# using config ( cantoseparate geneformer yaml)
 CONFIG_PATH="configs/baselines/scvi_ddpm_mlp.yaml"
 
 LOG_DIR="logs/geneformer_ddpm"
 
-########################## 创建目录 ##########################
+########################## directory ##########################
 
 echo "[INFO] Creating directories..."
 
@@ -65,7 +65,7 @@ echo "######################################################################"
 
 ALL_OUTPUTS=""
 
-########################## 多次运行循环 ##########################
+########################## ##########################
 
 for (( run=1; run<=NUM_RUNS; run++ )); do
   echo
@@ -73,13 +73,13 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo ">>> Run ${run}/${NUM_RUNS} for ${CELL_TYPE}"
   echo "======================================================================"
 
-  # 为本次 run 定义子目录
+  # as run definesubdir
   RUN_CKPT_DIR="${LATENT_DDPM_CKPT_BASE}/run_${run}"
   mkdir -p "${RUN_CKPT_DIR}"
   echo "[RUN ${run}] RUN_CKPT_DIR = ${RUN_CKPT_DIR}"
 
   ########################################
-  # 1) Geneformer 编码 TRAIN
+  # 1) Geneformer TRAIN
   ########################################
   echo -e "\n--- [1/4] Geneformer encoding on train_${CELL_TYPE} (run ${run}) ---"
 
@@ -101,7 +101,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "[Geneformer] TRAIN encoded h5ad should be at: ${GENE_TRAIN_LATENT_H5}"
 
   ########################################
-  # 2) Geneformer 编码 VALID
+  # 2) Geneformer VALID
   ########################################
   echo -e "\n--- [2/4] Geneformer encoding on valid_${CELL_TYPE} (run ${run}) ---"
 
@@ -123,7 +123,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "[Geneformer] VALID encoded h5ad should be at: ${GENE_VALID_LATENT_H5}"
 
   #########################################
-  # 3) 训练 latent DDPM+decoder（每个 run 自己的子目录）
+  # 3) train latent DDPM+decoder (each run ownsubdir)
   #########################################
   echo -e "\n--- [3/4] Train Geneformer-latent DDPM+decoder for ${CELL_TYPE} (run ${run}) ---"
 
@@ -132,7 +132,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   echo "  valid-latent-h5ad : ${GENE_VALID_LATENT_H5}"
   echo "  run-ckpt-dir      : ${RUN_CKPT_DIR}"
 
-  # 如果已有 epoch=* 的 checkpoint，就认为本 run 的训练已经做过，直接跳过
+  # epoch=* checkpoint, as run trainalready , directlyskip
   if compgen -G "${RUN_CKPT_DIR}/epoch=*.pt" > /dev/null; then
     echo "[DDPM][run ${run}] Found existing checkpoints in ${RUN_CKPT_DIR}"
     echo "[DDPM][run ${run}] Skip training, reuse existing model."
@@ -146,7 +146,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   fi
 
   ########################################
-  # 4) 评测
+  # 4) eval
   ########################################
   echo -e "\n--- [4/4] Evaluate Geneformer-latent model on valid_${CELL_TYPE} (run ${run}) ---"
 
@@ -164,7 +164,7 @@ for (( run=1; run<=NUM_RUNS; run++ )); do
   ALL_OUTPUTS+="${OUTPUT}"$'\n'
 done
 
-########################## 汇总 metrics -> CSV ##########################
+########################## metrics -> CSV ##########################
 
 echo -e "\n--- Aggregating metrics to CSV: ${CSV_PATH} ---\n"
 

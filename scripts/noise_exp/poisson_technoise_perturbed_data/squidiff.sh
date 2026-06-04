@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# 如果任何命令以非零状态退出，则立即退出脚本。
+# Exit immediately if any command fails.
 set -e
 
-# -------------------- 配置 --------------------
+# -------------------- Config --------------------
 CELL_TYPES=(
     # 'B'
     'CD4T'
@@ -14,7 +14,7 @@ CELL_TYPES=(
     # 'NK'
 )
 
-# 噪声标准差
+# noise std
 NOISE_LEVELS=(
   '0.25'
   '0.5'
@@ -23,12 +23,12 @@ NOISE_LEVELS=(
   '4.0'
 )
 
-# 通用参数
+# usingargs
 GENE_SIZE="${GENE_SIZE:-6998}"
 NUM_RUNS="${NUM_RUNS:-3}"
 
-METHOD_NAME="${METHOD_NAME:-Squidiff-${GENE_SIZE}}"   # 写到 CSV 里的方法名
-METHOD_DIR="${METHOD_DIR:-squidiff}"                  # 作为路径最后一级的方法目录名
+METHOD_NAME="${METHOD_NAME:-Squidiff-${GENE_SIZE}}"   # write to CSV method name in
+METHOD_DIR="${METHOD_DIR:-squidiff}" # aspath after level directoryname
 
 BASE_DATA_DIR="data/add_poisson_technoise_output"
 BASE_CKPT_DIR="checkpoints/poisson_technoise"
@@ -36,45 +36,45 @@ BASE_SAMPLES_DIR="samples/poisson_technoise"
 
 mkdir -p logs
 
-# -------------------- 主循环 --------------------
+# -------------------- Main loop --------------------
 for cell_type in "${CELL_TYPES[@]}"; do
   for noise_level in "${NOISE_LEVELS[@]}"; do
     echo "######################################################################"
-    echo "###  处理细胞类型: $cell_type | 噪声等级: $noise_level"
+    echo "###  Processing: $cell_type | noise: $noise_level"
     echo "######################################################################"
 
-    # 动态构建带噪声的训练 / 验证数据文件路径（注意这里不再硬编码 CD4T）
+    # build noisy train path / validatedatafilepath ( hereno longer CD4T)
     train_data_file="${BASE_DATA_DIR}/task1_train_${cell_type}_exp_poisson_depth_${noise_level}.h5ad"
     valid_data_file="${BASE_DATA_DIR}/task1_valid_${cell_type}_exp_poisson_depth_${noise_level}.h5ad"
 
-    # 检查带噪声的训练文件是否存在，如果不存在则跳过该组合
+    # check noisetrainfilewhetherexist, exist skip 
     if [ ! -f "$train_data_file" ]; then
-      echo "警告: 未找到训练数据文件 '$train_data_file'。将跳过此组合。"
+      echo " : Training data file not found '$train_data_file'.skip this combo."
       continue
     fi
 
     group_suffix="${cell_type}_noise_${noise_level}"
 
-    # 统一的大路径：只在最后一级用 METHOD_DIR 区分方法
+    # shared base path: only at last level use METHOD_DIR distinguish methods
     base_checkpoint_dir="${BASE_CKPT_DIR}/${group_suffix}/${METHOD_DIR}"
     base_samples_dir="${BASE_SAMPLES_DIR}/${group_suffix}/${METHOD_DIR}"
     mkdir -p "${base_checkpoint_dir}" "${base_samples_dir}"
 
-    echo -e "\n--- 正在为 $cell_type (噪声: $noise_level) 进行 ${NUM_RUNS} 次 [训练+采样] ---"
+    echo -e "\n--- Running $cell_type (noise: $noise_level) run ${NUM_RUNS}  train+sample runs ---"
 
     all_outputs=""
 
-    # ---------- 第 1&2 步：三次训练 + 对应三次采样 ----------
+    # ---------- 1&2 : train + forshould ----------
     for (( run_id=1; run_id<=NUM_RUNS; run_id++ )); do
       echo -e "\n================ Run ${run_id}/${NUM_RUNS} | ${cell_type} noise=${noise_level} ================"
 
-      # 每个 run 独立的 checkpoint / samples 子目录
+      # each run standalone checkpoint / samples subdir
       checkpoint_dir="${base_checkpoint_dir}/run_${run_id}"
       samples_dir="${base_samples_dir}/run_${run_id}"
       mkdir -p "${checkpoint_dir}" "${samples_dir}"
 
-      # --- 训练 ---
-      echo -e "\n--- [Run ${run_id}] 训练模型 ---"
+      # --- train ---
+      echo -e "\n--- [Run ${run_id}] train ---"
       python src/Squidiff/train_squidiff.py \
         --logger_path "logs/squidiff/${cell_type}_train_HVG_${GENE_SIZE}_noise_${noise_level}_run${run_id}" \
         --data_path "${train_data_file}" \
@@ -84,13 +84,13 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
       model_path="${checkpoint_dir}/model.pt"
       if [ ! -f "${model_path}" ]; then
-        echo "[ERROR] 训练完成后未找到模型权重: ${model_path}" >&2
+        echo "[ERROR] training doneafter found : ${model_path}" >&2
         exit 1
       fi
-      echo "--- [Run ${run_id}] 训练完成，模型: ${model_path} ---"
+      echo "--- [Run ${run_id}] training done, : ${model_path} ---"
 
-      # --- 采样 / 评估（失败不终止整体流水线） ---
-      echo -e "\n--- [Run ${run_id}] 开始采样 / 评估 ---"
+      # --- / eval ( ) ---
+      echo -e "\n--- [Run ${run_id}] Start / eval ---"
       output=$(
         python src/Squidiff/sample_squidiff.py \
           --model_path "${model_path}" \
@@ -107,11 +107,11 @@ for cell_type in "${CELL_TYPES[@]}"; do
       all_outputs+="${output}"$'\n'
     done
 
-    # ---------- 第 3 步：AWK 统计 + 写 CSV ----------
+    # ---------- 3 : AWK stats + CSV ----------
     CSV_PATH="${base_samples_dir}/metrics_${group_suffix}.csv"
     mkdir -p "$(dirname "${CSV_PATH}")"
 
-    echo -e "\n--- 使用 AWK 聚合 ${NUM_RUNS} 次运行的指标，并写入 CSV: ${CSV_PATH} ---\n"
+    echo -e "\n--- using AWK ${NUM_RUNS} , and CSV: ${CSV_PATH} ---\n"
 
     echo "${all_outputs}" | awk \
       -v dataset="$cell_type" \
@@ -119,7 +119,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
       -v num_runs="$NUM_RUNS" \
       -v method="$METHOD_NAME" \
       -v csv_path="$CSV_PATH" '
-      # ---------- 函数定义 ----------
+      # ---------- countdefine ----------
       function print_stat(name, arr, cnt,    i,sum,mean,ssd,sd,tmp){
         if (cnt > 0){
           sum=0
@@ -130,7 +130,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           sd=(cnt>1)? sqrt(ssd/(cnt-1)) : 0
           printf "%-40s: %.4f ± %.4f\n", name, mean, sd
         } else {
-          printf "%-40s: N/A (未收集到数据)\n", name
+          printf "%-40s: N/A (no data collected)\n", name
         }
       }
 
@@ -187,7 +187,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         return sprintf("%.4f±%.4f", parts[1]+0, parts[2]+0)
       }
 
-      # ---------- 收集指标 ----------
+      # ---------- collect metrics ----------
       /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF+0 }
       /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF+0 }
       /Differential Expression Score \(DES\):/    { des[c_des++] = $NF+0 }
@@ -202,7 +202,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
       END{
         print "=================================================================="
-        printf " %s (噪声: %s) 的最终统计结果 (%d 次运行)\n", dataset, noise, num_runs
+        printf " %s (noise: %s) final stats (%d )\n", dataset, noise, num_runs
         print "=================================================================="
 
         print_stat("Perturbation Discrimination (PDS)", pds, c_pds)
@@ -221,7 +221,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
         print "==================================================================\n"
 
-        # -------- 写 CSV：Dataset,Noise,Method + mean±std + 每次运行 --------
+        # -------- CSV: Dataset,Noise,Method + mean±std + per run --------
         metric_names[1]="PDS"
         metric_names[2]="MAE"
         metric_names[3]="DES"
@@ -255,10 +255,10 @@ for cell_type in "${CELL_TYPES[@]}"; do
       }
     '
 
-    echo -e "\n--- 完成细胞类型: $cell_type | 噪声等级: $noise_level 的流程 ---\n"
+    echo -e "\n--- Done: $cell_type | noise: $noise_level ---\n"
   done
 done
 
 echo "######################################################################"
-echo "###   所有细胞类型和噪声等级的处理已全部完成！                 ###"
+echo "###   All cell types and noise levels finished!                 ###"
 echo "######################################################################"

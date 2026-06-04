@@ -9,7 +9,7 @@ GENE_SIZE="${GENE_SIZE:-6998}"
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 
-# n_samples（如与你当前评测集规模不符可自行调整）
+# n_samples ( and currenteval can )
 declare -A SAMPLES_MAP=(
   ["B"]=110
   ["NK"]=54
@@ -27,7 +27,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
   echo "###   Target cell type: ${cell_type} | genes=${GENE_SIZE} | runs=${NUM_RUNS}"
   echo "######################################################################"
 
-  # 输出目录（与 --out_h5ad 同级父目录一致）
+  # output dir (and --out_h5ad level directory )
   sample_base="../../samples/fig2/task2/${cell_type}/squidiff"
   ckpt_base="../../checkpoints/fig2/task2/pretrain_CD4T/squidiff"
   mkdir -p "${sample_base}" "${ckpt_base}"
@@ -45,7 +45,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
     run_sample_dir="${sample_base}/run${i}"
     mkdir -p "${run_ckpt_dir}" "${run_sample_dir}"
 
-    # 训练（每次 run 独立目录，避免权重覆盖）
+    # train (each run run standalonedirectory, )
     echo
     echo "--- Training on CD4T data [run ${i}] ---"
     python train_squidiff.py \
@@ -55,9 +55,9 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
       --gene_size "${GENE_SIZE}" \
       --output_dim "${GENE_SIZE}"
 
-    model_path="${run_ckpt_dir}/model.pt"   # 若训练产物命名不同，请改这里
+    model_path="${run_ckpt_dir}/model.pt" # train name , here
 
-    # 推断/评测
+    # /eval
     echo
     echo "--- Inference & evaluation on ${cell_type} [run ${i}] ---"
     output=$(
@@ -73,16 +73,16 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
     ) || true
 
     echo "$output"
-    # 逐次追加并保证换行
+    # and 
     all_outputs+="${output}"$'\n'
   done
 
-  # -------- 聚合统计 + 写 CSV --------
+  # -------- stats + CSV --------
   csv_path="${sample_base}/metrics_${METHOD_NAME}_${cell_type}_g${GENE_SIZE}.csv"
 
   echo
   printf "%s" "$all_outputs" | awk -v dataset="${cell_type}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${csv_path}" '
-    # 抓取 11 项指标（按你评测脚本打印的末尾数字 $NF）
+    # 11 items ( eval count $NF)
     /Perturbation Discrimination Score \(PDS\):/ { pds[c_pds++] = $NF }
     /Mean Absolute Error \(MAE\):/              { mae[c_mae++] = $NF }
     /Differential Expression Score \(DES\):/    { des[c_des++] = $NF }
@@ -171,7 +171,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
       print_stat("Pearson Delta (top 100 DE genes)",  pearson_delta_de100, c_pearson_delta_de100);
       print "==================================================================\n";
 
-      # CSV header: 方法 + 11(mean±std) + raw(3x11)
+      # CSV header: + 11(mean±std) + raw(3x11)
       metric_names[1]="PDS";
       metric_names[2]="MAE";
       metric_names[3]="DES";
@@ -196,7 +196,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
         else row = row sprintf(",%.4f", v);
       }
 
-      # 写 CSV（覆盖写入同一路径）
+      # CSV ( path)
       print header > csv_path;
       print row    >> csv_path;
       close(csv_path);

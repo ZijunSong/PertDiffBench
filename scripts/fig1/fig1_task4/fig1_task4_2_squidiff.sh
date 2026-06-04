@@ -10,8 +10,8 @@ declare -A DATASETS=(
   ["B2M"]="5737"
 )
 
-NUM_RUNS="${NUM_RUNS:-3}"           # 训练+评测重复次数
-N_SAMPLES="${N_SAMPLES:-100}"       # 每次评测采样数量
+NUM_RUNS="${NUM_RUNS:-3}" # train+eval count
+N_SAMPLES="${N_SAMPLES:-100}" # each runeval countamount
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 
 echo "Changing directory to src/Squidiff..."
@@ -39,13 +39,13 @@ for prefix in "${!DATASETS[@]}"; do
 
   ALL_OUTPUTS=""
 
-  # -------- Run 1..NUM_RUNS（每次 run 都重新训练+评测） --------
+  # -------- Run 1..NUM_RUNS (each run run train+eval) --------
   for (( i=1; i<=NUM_RUNS; i++ )); do
     run_tag="run${i}"
     run_dir="${OUT_ROOT}/${run_tag}"
     mkdir -p "$run_dir"
 
-    # 为每次 run 准备独立的 ckpt 目录，避免覆盖
+    # aseach run run preparestandalone ckpt directory, 
     run_ckpt_dir="${CKPT_ROOT}/${run_tag}"
     mkdir -p "$run_ckpt_dir"
 
@@ -53,7 +53,7 @@ for prefix in "${!DATASETS[@]}"; do
     echo "[$(date '+%F %T')] >>> ${run_tag}: TRAIN (${train_dataset})" | tee "$log_file"
 
     # -------------------- Step 1: Train --------------------
-    # 你的 train_squidiff.py 会把权重保存到 --resume_checkpoint 指定目录（典型 model.pt）
+    # train_squidiff.py will to --resume_checkpoint specifydirectory ( model.pt)
     python train_squidiff.py \
       --logger_path "../../logs/squidiff/task4/${train_dataset}/${run_tag}" \
       --data_path   "../../data/fig1/task4/${train_dataset}.h5ad" \
@@ -65,7 +65,7 @@ for prefix in "${!DATASETS[@]}"; do
     # -------------------- Step 2: Sample + Eval --------------------
     echo "[$(date '+%F %T')] >>> ${run_tag}: EVAL  (${eval_dataset})" | tee -a "$log_file"
 
-    # 采样与评测脚本通常会在 stdout 打印 11 项指标；这里同时保存产物
+    # andeval willin stdout 11 items ; here when 
     if python sample_squidiff.py \
         --model_path "${run_ckpt_dir}/model.pt" \
         --gene_size  "$gene_size" \
@@ -83,7 +83,7 @@ for prefix in "${!DATASETS[@]}"; do
       exit 1
     fi
 
-    # 只抽取可解析的指标行，汇总到 ALL_OUTPUTS
+    # canparse , to ALL_OUTPUTS
     run_tmp="$(mktemp)"
     grep -E "Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)" \
       "$log_file" > "$run_tmp" || true
@@ -92,7 +92,7 @@ for prefix in "${!DATASETS[@]}"; do
     rm -f "$run_tmp"
   done
 
-  # -------- Step 3: 聚合成单个 CSV（mean±std + 每次原始值） --------
+  # -------- Step 3: CSV (mean±std + each runoriginalvalue) --------
   echo -e "${ALL_OUTPUTS}" | awk -v ds="${eval_dataset}" -v num_runs="${NUM_RUNS}" -v method="${METHOD_NAME}" -v csv_path="${METRICS_CSV}" '
     function to_num(x){ gsub(/[^0-9eE+\-\.]/,"",x); return x+0 }
 
@@ -162,8 +162,8 @@ for prefix in "${!DATASETS[@]}"; do
       for(i=1;i<=11;i++) row=row "," mean_std(i);
       for(r=0;r<num_runs;r++) for(i=1;i<=11;i++) row=row sprintf(",%.6f", val(i,r)+0);
 
-      print header > csv_path;   # 覆盖写表头
-      print row    >> csv_path;  # 追加单行
+      print header > csv_path; # header
+      print row >> csv_path; # 
       close(csv_path);
       printf("CSV written: %s\n", csv_path);
     }

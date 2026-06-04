@@ -20,7 +20,7 @@ for csv_file in csv_files:
     try:
         df = pd.read_csv(csv_file, index_col=0)
         
-        # 查看CSV数据的详细信息
+        # CSVdata batch info
         print(f"--- Details for {base_name} ---")
         print("DataFrame Info:")
         df.info()
@@ -52,8 +52,8 @@ for csv_file in csv_files:
 
     df_transposed = df_expression.T
     
-    # *** 修正 ***
-    # 直接将DataFrame传递给AnnData，以保留细胞ID（索引）和基因ID（列名）
+    # *** ***
+    # directlyDataFrame AnnData, tokeepcellID (index) geneID (colsname)
     adata = ad.AnnData(df_transposed, dtype='float32')
     
     adata.obs['dose_value_unit'] = dose_value_unit_data

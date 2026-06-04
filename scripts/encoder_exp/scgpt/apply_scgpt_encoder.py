@@ -75,16 +75,16 @@ def run_scgpt_encoder_on_adata(adata, ckpt_dir: str, device: str = "cuda"):
             "Please install it via `pip install scgpt` (or conda/mamba)."
         ) from e
 
-    # 1) gene_col 一定要存在，否则 embed_data 里会 assert
+    # 1) gene_col must exist, else embed_data will assert
     gene_col = detect_gene_col(adata)
 
-    # 这里 embed_data 实现并不需要 cell_type，所以不强制加，但加了也无害
+    # here embed_data and must cell_type, to , 
     if "cell_type" not in adata.obs.columns:
         print("[scGPT] adata.obs has no 'cell_type' column. Creating a dummy one.")
         adata.obs["cell_type"] = "unknown"
 
     print(f"[scGPT] Running embed_data() with model_dir={ckpt_dir}, device={device}")
-    # 2) 关键：这里我们显式使用 return_new_adata=False
+    # 2) key: hereweexplicit using return_new_adata=False
     new_adata = embed_data(
         adata_or_file=adata,
         model_dir=ckpt_dir,
@@ -94,12 +94,12 @@ def run_scgpt_encoder_on_adata(adata, ckpt_dir: str, device: str = "cuda"):
         obs_to_save=None,
         device=device,
         use_fast_transformer=True,
-        return_new_adata=False,  # <---- 这是关键
+        return_new_adata=False, # <---- key
     )
 
-    # 按你提供的实现，此时 new_adata 就是 adata 本体
+    # , when new_adata adata 
     if "X_scGPT" not in new_adata.obsm:
-        # 如果这里没有，说明 ckpt_dir 或 scGPT 版本有问题
+        # hereno, ckpt_dir or scGPT 
         raise RuntimeError(
             "scGPT embed_data() finished but new_adata.obsm['X_scGPT'] not found. "
             "Please check your checkpoint directory and scGPT version."
@@ -113,7 +113,7 @@ def run_scgpt_encoder_on_adata(adata, ckpt_dir: str, device: str = "cuda"):
             f"Latent shape {latent.shape} does not match n_obs={new_adata.n_obs}."
         )
 
-    # 3) 为了和 DDPM pipeline 统一，再额外写一个小写 key
+    # 3) as DDPM pipeline , outside key
     new_adata.obsm["X_scgpt"] = latent
     print(
         "[scGPT] Stored cell embeddings in new_adata.obsm['X_scGPT'] "

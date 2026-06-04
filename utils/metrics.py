@@ -7,7 +7,7 @@ from scipy.spatial.distance import pdist, cdist
 import warnings
 from typing import Set, Dict, Optional, List
 
-# 当样本量超过此值时，E-Distance/MMD 在随机子集上计算，避免 pdist/cdist 导致 OOM（约 4.93 TiB）
+# When sample count exceeds this, subsample for E-Distance/MMD to avoid pdist/cdist OOM (~4.93 TiB)
 EDISTANCE_MMD_MAX_SAMPLES = 8000
 
 def _find_non_finite_indices(arr: np.ndarray) -> np.ndarray:
@@ -379,7 +379,7 @@ def compute_edistance(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         warnings.warn("Input arrays must not be empty. Returning nan.", UserWarning)
         return np.nan
 
-    # 样本过多时在随机子集上计算，避免 pdist/cdist 分配 TiB 级内存
+    # Too many samples: subsample to avoid TiB-scale pdist/cdist allocations
     rng = np.random.default_rng(42)
     if n > EDISTANCE_MMD_MAX_SAMPLES or m > EDISTANCE_MMD_MAX_SAMPLES:
         n_sub = min(n, EDISTANCE_MMD_MAX_SAMPLES)
@@ -410,17 +410,17 @@ def compute_r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     All calculation results are rounded to four decimal places.
     """
     if y_true.shape != y_pred.shape:
-        # 逐维度取最小长度
+        # Per-dimension minimum length
         common_shape = tuple(min(d1, d2) for d1, d2 in zip(y_true.shape, y_pred.shape))
 
-        # 双向裁剪
+        # Crop both arrays to common shape
         slices = tuple(slice(0, dim) for dim in common_shape)
         y_true = y_true[slices]
         y_pred = y_pred[slices]
 
         warnings.warn(
-            f"输入数组形状不匹配：真实值 {y_true.shape}，预测值 {y_pred.shape}。"
-            f"已按共同长度 {common_shape} 双向裁剪。",
+ f"Input shape mismatch: y_true {y_true.shape}, y_pred {y_pred.shape}."
+ f"Cropped both to common shape {common_shape}."
             UserWarning
         )
     if y_true.size == 0:
@@ -467,7 +467,7 @@ def compute_mmd(y_true: np.ndarray, y_pred: np.ndarray, gamma: Optional[float] =
         warnings.warn("Input arrays must not be empty. Returning nan.", UserWarning)
         return np.nan
 
-    # 样本过多时在随机子集上计算，避免 kernel/cdist 分配 TiB 级内存
+    # Too many samples: subsample to avoid TiB-scale kernel/cdist allocations
     rng = np.random.default_rng(42)
     if n > EDISTANCE_MMD_MAX_SAMPLES or m > EDISTANCE_MMD_MAX_SAMPLES:
         n_sub = min(n, EDISTANCE_MMD_MAX_SAMPLES)

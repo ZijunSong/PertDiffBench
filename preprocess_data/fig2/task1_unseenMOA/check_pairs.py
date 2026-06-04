@@ -6,7 +6,7 @@ from pathlib import Path
 import anndata as ad
 import pandas as pd
 
-# 处理后数据的根路径（可从项目根目录运行脚本）
+# Processed data root (script can be run from repo root)
 DATA_OUT = Path("/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA")
 
 STATUS_COL = "perturbation_status"

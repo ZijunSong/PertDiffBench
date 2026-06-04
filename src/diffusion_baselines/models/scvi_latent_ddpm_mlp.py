@@ -24,8 +24,8 @@ class SinusoidalPosEmb(nn.Module):
 class MLPCond(nn.Module):
     """
     Noise predictor ε_θ(z_t, cond=z0, t) in latent space.
-    输入: 当前 z_t, 条件 z0, 时间步 t
-    输出: 预测噪声 ε
+    input: current z_t, cond z0, timestep t
+    output: pred noise ε
     """
     def __init__(self, latent_dim: int, hidden_dim: int, cond_dim: int, time_dim: int):
         super().__init__()
@@ -54,8 +54,8 @@ class MLPCond(nn.Module):
 
 class LatentDecoderMLP(nn.Module):
     """
-    简单 MLP decoder: latent -> gene expression
-    这个 decoder 会用 (z1, x1) 监督训练，使得 x_hat ≈ x1。
+    simple MLP decoder: latent -> gene expression
+    This decoder is supervised with (z1, x1), so x_hat ≈ x1.
     """
     def __init__(
         self,
@@ -94,19 +94,19 @@ class LatentDecoderMLP(nn.Module):
 
 class ScviLatentDDPMMLP(nn.Module):
     """
-    整体结构（不包含 encoder）:
-        z0, z1: 来自预训练 scVI 的 latent
-        net:    DDPM 噪声预测网络
+    Full architecture (encoder not included):
+        z0, z1: from pretrained scVI latent
+        net:    DDPM noise prednet
         decoder: MLP latent -> gene expression
 
-    训练时:
-        - loss_diff 在 latent 空间 (依赖 z0, z1)
-        - loss_dec  在 gene 空间   (依赖 z1, x1)
-        - 总 loss = loss_diff + lambda_dec * loss_dec
+    Training:
+        - loss_diff in latent space (depends on z0, z1)
+        - loss_dec in gene space (depends on z1, x1)
+        - total loss = loss_diff + lambda_dec * loss_dec
 
-    采样时:
-        - 给 z0 (control latent) 做 reverse diffusion 得到 z_hat1
-        - 再用 decoder 把 z_hat1 decode 到 gene 表达空间。
+    Sampling:
+        - reverse diffuse from z0 (control latent) to get z_hat1
+        - decode z_hat1 to gene expression with the decoder.
     """
     def __init__(self, cfg):
         super().__init__()
@@ -115,7 +115,7 @@ class ScviLatentDDPMMLP(nn.Module):
         diff_cfg = cfg.model.diffusion
 
         self.latent_dim = ae_cfg.latent_dim   # == scVI n_latent
-        self.gene_dim = ae_cfg.input_dim      # 原始基因数
+        self.gene_dim = ae_cfg.input_dim  # original gene count
 
         # decoder: latent -> gene
         self.decoder = LatentDecoderMLP(
@@ -128,7 +128,7 @@ class ScviLatentDDPMMLP(nn.Module):
             out_activation=getattr(ae_cfg, "out_activation", "none"),
         )
 
-        # DDPM 噪声网络
+        # DDPM noisenet
         self.net = MLPCond(
             latent_dim=self.latent_dim,
             hidden_dim=diff_cfg.hidden_dim,
@@ -152,7 +152,7 @@ class ScviLatentDDPMMLP(nn.Module):
             T=T,
         )
 
-        # decoder loss 权重
+        # decoder loss weights
         self.lambda_dec = getattr(cfg.model, "lambda_dec", 1.0)
 
         self.mse = nn.MSELoss()
@@ -176,7 +176,7 @@ class ScviLatentDDPMMLP(nn.Module):
     @torch.no_grad()
     def sample_from_latent(self, z0: torch.Tensor, noise: torch.Tensor = None) -> torch.Tensor:
         """
-        给定 control latent z0，先做 reverse diffusion 得到 z_hat1，再 decode 成 gene 表达。
+        Given control latent z0, reverse diffuse to z_hat1, then decode to gene expression.
         """
         device = z0.device
         if noise is None:
@@ -185,7 +185,7 @@ class ScviLatentDDPMMLP(nn.Module):
             z_t = noise.to(device)
 
         B = z0.shape[0]
-        z_clip = 1e3  # 限制 latent 幅度，减轻 reverse 过程中 float32 溢出导致的 NaN
+        z_clip = 1e3  # clip latent magnitude to avoid float32 overflow/NaN during reverse diffusion
         for step in reversed(range(self.diffusion_trainer.T)):
             t = torch.full((B,), step, dtype=torch.long, device=device)
             eps = self.net(z_t, z0, t)
