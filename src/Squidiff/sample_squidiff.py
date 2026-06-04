@@ -168,12 +168,18 @@ def main():
         pert_mask = adata.obs["perturbation_status"] == pert
         pert_ids = adata.obs_names[pert_mask].tolist()
 
-        if len(ctrl_ids) < args.n_samples or len(pert_ids) < args.n_samples:
-            print(f"Warning: Not enough cells for '{pert}'. Required {args.n_samples}, found {min(len(ctrl_ids), len(pert_ids))}. Skipping.")
+        n_use = min(len(ctrl_ids), len(pert_ids), args.n_samples)
+        if n_use < 1:
+            print(f"Warning: No usable cells for '{pert}'. Skipping.")
             continue
+        if n_use < args.n_samples:
+            print(
+                f"Warning: For '{pert}', requested {args.n_samples} samples but only "
+                f"{min(len(ctrl_ids), len(pert_ids))} cells available; using {n_use}."
+            )
 
-        selected_ctrl_ids = np.random.choice(ctrl_ids, args.n_samples, replace=False)
-        selected_pert_ids = np.random.choice(pert_ids, args.n_samples, replace=False)
+        selected_ctrl_ids = np.random.choice(ctrl_ids, n_use, replace=False)
+        selected_pert_ids = np.random.choice(pert_ids, n_use, replace=False)
 
         # Get expression data
         ctrl_X = np.asarray(adata[selected_ctrl_ids].X)
@@ -192,7 +198,7 @@ def main():
                 ctrl_feat, drug_dose=drug_ctrl, control_feature=ctrl_feat
             )
             # Perturbed: use mean control expression as control_feature for direction; drug_dose from pert cells
-            mean_ctrl = ctrl_feat.mean(dim=0, keepdim=True).expand(args.n_samples, -1)
+            mean_ctrl = ctrl_feat.mean(dim=0, keepdim=True).expand(n_use, -1)
             z_pert_true = my_sampler.model.encoder(
                 pert_feat, drug_dose=drug_pert, control_feature=mean_ctrl
             )
@@ -244,8 +250,8 @@ def main():
 
         # Store synthetic data
         obs = pd.DataFrame({
-            "perturbation_status": [f"Predicted_{pert}"] * args.n_samples
-        }, index=[f"synthetic_{pert}_{i}" for i in range(args.n_samples)])
+            "perturbation_status": [f"Predicted_{pert}"] * n_use
+        }, index=[f"synthetic_{pert}_{i}" for i in range(n_use)])
         all_synthetic_adata.append(sc.AnnData(X=pred_pert, obs=obs, var=adata.var.copy()))
 
     # --- Aggregate Metrics ---

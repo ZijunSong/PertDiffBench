@@ -1,0 +1,39 @@
+model:
+  input_dim: 1000
+  hidden_dim: 1024
+
+diffusion:
+  beta_1: 1e-4
+  beta_T: 0.02
+  timesteps: 1000
+
+data:
+  path: ./dataset/scrna_data/scrna.h5ad
+  batch_size: 32
+  label_key: perturbation_status
+  transform:
+    - RandomHorizontalFlip: {}
+    - ToTensor: {}
+    - Normalize: {mean: [0.5], std: [0.5]}
+
+train:
+  device: cuda
+  epoch: 1000
+  batch_size: 2048
+  lr: 5.0e-6
+  weight_decay: 1.0e-4
+  grad_clip: 1.0
+  grad_clip_norm: 1.0
+  warmup_multiplier: 10
+  save_weight_dir: ./checkpoints/sweep/fig1_cd4t/D1
+  resume_from: null
+  num_workers: 32
+  ckpt_save_interval: 100
+
+sample:
+  batch_size: 64
+  sampled_dir: ./samples/sweep/fig1_cd4t/D1
+  sampledNoisyImgName: noisy.png
+  sampledImgName: denoised.png
+  nrow: 8
+  out_h5ad: synthetic_ddpm_D1.h5ad

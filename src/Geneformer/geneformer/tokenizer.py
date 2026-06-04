@@ -473,7 +473,9 @@ class TranscriptomeTokenizer:
             use_generator=use_generator,
         )
 
-        output_path = (Path(output_directory) / output_prefix).with_suffix(".dataset")
+        # Use string suffix, not Path.with_suffix: prefixes like "task2_B_p0.25_train"
+        # contain dots and would be mangled (e.g. -> task2_B_p0.dataset).
+        output_path = Path(output_directory) / f"{output_prefix}.dataset"
         tokenized_dataset.save_to_disk(str(output_path))
 
     def tokenize_files(

@@ -12,7 +12,7 @@
 ```
 conda create -n pertdiffbench python=3.10 -y && conda activate pertbench
 pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121 
-pip install omegaconf numpy anndata tqdm scanpy gdown einops torch_geometric adjustText wandb 
+pip install omegaconf numpy anndata tqdm scanpy gdown einops torch_geometric adjustText wandb zarr blobfile
 pip install git+https://github.com/LouiseDck/scgen
 sudo apt update
 sudo apt install openmpi-bin libopenmpi-dev
@@ -308,6 +308,52 @@ nohup bash scripts/fig2/fig2_task2_extend/fig2_task2_extend_ddpm_mlp.sh > fig2_t
 nohup bash scripts/fig2/fig2_task2_extend/fig2_task2_extend_scdiff.sh > fig2_task2_extend_scdiff.log 2>&1 &
 nohup bash scripts/fig2/fig2_task2_extend/fig2_task2_extend_scgen.sh > fig2_task2_extend_scgen.log 2>&1 &
 ```
+
+**Task 2 — leave-one-out unseen cell type with partial test controls (Fig2 `task2_plus`)**
+
+This extension uses all **seven** PBMC cell types from the Task 1 PBMC setup (`B`, `CD4T`, `CD8T`, `CD14+Mono`, `Dendritic`, `FCGR3A+Mono`, `NK`). For each **leave-one-out (LOO)** fold, one cell type is held out as the target; models are trained on the other six cell types (full Control + IFN) and, following scGen-style generalization, an additional **random fraction of the held-out type’s Control cells** is included in training. The **remaining** held-out Control cells, together with **all** IFN (stimulated) cells of that type, define the test split. Three training fractions are evaluated: **0%**, **25%**, and **50%** of the held-out type’s Control cells added to training.
+
+**Data preparation**
+
+Merge each cell type’s `task1_train_*` and `task1_valid_*` CSVs and emit LOO splits as `.h5ad` files:
+
+```bash
+python preprocess_data/fig2/task2_unseen_celltype_plus/task2_unseen_celltype_plus_loo.py \
+  --ori-dir <path_to>/data_ori/fig2/task2_unseen_celltype_plus \
+  --out-root <path_to>/data/fig2/task2_unseen_celltype_plus \
+  --seed 0
+```
+
+For each `(held-out cell type, control fraction)` pair, the script writes `task2_train_exp.h5ad`, `task2_test_exp.h5ad`, and `scgen_combined_train_plus_test_control.h5ad` under `loo_<celltype>/<p0|p0.25|p0.5>/`. Point baselines at this tree via `DATA_BASE` (default `data/fig2/task2_unseen_celltype_plus` relative to the repo root).
+
+**Evaluation grid:** Each baseline script loops over **7 LOO folds × 3 control fractions × `NUM_RUNS`** (default **`NUM_RUNS=3`**). That is **21** dataset configurations per method, each evaluated with **three** random repeats unless you change `NUM_RUNS`. Metrics are aggregated into one row per `(fold, fraction)` in the global CSV (mean ± std over runs).
+
+**Note on scDiffusion:** For each of the **21** configurations, the VAE, diffusion, and classifier are trained **once**; `NUM_RUNS` then controls how many **sampling / evaluation** passes are averaged (other baselines typically perform a full train+eval per run index).
+
+**scDiffusion pretrained VAE weights:** `fig2_task2_plus_scdiffusion.sh` passes `--state_dict` to the VAE trainer (encoder/decoder init). By default it uses `ANNOTATION_MODEL_DIR=/data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1` (expects `encoder.ckpt`, `decoder.ckpt`, `gene_order.tsv` there). To use a copy under the repo instead, run e.g. `export ANNOTATION_MODEL_DIR=/path/to/PertDiffBench/checkpoints/annotation_model_v1` before launching the script.
+
+**Default GPUs:** The six scripts are configured for **single-GPU** runs on **GPU 0–5** by default (`scGen`→0, `scDiff`→1, DDPM→2, DDPM+MLP→3, Squidiff→4, scDiffusion→5). Override with `CUDA_VISIBLE_DEVICES` if needed.
+
+**Run the evaluation** (from the repository root, after activating your environment and `export PYTHONPATH=./`):
+
+```bash
+cd /data/ppnm/PertDiffBench && conda activate pertdiffbench && export PYTHONPATH=./
+nohup bash scripts/fig2/fig2_task2_plus/fig2_task2_plus_scgen.sh > fig2_task2_plus_scgen.log 2>&1 &
+nohup bash scripts/fig2/fig2_task2_plus/fig2_task2_plus_scdiff.sh > fig2_task2_plus_scdiff.log 2>&1 &
+nohup bash scripts/fig2/fig2_task2_plus/fig2_task2_plus_ddpm.sh > fig2_task2_plus_ddpm.log 2>&1 &
+nohup bash scripts/fig2/fig2_task2_plus/fig2_task2_plus_ddpm_mlp.sh > fig2_task2_plus_ddpm_mlp.log 2>&1 &
+nohup bash scripts/fig2/fig2_task2_plus/fig2_task2_plus_squidiff.sh > fig2_task2_plus_squidiff.log 2>&1 &
+nohup bash scripts/fig2/fig2_task2_plus/fig2_task2_plus_scdiffusion.sh > fig2_task2_plus_scdiffusion.log 2>&1 &
+```
+
+**Squidiff (slow):** `fig2_task2_plus_squidiff.sh` runs the **p0** control fraction by default. For **p0.25** and **p0.5**, use the split wrappers (defaults: GPU 6 and 7):
+
+```bash
+nohup bash scripts/fig2/fig2_task2_plus/fig2_task2_plus_squidiff_p0.25.sh > fig2_task2_plus_squidiff_p0.25.log 2>&1 &
+nohup bash scripts/fig2/fig2_task2_plus/fig2_task2_plus_squidiff_p0.5.sh > fig2_task2_plus_squidiff_p0.5.log 2>&1 &
+```
+
+To run all three fractions in one process, set `FIG2_TASK2_PLUS_SQUIDIFF_SLUGS="p0 p0.25 p0.5"` before calling `fig2_task2_plus_squidiff.sh`.
 
 #### Task 3
 

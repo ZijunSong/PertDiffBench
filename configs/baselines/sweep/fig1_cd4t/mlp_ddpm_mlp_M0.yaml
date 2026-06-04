@@ -1,0 +1,35 @@
+model:
+  ae:
+    input_dim: 1000
+    latent_dim: 256
+    hidden_dim: 1024
+
+  diffusion:
+    timesteps: 1000
+    beta_1: 1e-4
+    beta_T: 0.005
+    hidden_dim: 512
+
+data:
+  path: ./dataset/scrna_data/scrna.h5ad
+  batch_size: 32
+  label_key: Condition
+  num_workers: 4
+
+train:
+  batch_size: 1024
+  device: cuda
+  epoch: 1000
+  lr: 5.0e-6
+  weight_decay: 1.0e-4
+  grad_clip: 0.5
+  warmup_multiplier: 10
+  save_weight_dir: ./checkpoints/sweep/fig1_cd4t/M0
+  resume_from: null
+  num_workers: 32
+  ckpt_save_interval: 500
+
+sample:
+  batch_size: 64
+  sampled_dir: ./samples/sweep/fig1_cd4t/M0
+  out_h5ad: synthetic_mlp_M0.h5ad

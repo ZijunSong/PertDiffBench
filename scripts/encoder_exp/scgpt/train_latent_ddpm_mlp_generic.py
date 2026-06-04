@@ -227,7 +227,7 @@ def main():
     global_step = 0
 
     if latest_ckpt_path is not None:
-        ckpt = torch.load(latest_ckpt_path, map_location=device)
+        ckpt = torch.load(latest_ckpt_path, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model_state_dict"])
         optim.load_state_dict(ckpt["optimizer_state_dict"])
         sched.load_state_dict(ckpt["scheduler_state_dict"])

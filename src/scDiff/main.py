@@ -1,3 +1,36 @@
+# Lightning may probe mpi4py for cluster env; broken mpi4py (no libmpi) raises RuntimeError.
+# Stub mpi4py before importing pytorch_lightning (same pattern as scripts/scGen_eval.py).
+import sys as _sys
+import types as _types
+
+
+def _patch_mpi4py_if_broken() -> None:
+    try:
+        from mpi4py import MPI  # type: ignore
+
+        MPI.COMM_WORLD.Get_size()
+    except (ImportError, ModuleNotFoundError, OSError, RuntimeError):
+        for _name in list(_sys.modules.keys()):
+            if _name == "mpi4py" or _name.startswith("mpi4py."):
+                del _sys.modules[_name]
+
+        class _StubComm:
+            def Get_size(self) -> int:
+                return 1
+
+            def Get_rank(self) -> int:
+                return 0
+
+        _mpi = _types.ModuleType("mpi4py.MPI")
+        _mpi.COMM_WORLD = _StubComm()
+        _pkg = _types.ModuleType("mpi4py")
+        _pkg.MPI = _mpi
+        _sys.modules["mpi4py"] = _pkg
+        _sys.modules["mpi4py.MPI"] = _mpi
+
+
+_patch_mpi4py_if_broken()
+
 import argparse
 import datetime
 import glob

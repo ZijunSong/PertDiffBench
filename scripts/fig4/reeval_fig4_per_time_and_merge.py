@@ -27,6 +27,8 @@ METHOD_DIR_TO_NAME = {
     "scrna_ddpm_scrna_3000": "DDPM",
     "mlp_ddpm_mlp_3000": "DDPM+MLP",
     "squidiff_3000": "Squidiff",
+    "squidiff_addition_3000": "Squidiff-addition",
+    "squidiff_lerp_3000": "Squidiff-lerp",
 }
 
 

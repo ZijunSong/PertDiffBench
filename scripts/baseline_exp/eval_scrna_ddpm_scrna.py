@@ -193,11 +193,16 @@ def main():
     print(f"Minimum cells in a perturbation group in test set: {min_pert_count}")
     print(f"Maximum possible --n_samples: {max_possible_samples}")
 
+    if max_possible_samples < 1:
+        print("Error: Not enough control or perturbation cells in the test set for evaluation.", file=sys.stderr)
+        sys.exit(1)
+
     if args.n_samples > max_possible_samples:
-        print(f"\nError: --n_samples ({args.n_samples}) exceeds the maximum possible value ({max_possible_samples}).")
-        print("This value is limited by the smallest perturbation group or the control group in the test set.")
-        print("Please specify a value for --n_samples that is less than or equal to this maximum.")
-        sys.exit(1) # Exit the script
+        print(
+            f"\nWarning: --n_samples ({args.n_samples}) exceeds the maximum ({max_possible_samples}); "
+            "clamping to that value (limited by control count and smallest perturbation group in the test set)."
+        )
+        args.n_samples = max_possible_samples
 
     all_pred_pb = []
     all_true_pb = []

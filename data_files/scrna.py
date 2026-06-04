@@ -3,8 +3,10 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 import anndata
-import pandas as pd # 确保导入 pandas
+import pandas as pd
 from sklearn.preprocessing import LabelEncoder
+
+from utils.drug_structure import Drug_dose_encoder, extract_smiles_dose_from_obs
 
 
 def _build_drug_dose_labels(obs, drug_key='perturbation', dose_key='dose_value', pert_status_col='perturbation_status'):
@@ -69,44 +71,70 @@ def get_target_drug_dose_from_test(test_path, label_encoder, drug_key='perturbat
     return dominant_label, idx, dose_val
 
 
+def get_target_drug_emb_from_test(test_path, smiles_key='smiles', dose_key='dose_value',
+                                  drug_dimension=1024):
+    """
+    Get dominant SMILES+dose from test IFN cells and encode with Drug_dose_encoder
+    (same conditioning as Squidiff use_drug_structure=True).
+    Returns (drug_emb_vector, dominant_smiles, dose_val).
+    """
+    from collections import Counter
+    adata = anndata.read_h5ad(test_path)
+    ifn_mask = adata.obs['perturbation_status'] == 'IFN'
+    if not ifn_mask.any():
+        smiles_list, dose_list = extract_smiles_dose_from_obs(adata.obs, smiles_key, dose_key)
+        emb = Drug_dose_encoder(smiles_list[:1], dose_list[:1], num_Bits=drug_dimension)
+        return emb[0], smiles_list[0], dose_list[0]
+
+    ifn_obs = adata.obs[ifn_mask]
+    smiles_list, dose_list = extract_smiles_dose_from_obs(ifn_obs, smiles_key, dose_key)
+    dominant_smiles = Counter(smiles_list).most_common(1)[0][0]
+    dose_val = float(np.median(dose_list))
+    emb = Drug_dose_encoder([dominant_smiles], [dose_val], num_Bits=drug_dimension)
+    return emb[0], dominant_smiles, dose_val
+
+
 class PairedScrnaDataset(Dataset):
     """
-    一个智能的数据集类，用于创建（对照组 vs 处理组）的细胞对。
-    它会自动检测数据中是否存在捐赠者/批次信息，并采取相应的配对策略。
-    支持 scGen setting：通过 pair_only_obs_key / pair_only_obs_value 仅在部分细胞（如 train）上做一一配对，
-    其余细胞（如 test_control）仅参与数据体量，映射为分布到分布。
+    Builds (control vs perturbed) cell pairs from AnnData.
+    Detects donor/batch columns when present; otherwise pairs globally within the pairing subset.
+    scGen-style mode: if pair_only_obs_key / pair_only_obs_value are set, pairs are built only
+    among cells matching that obs filter (e.g. split=='train'); other cells are not used for pairing.
     """
     def __init__(self, adata_path, donor_key=None, ctrl_status='Control', pert_status='IFN',
                  pair_only_obs_key=None, pair_only_obs_value=None):
         """
         Args:
-            adata_path (str): .h5ad 文件的路径。
-            donor_key (str, optional): 手动指定用于分组的列名（例如 'donor', 'batch'）。
-            ctrl_status (str, optional): 表示对照组在'perturbation_status'列中的值。
-            pert_status (str, optional): 表示处理组在'perturbation_status'列中的值。
-            pair_only_obs_key (str, optional): 若与 pair_only_obs_value 同时给出，则仅在
-                obs[pair_only_obs_key] == pair_only_obs_value 的细胞中构建配对（用于 scGen：仅 train 配对）。
-            pair_only_obs_value (str, optional): 见 pair_only_obs_key。
+            adata_path: Path to .h5ad file.
+            donor_key: Optional column for stratified pairing (e.g. 'donor', 'batch').
+            ctrl_status: Value in ``perturbation_status`` for control cells.
+            pert_status: Value in ``perturbation_status`` for perturbed cells.
+            pair_only_obs_key: If set with pair_only_obs_value, restrict pairing to cells with
+                obs[key]==value (e.g. scGen: only ``split=='train'``).
+            pair_only_obs_value: See pair_only_obs_key.
         """
         adata = anndata.read_h5ad(adata_path)
         obs = adata.obs.copy()
         X = adata.X.toarray() if hasattr(adata.X, 'toarray') else adata.X
 
-        # scGen setting：只在与 pair_only 匹配的子集上构建配对
+        # scGen-style: pair only within cells matching pair_only filter
         if pair_only_obs_key is not None and pair_only_obs_value is not None and pair_only_obs_key in obs.columns:
             obs_for_pair = obs[obs[pair_only_obs_key].astype(str) == str(pair_only_obs_value)]
-            print(f"INFO: scGen/pair-only 模式，仅在 obs['{pair_only_obs_key}']=='{pair_only_obs_value}' 的细胞上配对 (n={len(obs_for_pair)})。")
+            print(
+                f"INFO: scGen pair-only mode: pairing only cells with "
+                f"obs['{pair_only_obs_key}']=='{pair_only_obs_value}' (n={len(obs_for_pair)})."
+            )
         else:
             obs_for_pair = obs
 
         self.pairs = []
         
-        # --- 智能配对逻辑开始（在 obs_for_pair 上）---
+        # --- Pairing logic (on obs_for_pair) ---
         
         donor_key_found = None
         
         if donor_key_found:
-            print(f"INFO: 正在按 '{donor_key_found}' 列进行精细配对...")
+            print(f"INFO: pairing within groups of column '{donor_key_found}'...")
             for group_id, sub_obs in obs_for_pair.groupby(donor_key_found):
                 idx_ctrl = sub_obs[sub_obs['perturbation_status'] == ctrl_status].index
                 idx_pert = sub_obs[sub_obs['perturbation_status'] == pert_status].index
@@ -115,9 +143,9 @@ class PairedScrnaDataset(Dataset):
                     for i in range(n):
                         self.pairs.append((idx_ctrl[i], idx_pert[i]))
         else:
-            # 策略B：全局配对（在 obs_for_pair 内）
+            # Strategy B: global pairing within obs_for_pair
             if pair_only_obs_key is None:
-                print("INFO: 未找到可用的捐赠者/批次键。假设所有细胞来自同一组，进行全局配对。")
+                print("INFO: no donor/batch key; pairing globally within the cohort.")
             idx_ctrl = obs_for_pair[obs_for_pair['perturbation_status'] == ctrl_status].index
             idx_pert = obs_for_pair[obs_for_pair['perturbation_status'] == pert_status].index
             if len(idx_ctrl) > 0 and len(idx_pert) > 0:
@@ -125,15 +153,18 @@ class PairedScrnaDataset(Dataset):
                 for i in range(n):
                     self.pairs.append((idx_ctrl[i], idx_pert[i]))
 
-        # --- 智能配对逻辑结束 ---
+        # --- End pairing logic ---
 
         if not self.pairs:
-            print(f"\n严重警告：未能生成任何配对样本！请检查 'perturbation_status' 列中是否存在 '{ctrl_status}' 和 '{pert_status}' 的值。")
+            print(
+                f"\nERROR: no paired samples. Check that 'perturbation_status' contains "
+                f"'{ctrl_status}' and '{pert_status}'."
+            )
         else:
-            print(f"\n成功生成 {len(self.pairs)} 对配对样本。")
+            print(f"\nBuilt {len(self.pairs)} control–perturbation pairs.")
 
         self.X = X
-        # 为了后续getitem能快速查找，将obs的index设为索引
+        # obs index for fast __getitem__ lookups
         self.obs = obs.set_index(pd.Index(obs.index))
 
     def __len__(self):
@@ -141,18 +172,21 @@ class PairedScrnaDataset(Dataset):
 
     def __getitem__(self, i):
         i0, i1 = self.pairs[i]
-        # 使用 .loc 进行更可靠的索引
         v0 = self.X[self.obs.index.get_loc(i0)]
         v1 = self.X[self.obs.index.get_loc(i1)]
         return torch.from_numpy(v0).float(), torch.from_numpy(v1).float()
 
 class PairedScrnaDatasetDrugCond(Dataset):
     """
-    Paired (Control, IFN) dataset with drug+dose conditioning for MOA task.
-    Returns (ctrl_expr, pert_expr, drug_label_idx, dose_scalar) per sample.
+    Paired (Control, IFN) dataset with drug conditioning for MOA task.
+
+    use_drug_structure=False (default): returns (ctrl, pert, drug_idx, dose)
+    use_drug_structure=True (Squidiff-style): returns (ctrl, pert, drug_emb)
+        where drug_emb is SMILES+dose Morgan fingerprint (1024-dim).
     """
     def __init__(self, adata_path, drug_key='perturbation', dose_key='dose_value',
-                 ctrl_status='Control', pert_status='IFN'):
+                 smiles_key='smiles', ctrl_status='Control', pert_status='IFN',
+                 use_drug_structure=False, drug_dimension=1024):
         adata = anndata.read_h5ad(adata_path)
         obs = adata.obs.copy()
         X = adata.X.toarray() if hasattr(adata.X, 'toarray') else adata.X
@@ -170,18 +204,28 @@ class PairedScrnaDatasetDrugCond(Dataset):
             raise ValueError(
                 f"No paired samples. Check perturbation_status for '{ctrl_status}' and '{pert_status}'."
             )
-        print(f"PairedScrnaDatasetDrugCond: {len(self.pairs)} pairs from {adata_path}")
+
+        self.use_drug_structure = use_drug_structure
+        mode = "SMILES+dose" if use_drug_structure else "drug_name+dose"
+        print(f"PairedScrnaDatasetDrugCond ({mode}): {len(self.pairs)} pairs from {adata_path}")
 
         self.X = X
         self.obs = obs.set_index(obs.index)
         self.drug_key = drug_key
         self.dose_key = dose_key
+        self.smiles_key = smiles_key
+        self.drug_dimension = drug_dimension
 
         labels = _build_drug_dose_labels(obs, drug_key, dose_key)
         self.label_encoder = LabelEncoder()
         self.label_encoder.fit(labels)
         self.label_indices = self.label_encoder.transform(labels)
         self.dose_values = obs[dose_key].astype(float).fillna(0).values if dose_key in obs.columns else np.zeros(len(obs))
+
+        if use_drug_structure:
+            smiles_list, dose_list = extract_smiles_dose_from_obs(obs, smiles_key, dose_key)
+            drug_emb = Drug_dose_encoder(smiles_list, dose_list, num_Bits=drug_dimension)
+            self.drug_emb = drug_emb.astype(np.float32)
 
     def get_label_encoder(self):
         return self.label_encoder
@@ -195,6 +239,13 @@ class PairedScrnaDatasetDrugCond(Dataset):
         loc1 = self.obs.index.get_loc(i1)
         v0 = self.X[loc0]
         v1 = self.X[loc1]
+        if self.use_drug_structure:
+            drug_emb = torch.from_numpy(self.drug_emb[loc1]).float()
+            return (
+                torch.from_numpy(v0).float(),
+                torch.from_numpy(v1).float(),
+                drug_emb,
+            )
         drug_idx = self.label_indices[loc1]
         dose = float(self.dose_values[loc1])
         return (

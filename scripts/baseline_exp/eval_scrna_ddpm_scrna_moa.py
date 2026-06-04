@@ -1,6 +1,6 @@
 """
 Evaluate drug-conditioned DDPM on MOA task.
-Loads test data, gets target drug+dose from IFN cells, generates perturbed cells.
+Loads test data, gets target drug condition from IFN cells, generates perturbed cells.
 """
 
 import os
@@ -20,8 +20,15 @@ from utils.metrics import (
     compute_edistance, compute_r2, compute_mmd,
     compute_pearson, compute_pearson_delta, compute_pearson_delta_de,
 )
-from data.scrna import get_target_drug_dose_from_test
+from data.scrna import get_target_drug_dose_from_test, get_target_drug_emb_from_test
 from src.diffusion_baselines.models.scrna_ddpm_scrna import ScrnaDDPMDrugCond
+
+
+def load_checkpoint(path, device):
+    try:
+        return torch.load(path, map_location=device, weights_only=False)
+    except TypeError:
+        return torch.load(path, map_location=device)
 
 
 def load_label_encoder(path):
@@ -29,7 +36,9 @@ def load_label_encoder(path):
     from sklearn.preprocessing import LabelEncoder
     le = LabelEncoder()
     le.classes_ = data["classes"]
-    return le
+    use_drug_structure = bool(data["use_drug_structure"][0]) if "use_drug_structure" in data else False
+    drug_dimension = int(data["drug_dimension"][0]) if "drug_dimension" in data else 1024
+    return le, use_drug_structure, drug_dimension
 
 
 def main():
@@ -52,27 +61,30 @@ def main():
     parser.add_argument("--umap_plot", type=str, default="")
     parser.add_argument("--drug-key", type=str, default="perturbation")
     parser.add_argument("--dose-key", type=str, default="dose_value")
+    parser.add_argument("--smiles-key", type=str, default="smiles")
+    parser.add_argument("--use-drug-structure", action="store_true",
+                        help="Use SMILES+dose Morgan fingerprint conditioning (Squidiff-style)")
+    parser.add_argument("--drug-dimension", type=int, default=1024)
     args = parser.parse_args()
 
     cfg = OmegaConf.load(args.config)
     if args.gene_nums:
         cfg.model.input_dim = args.gene_nums
 
-    label_encoder = load_label_encoder(args.label_encoder_path)
-    num_drug = len(label_encoder.classes_)
-    cfg.model.num_drug_classes = num_drug
+    label_encoder, meta_use_drug_structure, meta_drug_dimension = load_label_encoder(args.label_encoder_path)
+    use_drug_structure = args.use_drug_structure or meta_use_drug_structure
+    drug_dimension = args.drug_dimension if args.drug_dimension != 1024 else meta_drug_dimension
+    cfg.model.use_drug_structure = use_drug_structure
+    cfg.model.drug_dimension = drug_dimension
+    if not use_drug_structure:
+        cfg.model.num_drug_classes = len(label_encoder.classes_)
 
     device = torch.device(cfg.train.device)
     model = ScrnaDDPMDrugCond(cfg).to(device)
-    ckpt = torch.load(args.ckpt, map_location=device)
+    ckpt = load_checkpoint(args.ckpt, device)
     model.load_state_dict(ckpt["model_state"])
     model.eval()
-    print(f"Loaded {args.ckpt}")
-
-    _, drug_idx, dose_val = get_target_drug_dose_from_test(
-        args.data_path, label_encoder, args.drug_key, args.dose_key
-    )
-    print(f"Target drug_idx={drug_idx}, dose={dose_val}")
+    print(f"Loaded {args.ckpt} (use_drug_structure={use_drug_structure})")
 
     adata = sc.read_h5ad(args.data_path)
     ctrl_mask = adata.obs["perturbation_status"] == "Control"
@@ -91,11 +103,26 @@ def main():
     ctrl_X = adata[selected_ctrl].X
     ctrl_X = ctrl_X.toarray() if hasattr(ctrl_X, "toarray") else ctrl_X
     ctrl_tensor = torch.from_numpy(ctrl_X.astype(np.float32)).to(device)
-    drug_idx_tensor = torch.full((n_samples,), drug_idx, dtype=torch.long, device=device)
-    dose_tensor = torch.full((n_samples,), dose_val, dtype=torch.float32, device=device)
 
-    with torch.no_grad():
-        pred_pert = model.sample_cond(ctrl_tensor, drug_idx_tensor, dose_tensor).cpu().numpy()
+    if use_drug_structure:
+        drug_emb, dominant_smiles, dose_val = get_target_drug_emb_from_test(
+            args.data_path, smiles_key=args.smiles_key, dose_key=args.dose_key,
+            drug_dimension=drug_dimension,
+        )
+        print(f"Target SMILES={dominant_smiles}, dose={dose_val}")
+        drug_dose_tensor = torch.from_numpy(drug_emb.astype(np.float32)).to(device)
+        drug_dose_tensor = drug_dose_tensor.unsqueeze(0).expand(n_samples, -1)
+        with torch.no_grad():
+            pred_pert = model.sample_cond(ctrl_tensor, drug_dose=drug_dose_tensor).cpu().numpy()
+    else:
+        _, drug_idx, dose_val = get_target_drug_dose_from_test(
+            args.data_path, label_encoder, args.drug_key, args.dose_key
+        )
+        print(f"Target drug_idx={drug_idx}, dose={dose_val}")
+        drug_idx_tensor = torch.full((n_samples,), drug_idx, dtype=torch.long, device=device)
+        dose_tensor = torch.full((n_samples,), dose_val, dtype=torch.float32, device=device)
+        with torch.no_grad():
+            pred_pert = model.sample_cond(ctrl_tensor, drug_idx_tensor, dose_tensor).cpu().numpy()
 
     true_pert = adata[selected_pert].X
     true_pert = true_pert.toarray() if hasattr(true_pert, "toarray") else true_pert

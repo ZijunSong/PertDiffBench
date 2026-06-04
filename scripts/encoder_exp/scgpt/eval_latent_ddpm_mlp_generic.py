@@ -27,6 +27,10 @@ from utils.metrics import (
 from src.diffusion_baselines.models.scvi_latent_ddpm_mlp import ScviLatentDDPMMLP
 
 
+def _finite_pair_mask(true_arr: np.ndarray, pred_arr: np.ndarray) -> np.ndarray:
+    return np.isfinite(true_arr).all(axis=1) & np.isfinite(pred_arr).all(axis=1)
+
+
 def main():
     np.random.seed(0)
     torch.manual_seed(0)
@@ -115,7 +119,7 @@ def main():
     # 3) 现在再根据 cfg 构建模型，就和训练时结构一致了
     model = ScviLatentDDPMMLP(cfg).to(device)
 
-    ckpt = torch.load(args.ckpt, map_location=device)
+    ckpt = torch.load(args.ckpt, map_location=device, weights_only=False)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     print(f"Loaded model from {args.ckpt}")
@@ -190,20 +194,33 @@ def main():
         ctrl_X_data = ctrl_X.toarray() if hasattr(ctrl_X, "toarray") else ctrl_X
         ctrl_X_data = np.asarray(ctrl_X_data, dtype=np.float32)
 
-        # population means in gene space
-        true_pert_pb = np.mean(true_pert, axis=0)
-        pred_pert_pb = np.mean(pred_pert, axis=0)
-        ctrl_pb = np.mean(ctrl_X_data, axis=0)
+        n_bad = int(np.sum(~np.isfinite(pred_pert).all(axis=1)))
+        if n_bad > 0:
+            print(
+                f"[Eval][{pert}] Warning: {n_bad}/{args.n_samples} synthetic cells have NaN/Inf. "
+                "Using nanmean for pseudobulk; R2/E-dist/MMD on fully-finite cell pairs only."
+            )
+
+        true_pert_pb = np.nanmean(true_pert, axis=0)
+        pred_pert_pb = np.nanmean(pred_pert, axis=0)
+        ctrl_pb = np.nanmean(ctrl_X_data, axis=0)
 
         all_true_pb.append(true_pert_pb)
         all_pred_pb.append(pred_pert_pb)
         all_ctrl_pb.append(ctrl_pb)
 
-        # metrics (gene space)
+        pair_ok = _finite_pair_mask(true_pert, pred_pert)
+        true_p, pred_p = true_pert[pair_ok], pred_pert[pair_ok]
+
         metrics_results["mae"].append(compute_mae(true_pert_pb, pred_pert_pb))
-        metrics_results["r2"].append(compute_r2(true_pert, pred_pert))
-        metrics_results["edistance"].append(compute_edistance(true_pert, pred_pert))
-        metrics_results["mmd"].append(compute_mmd(true_pert, pred_pert))
+        if true_p.shape[0] >= 2 and pred_p.shape[0] >= 2:
+            metrics_results["r2"].append(compute_r2(true_p, pred_p))
+            metrics_results["edistance"].append(compute_edistance(true_p, pred_p))
+            metrics_results["mmd"].append(compute_mmd(true_p, pred_p))
+        else:
+            metrics_results["r2"].append(float("nan"))
+            metrics_results["edistance"].append(float("nan"))
+            metrics_results["mmd"].append(float("nan"))
         metrics_results["pearson_all"].append(compute_pearson(true_pert_pb, pred_pert_pb))
         metrics_results["pearson_delta_all"].append(
             compute_pearson_delta(true_pert_pb, pred_pert_pb, ctrl_pb)

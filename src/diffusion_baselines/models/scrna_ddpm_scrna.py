@@ -192,26 +192,37 @@ class ScrnaDDPM(nn.Module):
 # --- Drug-conditioned DDPM for MOA task (drug name + dose) ---
 
 class MLPCondDrug(nn.Module):
-    """MLP with drug+dose conditioning: x_t, cond (control), drug_emb, dose, t -> noise."""
-    def __init__(self, input_dim: int, hidden_dim: int, num_drug_classes: int, drug_emb_dim: int = 32):
+    """MLP with drug conditioning: x_t, cond (control), drug info, t -> noise."""
+    def __init__(self, input_dim: int, hidden_dim: int, num_drug_classes: int = 16,
+                 drug_emb_dim: int = 32, use_drug_structure: bool = False,
+                 drug_dimension: int = 1024):
         super().__init__()
+        self.use_drug_structure = use_drug_structure
         self.time_emb = SinusoidalPosEmb(hidden_dim)
         self.fc_t = nn.Linear(hidden_dim, hidden_dim)
-        self.drug_emb = nn.Embedding(num_drug_classes, drug_emb_dim)
-        # input: x (D) + cond (D) + drug_emb (E) + dose (1) = 2*D + E + 1
-        cond_dim = input_dim * 2 + drug_emb_dim + 1
+        if use_drug_structure:
+            drug_cond_dim = drug_dimension
+        else:
+            self.drug_emb = nn.Embedding(num_drug_classes, drug_emb_dim)
+            drug_cond_dim = drug_emb_dim + 1
+        cond_dim = input_dim * 2 + drug_cond_dim
         self.fc1 = nn.Linear(cond_dim, hidden_dim)
         self.act = nn.SiLU()
         self.fc2 = nn.Linear(hidden_dim, input_dim)
 
-    def forward(self, x: torch.Tensor, cond: torch.Tensor, drug_idx: torch.Tensor,
-                dose: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, cond: torch.Tensor, t: torch.Tensor,
+                drug_idx: torch.Tensor = None, dose: torch.Tensor = None,
+                drug_dose: torch.Tensor = None) -> torch.Tensor:
         target_dtype = self.fc1.weight.dtype
         x = x.to(dtype=target_dtype)
         cond = cond.to(dtype=target_dtype)
-        drug_e = self.drug_emb(drug_idx.to(x.device))
-        dose_exp = dose.to(x.device, dtype=target_dtype).view(-1, 1)
-        h = torch.cat([x, cond, drug_e, dose_exp], dim=1)
+        if self.use_drug_structure:
+            drug_cond = drug_dose.to(x.device, dtype=target_dtype)
+        else:
+            drug_e = self.drug_emb(drug_idx.to(x.device))
+            dose_exp = dose.to(x.device, dtype=target_dtype).view(-1, 1)
+            drug_cond = torch.cat([drug_e, dose_exp], dim=1)
+        h = torch.cat([x, cond, drug_cond], dim=1)
         te = self.time_emb(t)
         te = self.act(self.fc_t(te))
         h = self.act(self.fc1(h)) + te
@@ -219,15 +230,22 @@ class MLPCondDrug(nn.Module):
 
 
 class ScrnaDDPMDrugCond(nn.Module):
-    """Conditional DDPM with drug name + dose as additional conditioning for MOA task."""
+    """Conditional DDPM with drug conditioning for MOA task."""
     def __init__(self, cfg):
         super().__init__()
         D = cfg.model.input_dim
         H = cfg.model.hidden_dim
+        use_drug_structure = cfg.model.get("use_drug_structure", False)
+        drug_dimension = cfg.model.get("drug_dimension", 1024)
         num_drug = cfg.model.get("num_drug_classes", 16)
         drug_emb_dim = cfg.model.get("drug_emb_dim", 32)
 
-        self.net = MLPCondDrug(D, H, num_drug, drug_emb_dim)
+        self.use_drug_structure = use_drug_structure
+        self.net = MLPCondDrug(
+            D, H, num_drug, drug_emb_dim,
+            use_drug_structure=use_drug_structure,
+            drug_dimension=drug_dimension,
+        )
         beta_1, beta_T, T = get_noise_schedule(cfg)
         self.diffusion_trainer = GaussianDiffusionTrainer(
             model=self.net, beta_1=beta_1, beta_T=beta_T, T=T, conditional=True
@@ -237,24 +255,30 @@ class ScrnaDDPMDrugCond(nn.Module):
         )
         self.num_drug_classes = num_drug
 
-    def forward(self, x_t: torch.Tensor, cond: torch.Tensor, drug_idx: torch.Tensor,
-                dose: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        return self.net(x_t, cond, drug_idx, dose, t)
+    def forward(self, x_t: torch.Tensor, cond: torch.Tensor, t: torch.Tensor,
+                drug_idx: torch.Tensor = None, dose: torch.Tensor = None,
+                drug_dose: torch.Tensor = None) -> torch.Tensor:
+        return self.net(x_t, cond, t, drug_idx=drug_idx, dose=dose, drug_dose=drug_dose)
 
     @torch.no_grad()
-    def sample_cond(self, cond: torch.Tensor, drug_idx: torch.Tensor, dose: torch.Tensor,
+    def sample_cond(self, cond: torch.Tensor, drug_idx: torch.Tensor = None,
+                    dose: torch.Tensor = None, drug_dose: torch.Tensor = None,
                     noise: torch.Tensor = None) -> torch.Tensor:
         device = cond.device
         B, D = cond.shape
         cond = cond.to(dtype=self.net.fc1.weight.dtype)
-        drug_idx = drug_idx.to(device)
-        dose = dose.to(device)
+        if drug_idx is not None:
+            drug_idx = drug_idx.to(device)
+        if dose is not None:
+            dose = dose.to(device)
+        if drug_dose is not None:
+            drug_dose = drug_dose.to(device)
         x_t = noise.to(device).to(dtype=cond.dtype) if noise is not None else torch.randn_like(cond)
 
         T = self.diffusion_trainer.T
         for timestep in reversed(range(T)):
             t_batch = torch.full((B,), timestep, dtype=torch.long, device=device)
-            eps = self.net(x_t, cond, drug_idx, dose, t_batch)
+            eps = self.net(x_t, cond, t_batch, drug_idx=drug_idx, dose=dose, drug_dose=drug_dose)
             mean = self.diffusion_sampler.predict_xt_prev_mean_from_eps(x_t, t_batch, eps)
             var = self.diffusion_sampler.posterior_var[timestep]
             if timestep > 0:

@@ -1,0 +1,68 @@
+# ChemCPA config for fig2 task1 unseen MOA (SMILES + dose_value conditioning)
+wandb:
+  project: pertdiffbench_chemcpa_moa
+  entity: null
+  mode: disabled
+
+dataset:
+  dataset_type: custom
+  data_params:
+    dataset_path: ""  # filled at runtime
+    perturbation_key: perturbation
+    dose_key: dose_value
+    covariate_keys: celltype
+    smiles_key: smiles
+    pert_category: cov_drug_dose_name
+    split_key: split
+    degs_key: all_DEGs
+    use_drugs_idx: true
+
+model:
+  load_pretrained: false
+  enable_cpa_mode: false
+  append_ae_layer: true
+  additional_params:
+    patience: 50
+    decoder_activation: ReLU
+    doser_type: amortized
+    seed: 1337
+  embedding:
+    model: rdkit
+    datapath: null
+    directory: null
+  hparams:
+    dim: 32
+    dropout: 0.2
+    autoencoder_width: 256
+    autoencoder_depth: 4
+    autoencoder_lr: 0.003
+    autoencoder_wd: 1.0e-6
+    adversary_width: 128
+    adversary_depth: 3
+    adversary_lr: 0.0008
+    adversary_wd: 1.0e-5
+    adversary_steps: 2
+    reg_adversary: 20.0
+    reg_adversary_cov: 10.0
+    penalty_adversary: 1.0
+    dosers_width: 64
+    dosers_depth: 3
+    dosers_lr: 0.001
+    dosers_wd: 1.0e-6
+    step_size_lr: 50
+    embedding_encoder_width: 128
+    embedding_encoder_depth: 4
+    batch_size: 4096
+    reg_multi_task: 0
+
+training:
+  num_epochs: 80
+  max_minutes: 0
+  checkpoint_freq: 999
+  full_eval_during_train: false
+  run_eval_disentangle: false
+  run_eval_r2: false
+  run_eval_r2_sc: false
+  run_eval_logfold: false
+  save_checkpoints: true
+  save_dir: ""  # filled at runtime

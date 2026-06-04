@@ -1,5 +1,8 @@
 """
 Helpers for distributed training.
+
+If mpi4py cannot load (no libmpi / OpenMPI), falls back to single-process
+torch.distributed so cell_train / classifier_* work without installing MPI.
 """
 
 import io
@@ -7,9 +10,14 @@ import os
 import socket
 
 import blobfile as bf
-from mpi4py import MPI
 import torch as th
 import torch.distributed as dist
+
+# mpi4py requires a system MPI (libmpi). Many single-GPU setups omit it.
+try:
+    from mpi4py import MPI  # type: ignore
+except Exception:  # ImportError, OSError, RuntimeError (dlopen libmpi)
+    MPI = None  # type: ignore
 
 # Change this to reflect your cluster layout.
 # The GPU for a given rank is (rank % GPUS_PER_NODE).
@@ -18,17 +26,32 @@ GPUS_PER_NODE = 8
 SETUP_RETRY_COUNT = 3
 
 
+def _using_mpi() -> bool:
+    return MPI is not None
+
+
 def setup_dist():
     """
     Setup a distributed process group.
     """
     if dist.is_initialized():
         return
+
+    backend = "gloo" if not th.cuda.is_available() else "nccl"
+
+    if not _using_mpi():
+        # Single process: no OpenMPI — use env:// with rank 0 only.
+        os.environ.setdefault("MASTER_ADDR", "127.0.0.1")
+        os.environ["RANK"] = "0"
+        os.environ["WORLD_SIZE"] = "1"
+        if "MASTER_PORT" not in os.environ:
+            os.environ["MASTER_PORT"] = str(_find_free_port())
+        dist.init_process_group(backend=backend, init_method="env://")
+        return
+
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     comm = MPI.COMM_WORLD
-    backend = "gloo" if not th.cuda.is_available() else "nccl"
-
     if backend == "gloo":
         hostname = "localhost"
     else:
@@ -55,6 +78,11 @@ def load_state_dict(path, **kwargs):
     """
     Load a PyTorch file without redundant fetches across MPI ranks.
     """
+    if not _using_mpi():
+        with bf.BlobFile(path, "rb") as f:
+            data = f.read()
+        return th.load(io.BytesIO(data), **kwargs)
+
     chunk_size = 2 ** 30  # MPI has a relatively small size limit
     if MPI.COMM_WORLD.Get_rank() == 0:
         with bf.BlobFile(path, "rb") as f:

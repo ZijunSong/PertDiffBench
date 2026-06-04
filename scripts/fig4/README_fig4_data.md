@@ -77,5 +77,5 @@
 |------|----------------|
 | **DDPM** | 为 fig4 单独训练一个 VAE（仅 encoder+decoder，与 DDPM+MLP 同结构），脚本：`train_fig4_ae_for_ddpm.py`；再用该 VAE 做 2h/8h 线性插值生成 4h/6h，脚本：`sample_fig4_vae_linear_interp.py`。 |
 | **DDPM+MLP** | 使用本模型自带的 encoder/decoder 做 2h/8h 线性插值 → 4h/6h（不跑 diffusion），脚本：`sample_fig4_vae_linear_interp.py`，ckpt 为 DDPM+MLP 的 `model_epoch_1000.pth`。 |
-| **Squidiff** | 在 Squidiff latent 空间对 2h/8h 做线性插值得到 4h/6h latent，再经 diffusion 解码为表达。脚本：`sample_fig4_squidiff_interp.py`。 |
+| **Squidiff** | 按原文 **addition** 方式：以 2h 细胞为 origin，计算 Δz_sem = mean(z_8h)−mean(z_2h)，scale(4h)=1/3、scale(6h)=2/3，经 `interp_with_direction` 得到 z_mod，再 DDIM 条件解码。脚本：`sample_fig4_squidiff_interp.py`（`--method addition`，可选 `--method lerp`）。 |
 | **scDiffusion** | 使用 classifier 的 **梯度插值**（2h–8h 方向）生成 4h/6h，不改为线性插值。 |

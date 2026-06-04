@@ -90,11 +90,7 @@ class ScRNATrainer(DDPMTrainer):
         # Model predicts noise given x_t and control embedding
         pred_noise = self.model(x_t, x, t)  # [B, D]
 
-        # ### 关键改动 1: 简化损失计算以提高数值稳定性 ###
-        # 原始代码: true_noise = (x_t - a_bar * y) / b_bar
-        # 这个除法在 b_bar 接近 0 时（即 t 接近 0 时）可能导致数值不稳定。
-        # 事实上，我们的目标就是让模型预测出我们一开始加入的 `noise`。
-        # 因此，直接使用 `noise` 作为目标是最直接和最稳定的方法。
+        # Use the injected noise as the regression target (stable; avoids dividing by b_bar near 0).
         loss = torch.nn.functional.mse_loss(pred_noise, noise)
         return loss
 
@@ -111,7 +107,7 @@ class ScRNATrainer(DDPMTrainer):
 
         num_epochs = self.cfg.train.epoch
         ckpt_interval = self.cfg.train.ckpt_save_interval
-        grad_clip_norm = self.cfg.train.get('grad_clip_norm', 1.0) # 从配置获取裁剪范数，默认为1.0
+        grad_clip_norm = self.cfg.train.get('grad_clip_norm', 1.0)
 
         # Outer loop: epochs
         for epoch in range(num_epochs):
@@ -125,9 +121,6 @@ class ScRNATrainer(DDPMTrainer):
                 self.optimizer.zero_grad()
                 loss.backward()
 
-                # ### 关键改动 2: 增加梯度裁剪 ###
-                # 这是防止梯度爆炸导致 NaN 的核心步骤。
-                # 它会将所有参数的梯度范数限制在一个最大值（这里是 grad_clip_norm）。
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=grad_clip_norm)
                 
                 self.optimizer.step()
@@ -150,14 +143,17 @@ class ScRNATrainer(DDPMTrainer):
 
 
 class ScRNATrainerDrugCond(ScRNATrainer):
-    """Trainer for drug-conditioned DDPM (MOA task: drug name + dose)."""
+    """Trainer for drug-conditioned DDPM (MOA task)."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.use_drug_structure = self.cfg.model.get("use_drug_structure", False)
 
     def compute_loss(self, x_ctrl: torch.Tensor, x_ifn: torch.Tensor,
-                     drug_idx: torch.Tensor, dose: torch.Tensor) -> torch.Tensor:
+                     drug_idx: torch.Tensor = None, dose: torch.Tensor = None,
+                     drug_dose: torch.Tensor = None) -> torch.Tensor:
         x = x_ctrl.to(self.device)
         y = x_ifn.to(self.device)
-        drug_idx = drug_idx.to(self.device).long()
-        dose = dose.to(self.device).float()
 
         B = x.size(0)
         T = self.diff_trainer.T
@@ -167,7 +163,13 @@ class ScRNATrainerDrugCond(ScRNATrainer):
         b_bar = self.diff_trainer.sqrt_one_minus_alphas_bar[t].view(B, 1)
         x_t = a_bar * y + b_bar * noise
 
-        pred_noise = self.model(x_t, x, drug_idx, dose, t)
+        if self.use_drug_structure:
+            drug_dose = drug_dose.to(self.device).float()
+            pred_noise = self.model(x_t, x, t, drug_dose=drug_dose)
+        else:
+            drug_idx = drug_idx.to(self.device).long()
+            dose = dose.to(self.device).float()
+            pred_noise = self.model(x_t, x, t, drug_idx=drug_idx, dose=dose)
         return torch.nn.functional.mse_loss(pred_noise, noise)
 
     def train(self):
@@ -180,10 +182,14 @@ class ScRNATrainerDrugCond(ScRNATrainer):
         for epoch in range(num_epochs):
             batch_iter = tqdm(self.loader, desc=f"Epoch {epoch+1}/{num_epochs}", unit="batch")
             for batch in batch_iter:
-                x_ctrl, x_ifn, drug_idx, dose = batch
-                drug_idx = drug_idx if isinstance(drug_idx, torch.Tensor) else torch.tensor(drug_idx, dtype=torch.long)
-                dose = dose if isinstance(dose, torch.Tensor) else torch.tensor(dose, dtype=torch.float32)
-                loss = self.compute_loss(x_ctrl, x_ifn, drug_idx, dose)
+                if self.use_drug_structure:
+                    x_ctrl, x_ifn, drug_dose = batch
+                    loss = self.compute_loss(x_ctrl, x_ifn, drug_dose=drug_dose)
+                else:
+                    x_ctrl, x_ifn, drug_idx, dose = batch
+                    drug_idx = drug_idx if isinstance(drug_idx, torch.Tensor) else torch.tensor(drug_idx, dtype=torch.long)
+                    dose = dose if isinstance(dose, torch.Tensor) else torch.tensor(dose, dtype=torch.float32)
+                    loss = self.compute_loss(x_ctrl, x_ifn, drug_idx=drug_idx, dose=dose)
 
                 self.optimizer.zero_grad()
                 loss.backward()

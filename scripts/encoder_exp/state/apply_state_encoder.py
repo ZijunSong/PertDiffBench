@@ -48,6 +48,12 @@ def main():
             print(f"[ERROR] State Python not found at: {STATE_PYTHON}", file=sys.stderr)
             print(f"[ERROR] Ensure 'uv tool install arc-state' completed successfully.", file=sys.stderr)
         sys.exit(1)
+
+    # cuDNN-backed scaled_dot_product_attention can fail on some GPUs / driver stacks
+    # with: RuntimeError: cuDNN Frontend error: ... No valid execution plans built.
+    # Disabling it forces Flash / mem_efficient / math SDPA instead (slower but stable).
+    if torch.cuda.is_available():
+        torch.backends.cuda.enable_cudnn_sdp(False)
     
     parser = argparse.ArgumentParser(
         description="Apply pretrained State Embedding (SE) to AnnData and export X_state."

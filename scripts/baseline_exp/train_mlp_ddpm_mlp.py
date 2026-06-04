@@ -18,12 +18,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", default="configs/mlp_ddpm_mlp.yaml")
     parser.add_argument("--data-path", type=str, default=None)
-    parser.add_argument("--save-weight-dir", type=str, default=None, help="覆盖 YAML 文件中的 train.save_weight_dir")
-    parser.add_argument("--gene-nums", type=int, default=None, help="覆盖 YAML 文件中的 model.input_dim")
+    parser.add_argument("--save-weight-dir", type=str, default=None,
+                        help="Override train.save_weight_dir in the YAML config")
+    parser.add_argument("--gene-nums", type=int, default=None,
+                        help="Override model.ae.input_dim in the YAML config")
     parser.add_argument("--pair-only-obs-key", type=str, default=None,
-                        help="scGen setting: 仅在此 obs 列等于 pair-only-obs-value 的细胞上构建配对")
+                        help="scGen-style: build pairs only where this obs column equals pair-only-obs-value")
     parser.add_argument("--pair-only-obs-value", type=str, default=None,
-                        help="scGen setting: 与 pair-only-obs-key 配合使用，如 'train'")
+                        help="scGen-style: use with pair-only-obs-key (e.g. 'train')")
     args = parser.parse_args()
     cfg = OmegaConf.load(args.config)
 

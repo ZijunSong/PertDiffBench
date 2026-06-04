@@ -1,4 +1,8 @@
-# 不上传大体积/生成数据目录
+# =============================================================================
+# PertDiffBench — 投稿/公开仓库：忽略大文件、实验产物与本地临时文件
+# =============================================================================
+
+# --- 实验输出目录 ---
 checkpoints/
 data/
 !src/scDiff/scdiff/data/
@@ -6,34 +10,40 @@ data_ori/
 logs/
 output/
 samples/
-
-# 常见 Python / 环境
-__pycache__/
-*.py[cod]
-*.egg-info/
-.eggs/
-*.egg
-.venv/
-venv/
-env/
-
-# 日志与临时（根目录 .log 也不纳入版本库）
-*.log
-fig4_*.log
-.DS_Store
-
-# 数据文件：一律不上传（GitHub 单文件限 100MB）
-*.h5ad
 **/results/
+
+# --- 稿件草稿、内部试验、结果打包（勿上传 GitHub）---
+writing/
+new_method/
+fig4_time_imputation_bundle*/
+fig4_time_imputation_bundle*.zip
+*.zip
+
+# --- 补充实验（supp）：仅保留脚本，忽略运行产物 ---
+supp/logs/
+supp/**/*.pt
+supp/**/*.ckpt
+
+# --- Encoder / 表征中间结果（体积极大）---
+scripts/encoder_exp/collected_encoder_latent_npy/
+**/collected_encoder_latent_npy/
+**/encoder_input_*_latent.npy
+src/scFoundation/enhancement/*_embedding.npy
+
+# --- 数据文件（GitHub 单文件限 100MB）---
+*.h5ad
 **/preprocessing/*.h5ad
 **/encoder_exp/**/*.h5ad
-
-# src 下各模型仓库的大文件/预训练权重（避免推送数 GB 导致超时）
-*.safetensors
-*.tar.gz
-**/fine_tuned_models/
 **/preprocessed_*.h5ad
 **/input_task1_*.h5ad
+**/preprocessing/data/
+**/preprocessed_task2_*_exp_info.xlsx
+
+# --- 预训练权重与打包资源（用 README / Drive / Zenodo 分发）---
+*.safetensors
+*.tar.gz
+*.tar
+**/fine_tuned_models/
 **/annotation_data.zip
 src/annotation_model_v1.tar.gz
 src/Geneformer/Geneformer-V2-316M/
@@ -43,3 +53,74 @@ src/Geneformer/Geneformer-V1-10M/
 src/Geneformer/model.safetensors
 pytorch_model.bin
 optimizer.pt
+*.ckpt
+*.pt
+*.pth
+training_args.bin
+
+# --- 其它大二进制 / 缓存表 ---
+*.parquet
+**/chembl_smiles_cache.json
+
+# =============================================================================
+# Python / IDE / 工具链
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.env
+.env.*
+
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+
+# W&B / Hydra
+wandb/
+**/wandb/
+**/outputs/
+**/multirun/
+
+# Numba 等本地 cache（若误拷进仓库根）
+cache/
+.numba_cache/
+
+# =============================================================================
+# 日志与并行运行临时文件
+# =============================================================================
+*.log
+*.nohup.log
+nohup.out
+fig4_*.log
+fig2_task2_plus_squidiff_p0*.log
+fig2_task2_plus_squidiff_p0.25.log
+fig2_task2_plus_squidiff_p0.5.log
+fig2_task2_plus_scdiff_p0.log
+fig2_task2_plus_scdiff_p0.25.log
+fig2_task2_plus_scdiff_p0.5.log
+**/fig2_task2_plus/squidiff/**/_agg_buffer.txt
+**/.metrics_all_csv.lock
+**/.metrics_rows.lock
+scripts/fig2/fig2_task2_plus/.squidiff_*.tmp
+scripts/fig2/fig2_task2_plus/.squidiff_*.pid
+scripts/fig2/fig2_task2_plus/.squidiff_split_tmp/
+scripts/fig2/fig2_task2_plus/.parallel_holdout_split/
+
+# 临时出图
+*_temp.png
+*_temp.svg
+
+.DS_Store
+src/chemCPA/preprocessing/5_sciplex_ood_splits.ipynb

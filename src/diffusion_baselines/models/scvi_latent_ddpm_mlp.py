@@ -185,6 +185,7 @@ class ScviLatentDDPMMLP(nn.Module):
             z_t = noise.to(device)
 
         B = z0.shape[0]
+        z_clip = 1e3  # 限制 latent 幅度，减轻 reverse 过程中 float32 溢出导致的 NaN
         for step in reversed(range(self.diffusion_trainer.T)):
             t = torch.full((B,), step, dtype=torch.long, device=device)
             eps = self.net(z_t, z0, t)
@@ -194,7 +195,10 @@ class ScviLatentDDPMMLP(nn.Module):
                 z_t = mean + torch.sqrt(var) * torch.randn_like(z_t)
             else:
                 z_t = mean
+            z_t = torch.nan_to_num(z_t, nan=0.0, posinf=z_clip, neginf=-z_clip)
+            z_t = z_t.clamp(min=-z_clip, max=z_clip)
 
         # decode latent to gene expression
+        z_t = torch.nan_to_num(z_t, nan=0.0, posinf=z_clip, neginf=-z_clip)
         x_hat = self.decoder(z_t)
         return x_hat

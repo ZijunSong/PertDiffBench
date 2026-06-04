@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# DDPM MOA Diff-MOA: drug name + dose conditioning
+# DDPM MOA Diff-MOA: SMILES + dose conditioning (Squidiff-style, default)
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR
 export LC_ALL=C LC_NUMERIC=C
@@ -9,12 +10,18 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS="${NUM_RUNS:-3}"
 NUM_SAMPLES="${NUM_SAMPLES:-100}"
+BATCH_SIZE="${BATCH_SIZE:-4096}"
+NUM_WORKERS="${NUM_WORKERS:-32}"
+CKPT_SAVE_INTERVAL="${CKPT_SAVE_INTERVAL:-1000}"
+SKIP_UMAP="${SKIP_UMAP:-true}"
 
 HOMEDIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$HOMEDIR"
 export PYTHONPATH="${HOMEDIR}:${PYTHONPATH:-}"
 
-DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA}"
+USE_DRUG_STRUCTURE="${USE_DRUG_STRUCTURE:-true}"
+
+DATA_BASE="${DATA_BASE:-/data/ppnm/data/PertDiffBench/data/fig2_task1_unseenMOA/control_plus_ifn_with_smiles}"
 SAMPLES_BASE="${SAMPLES_BASE:-/data/ppnm/data/PertDiffBench/samples}"
 CKPT_BASE="${CKPT_BASE:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 
@@ -25,10 +32,15 @@ CKPT_ROOT="${CKPT_ROOT:-${CKPT_BASE}/fig2/task1_unseenMOA/diff}"
 
 mkdir -p "${SAMPLES_ROOT}" "${CKPT_ROOT}"
 
+DRUG_STRUCT_ARGS=()
+if [[ "${USE_DRUG_STRUCTURE}" == "true" ]]; then
+  DRUG_STRUCT_ARGS=(--use-drug-structure)
+fi
+
 mapfile -t TRAIN_FILES < <(find "${DATA_ROOT}" -maxdepth 1 -type f -name "*_train__plus_control.h5ad" 2>/dev/null | sort)
 [[ ${#TRAIN_FILES[@]} -gt 0 ]] || { echo "[ERROR] No *_train__plus_control.h5ad under ${DATA_ROOT}" >&2; exit 1; }
 
-echo "Found ${#TRAIN_FILES[@]} MOA datasets | runs=${NUM_RUNS} | genes=${NUM_GENES}"
+echo "Found ${#TRAIN_FILES[@]} MOA datasets | runs=${NUM_RUNS} | genes=${NUM_GENES} | batch=${BATCH_SIZE} | workers=${NUM_WORKERS} | use_drug_structure=${USE_DRUG_STRUCTURE}"
 echo
 
 for train_path in "${TRAIN_FILES[@]}"; do
@@ -62,9 +74,18 @@ for train_path in "${TRAIN_FILES[@]}"; do
       --save-weight-dir "${run_ckpt}" \
       --gene-nums "${NUM_GENES}" \
       --drug-key perturbation \
-      --dose-key dose_value
+      --dose-key dose_value \
+      --batch-size "${BATCH_SIZE}" \
+      --num-workers "${NUM_WORKERS}" \
+      --ckpt-save-interval "${CKPT_SAVE_INTERVAL}" \
+      "${DRUG_STRUCT_ARGS[@]}"
 
     [[ -f "${ckpt_pt}" ]] || { echo "[ERROR] Checkpoint not found: ${ckpt_pt}" >&2; exit 1; }
+
+    UMAP_ARGS=()
+    if [[ "${SKIP_UMAP}" != "true" ]]; then
+      UMAP_ARGS=(--umap_plot "${run_sample}/umap_comparison_${i}.png")
+    fi
 
     run_out="$(
       python scripts/baseline_exp/eval_scrna_ddpm_scrna_moa.py \
@@ -76,9 +97,10 @@ for train_path in "${TRAIN_FILES[@]}"; do
         --n_samples "${NUM_SAMPLES}" \
         --out_h5ad "${run_sample}/synthetic_${moa}_${i}.h5ad" \
         --gene-nums "${NUM_GENES}" \
-        --umap_plot "${run_sample}/umap_comparison_${i}.png" \
         --drug-key perturbation \
-        --dose-key dose_value 2>&1
+        --dose-key dose_value \
+        "${UMAP_ARGS[@]}" \
+        "${DRUG_STRUCT_ARGS[@]}" 2>&1
     )" || { echo "[ERROR] Eval failed for run ${i}" >&2; exit 1; }
     echo "${run_out}"
     ALL_OUTPUTS+="${run_out}"$'\n'

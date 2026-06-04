@@ -110,7 +110,11 @@ class MLPModel(nn.Module):
         self.num_classes = num_classes
         self.drug_dimension = drug_dimension
         if use_encoder: 
-            self.encoder = EncoderMLPModel(gene_size,self.hidden_sizes, self.num_classes, use_drug_structure, self.drug_dimension, comb_num)
+            self.encoder = EncoderMLPModel(
+                gene_size, self.hidden_sizes, self.num_classes,
+                use_drug_structure, self.drug_dimension, comb_num,
+                use_fp16=use_fp16,
+            )
         
         
         if time_embed_dim is not None:
@@ -133,6 +137,12 @@ class MLPModel(nn.Module):
         
         self.input_layer = nn.Linear(gene_size, hidden_sizes)
         self.output_layer = nn.Linear(hidden_sizes, output_dim)
+
+    def convert_to_fp16(self):
+        self.apply(convert_module_to_f16)
+
+    def convert_to_fp32(self):
+        self.apply(convert_module_to_f32)
         
     def forward(self, x, timesteps=None, **model_kwargs):
         

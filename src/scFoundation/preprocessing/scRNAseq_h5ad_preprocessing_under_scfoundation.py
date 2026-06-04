@@ -27,16 +27,19 @@ system_path = args.system_path.rstrip("/")
 file_name = args.file_name
 sparse_matrix = args.sparse_matrix
 
-# make sure code can import scRNA_workflow
-sys.path.append(os.path.join(system_path, "code"))
+# Import scRNA_workflow from this preprocessing tree (works after server migration).
+# Some installs use system_path/code; this repo keeps scRNA_workflow.py next to this script.
+for _p in (system_path, os.path.join(system_path, "code")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 os.chdir(system_path)
 
 from scRNA_workflow import *
-# scRNA_workflow is now imported from ${system_path}/code/
 
-# paths
-data_path = os.path.join("/share/PertBench/data/fig1/raw_task1/", file_name)
-output_dir = "/share/PertBench/src/scFoundation/preprocessing"
+# paths — read input from system_path/data/<file_name> (caller copies h5ad there); write preprocessed h5ad under system_path/
+data_path = os.path.join(system_path, "data", file_name)
+output_dir = system_path
+os.makedirs(os.path.join(system_path, "data"), exist_ok=True)
 os.makedirs(output_dir, exist_ok=True)
 
 print(f"[SCF-preprocess] Reading: {data_path}")

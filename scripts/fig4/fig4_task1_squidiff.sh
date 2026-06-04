@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fig4 时间条件生成 — Squidiff（训练后用 2h/8h latent 线性插值生成 4h/6h，再 eval）
+# Fig4 时间条件生成 — Squidiff（原文 addition：Δz_sem + DDIM 条件解码，生成 4h/6h）
 
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
@@ -43,11 +43,12 @@ mkdir -p "${ckpt_base}" "${sample_base}" "${LOGDIR}/fig4_task1"
       --gene_size "${NUM_GENES}" \
       --output_dim "${NUM_GENES}" 2>&1 | tee -a "${log_file}" || true
 
-    echo "--- Sampling 4h/6h (Squidiff latent linear interp) [run ${i}] ---"
+    echo "--- Sampling 4h/6h (Squidiff official addition: 2h origin + Δz_sem * scale → DDIM) [run ${i}] ---"
     python scripts/fig4/sample_fig4_squidiff_interp.py \
       --model_path "${run_ckpt}/model.pt" \
       --train-h5ad "${TRAIN_H5}" --out-h5ad "${run_sample}/synthetic_fig4.h5ad" \
-      --n-samples "${N_SAMPLES}" --gene-size "${NUM_GENES}" --output-dim "${NUM_GENES}" || true
+      --n-samples "${N_SAMPLES}" --gene-size "${NUM_GENES}" --output-dim "${NUM_GENES}" \
+      --method addition --anchor-start 2h --anchor-end 8h --target-times 4h 6h || true
 
     echo "--- Eval [run ${i}] ---"
     output=$(python scripts/fig4/eval_fig4_time_conditioned.py \

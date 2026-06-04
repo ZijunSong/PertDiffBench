@@ -1,3 +1,37 @@
+# Lightning (via scvi) may import mpi4py to probe cluster env. A broken mpi4py install
+# (wheel present but no libmpi) raises RuntimeError; MPIEnvironment only catches ImportError.
+# Stub mpi4py so detect() sees world size 1 and skips MPI.
+import sys as _sys
+import types as _types
+
+
+def _patch_mpi4py_if_broken() -> None:
+    try:
+        from mpi4py import MPI  # type: ignore
+
+        MPI.COMM_WORLD.Get_size()
+    except (ImportError, ModuleNotFoundError, OSError, RuntimeError):
+        for _name in list(_sys.modules.keys()):
+            if _name == "mpi4py" or _name.startswith("mpi4py."):
+                del _sys.modules[_name]
+
+        class _StubComm:
+            def Get_size(self) -> int:
+                return 1
+
+            def Get_rank(self) -> int:
+                return 0
+
+        _mpi = _types.ModuleType("mpi4py.MPI")
+        _mpi.COMM_WORLD = _StubComm()
+        _pkg = _types.ModuleType("mpi4py")
+        _pkg.MPI = _mpi
+        _sys.modules["mpi4py"] = _pkg
+        _sys.modules["mpi4py.MPI"] = _mpi
+
+
+_patch_mpi4py_if_broken()
+
 import argparse
 import os
 import numpy as np
@@ -136,14 +170,21 @@ stim_mask = (model.adata.obs['perturbation_status'] == "IFN") & (model.adata.obs
 ctrl_adata_true = model.adata[ctrl_mask].copy()
 stim_adata_true = model.adata[stim_mask].copy()
 
-if ctrl_adata_true.n_obs < args.n_samples or stim_adata_true.n_obs < args.n_samples:
-    print(f"Error: Not enough cells for evaluation. Need at least {args.n_samples} for control and stimulated groups.")
+max_eval = min(ctrl_adata_true.n_obs, stim_adata_true.n_obs, pred_adata.n_obs)
+if max_eval < 1:
+    print("Error: No cells available for evaluation (control, stimulated, or predicted).", file=sys.stderr)
     sys.exit(1)
+n_eval = min(args.n_samples, max_eval)
+if n_eval < args.n_samples:
+    print(
+        f"Warning: --n_samples ({args.n_samples}) exceeds available cells ({max_eval}); "
+        f"using {n_eval} for evaluation."
+    )
 
 # Sample cells for fair comparison
-sc.pp.subsample(ctrl_adata_true, n_obs=args.n_samples, random_state=0)
-sc.pp.subsample(stim_adata_true, n_obs=args.n_samples, random_state=0)
-sc.pp.subsample(pred_adata, n_obs=args.n_samples, random_state=0)
+sc.pp.subsample(ctrl_adata_true, n_obs=n_eval, random_state=0)
+sc.pp.subsample(stim_adata_true, n_obs=n_eval, random_state=0)
+sc.pp.subsample(pred_adata, n_obs=n_eval, random_state=0)
 
 # Get expression matrices
 ctrl_X = ctrl_adata_true.X.toarray() if hasattr(ctrl_adata_true.X, 'toarray') else ctrl_adata_true.X

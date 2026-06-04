@@ -402,11 +402,20 @@ def main(cell_type=None, multi=False, inter=True, weight=[10,10]):
         ctrl_adata_true = ori_adata[ctrl_mask].copy()
         stim_adata_true = ori_adata[stim_mask].copy()
 
-        if ctrl_adata_true.n_obs < args.num_samples or stim_adata_true.n_obs < args.num_samples:
-            raise ValueError(f"Not enough cells for evaluation. Need at least {args.num_samples}.")
+        max_eval = min(ctrl_adata_true.n_obs, stim_adata_true.n_obs, pred_X.shape[0])
+        if max_eval < 1:
+            raise ValueError("Not enough cells for evaluation (control, stimulated, or predicted).")
+        n_eval = min(args.num_samples, max_eval)
+        if n_eval < args.num_samples:
+            logger.log(
+                f"Warning: num_samples {args.num_samples} exceeds available ({max_eval}); "
+                f"using {n_eval} for evaluation."
+            )
+        if pred_X.shape[0] > n_eval:
+            pred_X = pred_X[:n_eval]
 
-        sc.pp.subsample(ctrl_adata_true, n_obs=args.num_samples, random_state=0)
-        sc.pp.subsample(stim_adata_true, n_obs=args.num_samples, random_state=0)
+        sc.pp.subsample(ctrl_adata_true, n_obs=n_eval, random_state=0)
+        sc.pp.subsample(stim_adata_true, n_obs=n_eval, random_state=0)
         
         if not isinstance(ctrl_adata_true.X, np.ndarray):
             ctrl_X = ctrl_adata_true.X.toarray()
@@ -419,7 +428,7 @@ def main(cell_type=None, multi=False, inter=True, weight=[10,10]):
             true_pert_X = stim_adata_true.X
 
         # Create AnnData for predicted cells
-        pred_adata = sc.AnnData(pred_X, obs={'perturbation_status': [f'Predicted_{stim_key}'] * args.num_samples}, var=ctrl_adata_true.var)
+        pred_adata = sc.AnnData(pred_X, obs={'perturbation_status': [f'Predicted_{stim_key}'] * n_eval}, var=ctrl_adata_true.var)
 
         # 3. Calculate pseudobulk profiles
         true_pert_pb = np.mean(true_pert_X, axis=0)
