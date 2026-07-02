@@ -2,13 +2,14 @@
 # Three (train+eval) runs per dataset; write logs and CSV metrics
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # ================== Configuration ==================
 DATASETS=('random1' 'random2' 'random3')
 NUM_GENES="2969"
 NUM_RUNS=3
 CONFIG_FILE="configs/baselines/scrna_ddpm_scrna.yaml"
 METHOD_NAME="DDPM"
-N_SAMPLES=6                      # eval sample count (original script)
 LOGDIR=${LOGDIR:-logs/fig1_task2}
 CKPT_NAME="scrna_ddpm_epoch1000.pt"
 
@@ -23,6 +24,8 @@ for dataset in "${DATASETS[@]}"; do
   train_data_path="data/fig1/task2/task2_train_${dataset}_bulkRNAseq_exp.h5ad"
   valid_data_path="data/fig1/task2/task2_test_${dataset}_bulkRNAseq_exp.h5ad"
 
+  N_SAMPLES="$(max_n_samples_paired "${valid_data_path}")"
+
   save_dir_base="checkpoints/ddpm/${dataset}"
   sample_dir_base="samples/fig1/task2/${dataset}/scrna_ddpm_scrna"
   mkdir -p "${save_dir_base}" "${sample_dir_base}"
@@ -34,6 +37,7 @@ for dataset in "${DATASETS[@]}"; do
   all_outputs=""
 
   for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
+    export RUN_SEED=$(($run_idx-1))
     echo -e "\n======================" | tee -a "$LOGFILE"
     echo -e " Run ${run_idx}/${NUM_RUNS} for dataset ${dataset}" | tee -a "$LOGFILE"
     echo -e "======================" | tee -a "$LOGFILE"

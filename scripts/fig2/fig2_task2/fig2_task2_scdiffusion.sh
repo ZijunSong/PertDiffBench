@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -7,7 +9,7 @@ export LC_ALL=C LC_NUMERIC=C
 TARGET_SPECIES=( "pig" "rabbit" "rat" )
 NUM_GENES="${NUM_GENES:-6619}"
 NUM_RUNS="${NUM_RUNS:-3}"
-NUM_SAMPLES="${NUM_SAMPLES:-100}"     # forshould classifier_sample.py  --num_samples
+     # forshould classifier_sample.py  --num_samples
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
 
 # -------------------- Step 1: VAE train (once) --------------------
@@ -65,6 +67,7 @@ for species in "${TARGET_SPECIES[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running sampling iteration ${i}/${NUM_RUNS} for ${species} ---"
     pushd src/scDiffusion >/dev/null
     if ! EVAL_OUTPUT=$(

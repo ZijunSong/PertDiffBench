@@ -2,6 +2,8 @@
 # SCimilarity + latent DDPM — Fig2 task2+ LOO (saves train/test encoder-input latents per fold).
 # Default GPU 1. Optional: SCIM_MODEL_DIR, FIG2_TASK2_LOO_* overrides.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1}"
@@ -9,7 +11,7 @@ export WANDB_DISABLED="${WANDB_DISABLED:-true}"
 export WANDB_MODE="${WANDB_MODE:-disabled}"
 
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-256}"
+
 METHOD_NAME="${METHOD_NAME:-scimilarity_ddpm}"
 CONFIG_PATH="${CONFIG_PATH:-configs/baselines/scimilarity_ddpm_mlp.yaml}"
 DATA_BASE="${DATA_BASE:-data/fig2/task2_unseen_celltype_plus}"
@@ -58,6 +60,7 @@ for ht in "${HOLDOUT_TYPES[@]}"; do
     DATA_DIR="${DATA_ROOT}/loo_${ht}/${slug}"
     TRAIN_H5="${DATA_DIR}/task2_train_exp.h5ad"
     VALID_H5="${DATA_DIR}/task2_test_exp.h5ad"
+    N_SAMPLES="$(max_n_samples_multi_pert "${VALID_H5}")"
     FOLD_OUT="${OUT_ROOT}/${ht}/${slug}"
 
     if [[ ! -f "${TRAIN_H5}" || ! -f "${VALID_H5}" ]]; then
@@ -101,6 +104,7 @@ for ht in "${HOLDOUT_TYPES[@]}"; do
     : > "${CELL_BUF}"
 
     for (( run=1; run<=NUM_RUNS; run++ )); do
+      export RUN_SEED=$(($run-1))
       RUN_CKPT_DIR="${CKPT_ROOT}/${ht}/${slug}/run_${run}"
       mkdir -p "${RUN_CKPT_DIR}"
 

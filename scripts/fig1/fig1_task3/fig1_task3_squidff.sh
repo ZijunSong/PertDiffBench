@@ -4,11 +4,12 @@
 set -e
 trap "echo ERROR && exit 1" ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # ------------ ------------
 NUM_GENES=1000
 NUM_RUNS=3
 METHOD_NAME="SquiDiff" # CSV firstcols name
-N_SAMPLES=100
 
 MIX_TYPES=('mix2' 'mix3' 'mix4' 'mix5' 'mix6' 'mix7')
 
@@ -38,6 +39,7 @@ for mix_type in "${MIX_TYPES[@]}"; do
 
   # -------- (train+eval) --------
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n======================"       | tee -a "${LOG_FILE}"
     echo -e " Run ${i}/${NUM_RUNS} "        | tee -a "${LOG_FILE}"
     echo -e "======================"       | tee -a "${LOG_FILE}"

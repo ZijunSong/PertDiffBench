@@ -65,14 +65,14 @@ def main() -> None:
     parser.add_argument("--num-epochs", type=int, default=None)
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=32)
-    parser.add_argument("--seed", type=int, default=1337)
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
     _setup_chemcpa_path()
     from chemCPA.data.data import PerturbationDataModule, load_dataset_splits
     from chemCPA.lightning_module import ChemCPA
 
-    L.seed_everything(args.seed, workers=True)
+    L.seed_everything(resolve_seed(args.seed), workers=True)
     cfg = OmegaConf.load(args.config)
     OmegaConf.set_struct(cfg, False)
 

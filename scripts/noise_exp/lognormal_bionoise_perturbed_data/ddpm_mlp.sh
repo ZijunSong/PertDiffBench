@@ -2,6 +2,8 @@
 # Exit on first error
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # Consistent numeric locale for awk
 export LC_ALL=C LC_NUMERIC=C
 
@@ -40,6 +42,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     # --- Dynamic paths (data) ---
     train_data_path="${BASE_DATA_DIR}/task1_train_${cell_type}_exp_lognorm_cv_${noise_level}.h5ad"
     valid_data_path="${BASE_DATA_DIR}/task1_valid_${cell_type}_exp_lognorm_cv_${noise_level}.h5ad"
+    N_SAMPLES="$(max_n_samples_paired "${valid_data_path}")"
 
     # --- Base output dirs (method-level) ---
     base_weight_dir="checkpoints/lognormal_bionoise/${cell_type}_noise_${noise_level}/mlp_ddpm_mlp"
@@ -52,6 +55,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     echo -e "\n--- Repeating Train+Eval for $cell_type with noise $noise_level: ${NUM_RUNS} runs ---"
 
     for (( run_id=1; run_id<=NUM_RUNS; run_id++ )); do
+      export RUN_SEED=$(($run_id-1))
       echo -e "\n=== Run ${run_id}/${NUM_RUNS} | ${cell_type}, Noise: ${noise_level} ==="
 
       # --- Per-run directories ---
@@ -82,7 +86,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         --out_h5ad "${samples_dir}/synthetic_ifn_run_${run_id}.h5ad" \
         --gene-nums "$NUM_GENES" \
         --umap_plot "${samples_dir}/umap_comparison_run_${run_id}.png" \
-        --n_samples 6 2>&1) || true
+        --n_samples "${N_SAMPLES}" 2>&1) || true
 
       echo "$output" | tee "logs/eval_${cell_type}_noise_${noise_level}_run${run_id}.log"
       # Preserve real newlines into the collector

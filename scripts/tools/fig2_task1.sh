@@ -1,3 +1,4 @@
+source "scripts/lib/max_n_samples.sh"
 # python scripts/tools/fig2_task1_merge.py \
 #     --exp 'data/fig2/task1_unseen_pert/dfcontrol_exp.csv' \
 #     --meta 'data/fig2/task1_unseen_pert/dfcontrol_meta.csv' \

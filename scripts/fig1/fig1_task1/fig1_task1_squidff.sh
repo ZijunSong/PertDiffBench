@@ -12,16 +12,10 @@ METHOD_NAME="Squidiff"
 LOG_ROOT="${ROOT_DIR}logs/fig1_task1"
 mkdir -p "${LOG_ROOT}"
 
-# n_samples per cell type
-declare -A SAMPLES_MAP=(
-  ['B']=110
-  ['CD4T']=278
-  ['CD8T']=53
-  ['CD14+Mono']=83
-  ['Dendritic']=55
-  ['FCGR3A+Mono']=132
-  ['NK']=54
-)
+# n_samples per cell type (max paired cells in valid set)
+source "scripts/lib/max_n_samples.sh"
+declare -A SAMPLES_MAP=()
+build_samples_map_from_valid_h5ad "${ROOT_DIR}" "${CELL_TYPES[@]}"
 
 CELL_TYPES=(
   'B'
@@ -66,6 +60,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
   # Step 2: Run inference NUM_RUNS times for the current cell type
   echo -e "\n--- Starting inference for $cell_type ($NUM_RUNS runs total) ---"
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running inference iteration $i/$NUM_RUNS for $cell_type ---"
     sample_dir_run="${sample_dir_base}/run${i}"
     mkdir -p "${sample_dir_run}"

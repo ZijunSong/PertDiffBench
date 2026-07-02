@@ -57,7 +57,7 @@ class CellXGeneBase(ABC):
     }
     GENE_LIST_FNAME='HLCA_gene_list.npy'
 
-    def __init__(self, datadir='./data', seed=10, normalize=True, n_genes=None, dataset='HLCA_sub',
+    def __init__(self, datadir='./data', seed=0, normalize=True, n_genes=None, dataset='HLCA_sub',
                  save_processed=False, splits={'train': 0.8, 'valid': 0.1, 'test': 0.1}, split_strategy='random',
                  subsample_ratio=None, force_split=False, post_cond_flag=False, return_raw=False, rescale=False,
                  text_cond_flag=False, text_emb_model='michiyasunaga/BioLinkBERT-large', text_emb_type='CL',
@@ -130,7 +130,7 @@ class CellXGeneBase(ABC):
                 sc.pp.highly_variable_genes(self.adata, n_top_genes=n_genes)
         
 
-    def _prepare_split(self, splits={'train': 0.8, 'valid': 0.1, 'test': 0.1}, split_strategy='random', seed=10,
+    def _prepare_split(self, splits={'train': 0.8, 'valid': 0.1, 'test': 0.1}, split_strategy='random', seed=0,
                        fname='HLCA_zstd_sub.h5ad', subsample_ratio=None, force_split=False):
         if split_strategy == 'reduce':  # No validation
             assert self.reduce_type in ['full', 'partial']

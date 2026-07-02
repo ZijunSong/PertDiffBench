@@ -96,7 +96,8 @@ def train_scvi_phase(
         )
         batch_key = None
 
-    scvi.settings.seed = 0
+    from utils.seed import resolve_seed
+    scvi.settings.seed = resolve_seed(0)
     print(f"[scVI] Seed set to {scvi.settings.seed}")
 
     device = "cuda" if (use_gpu and torch.cuda.is_available()) else "cpu"

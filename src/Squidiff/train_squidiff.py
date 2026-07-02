@@ -124,7 +124,8 @@ def parse_args():
         'diffusion_steps': 1000,
         'logger_path': '',
         'use_drug_structure':False,
-        'comb_num':1
+        'comb_num':1,
+        'seed': 0,
     }
     default_args.update(updated_args)
     # Initialize argument parser
@@ -161,7 +162,15 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    import sys
+    import os as _os
+    _repo_root = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", ".."))
+    if _repo_root not in sys.path:
+        sys.path.insert(0, _repo_root)
+    from utils.seed import resolve_seed, set_seed
+
     args_train = parse_args()
+    set_seed(resolve_seed(args_train.get("seed", 0)))
     print('**************training args*************')
     print(args_train)
 

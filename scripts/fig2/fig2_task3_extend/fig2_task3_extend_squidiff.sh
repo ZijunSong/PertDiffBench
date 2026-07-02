@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Leave-one-out: hold one species for test, merge the rest for training.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 export PYTHONUNBUFFERED=1
@@ -8,7 +10,7 @@ export PYTHONUNBUFFERED=1
 ALL_SPECIES=( "mouse" "pig" "rabbit" "rat" )
 GENE_SIZE="${GENE_SIZE:-6619}"
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-100}"
+
 
 # Unified data and checkpoint roots (override via env if needed)
 DATA_ROOT="${DATA_ROOT:-/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species}"
@@ -67,6 +69,7 @@ for test_species in "${ALL_SPECIES[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running sampling iteration ${i}/${NUM_RUNS} for ${test_species} ---"
     exec 3>&1
     if ! EVAL_OUTPUT="$(

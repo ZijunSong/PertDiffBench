@@ -3,6 +3,8 @@
 # Exit immediately if any command fails.
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # definemustevalallcelltypearray
 CELL_TYPES=(
     # 'B'
@@ -58,9 +60,13 @@ for cell_type in "${CELL_TYPES[@]}"; do
         # for all output amount
         all_outputs=""
 
+        valid_h5="data/add_gaussian_noise_output/task1_valid_CD4T_exp_noise_std_${noise_level}.h5ad"
+        N_SAMPLES="$(max_n_samples_paired "${valid_h5}")"
+
         # --- 2 : ascurrentcelltype noise level ---
         echo -e "\n--- Running $cell_type (noise: $noise_level) Start ($NUM_RUNS ) ---"
         for (( i=1; i<=NUM_RUNS; i++ )); do
+          export RUN_SEED=$(($i-1))
             echo -e "\n--- Running $cell_type (noise: $noise_level) run $i/$NUM_RUNS  inference iterations ---"
             
             # sample_squidiff.py 
@@ -69,7 +75,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
                 --gene_size "$GENE_SIZE" \
                 --output_dim "$GENE_SIZE" \
                 --out_h5ad "samples/fig1/task1/${cell_type}/squidiff_${GENE_SIZE}_noise_${noise_level}/synthetic_ifn_run_${i}.h5ad" \
-                --n_samples 6 \
+                --n_samples "${N_SAMPLES}" \
                 --umap_plot "samples/fig1/task1/${cell_type}/squidiff_${GENE_SIZE}_noise_${noise_level}/umap_comparison_${i}.png" \
                 --data_path "data/add_gaussian_noise_output/task1_valid_CD4T_exp_noise_std_${noise_level}.h5ad" 2>&1) || true
             

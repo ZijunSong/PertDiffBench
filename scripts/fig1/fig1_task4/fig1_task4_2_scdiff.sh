@@ -4,6 +4,8 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # --------------------
 # Configuration
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
@@ -48,6 +50,7 @@ for prefix in "${PREFIXES[@]}"; do
   ALL_OUT_TMP="$(mktemp)"
 
   for ((i=1; i<=NUM_RUNS; i++)); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running iteration ${i}/${NUM_RUNS} for ${dataset_name} ---"
     # key : using tee output to stdout ( nohup ), tempfile
     if python src/scDiff/main.py \

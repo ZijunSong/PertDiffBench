@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -7,7 +9,7 @@ export LC_ALL=C LC_NUMERIC=C
 TARGET_SPECIES=( "pig" "rabbit" "rat" )
 
 NUM_GENES="${NUM_GENES:-6619}"
-N_SAMPLES="${N_SAMPLES:-1000}"
+
 NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
 METHOD_NAME="${METHOD_NAME:-MLP-DDPM-MLP}"
@@ -47,6 +49,7 @@ for species in "${TARGET_SPECIES[@]}"; do
 
   ALL_OUTPUTS=""
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     echo "[$(date '+%F %T')] >>> ${run_tag}: EVAL (${species}_control_ifn)"
     if ! EVAL_OUTPUT=$(python scripts/baseline/eval_mlp_ddpm_mlp.py \

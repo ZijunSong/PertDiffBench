@@ -2,6 +2,8 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # -------------------- Configuration --------------------
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 LOGDIR="${LOGDIR:-logs}"
@@ -30,6 +32,8 @@ for seed in "${SEEDS[@]}"; do
   dataset_base="seed${seed}"
   train_ds="${dataset_base}_control_train"
   test_ds="${dataset_base}_control_test"
+
+  N_SAMPLES="$(max_n_samples_paired "data/fig2/task1_unseen_pert/${test_ds}.h5ad")"
   train_fname="${train_ds}.h5ad"
   test_fname="${test_ds}.h5ad"
 
@@ -49,13 +53,14 @@ for seed in "${SEEDS[@]}"; do
   data_settings+=("data.params.train.params.fname=${train_fname}")
   data_settings+=("data.params.test.params.dataset=${dataset_base}")
   data_settings+=("data.params.test.params.fname=${test_fname}")
-  data_settings+=("model.params.generation_kwargs.n_samples=1000")
+  data_settings+=("model.params.generation_kwargs.n_samples=${N_SAMPLES}")
 
   {
     all_outputs=""
 
     # -------- Run 1..NUM_RUNS --------
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       run_tag="run${i}"
       run_postfix="perturbation_${NAME}_${run_tag}"
 

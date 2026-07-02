@@ -2,6 +2,8 @@
 
 # Exit on error; print a clear message
 set -e
+
+source "scripts/lib/max_n_samples.sh"
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
 # -------------------- Configuration --------------------
@@ -29,6 +31,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     # -------------------- data path (and datastay consistent) --------------------
     train_h5="data/add_zero_inflation_output/task1_train_${cell_type}_exp_zeroinflation_strength_${noise_level}.h5ad"
     valid_h5="data/add_zero_inflation_output/task1_valid_${cell_type}_exp_zeroinflation_strength_${noise_level}.h5ad"
+    N_SAMPLES="$(max_n_samples_paired "${valid_h5}")"
 
     # skip
     if [ ! -f "$train_h5" ]; then
@@ -54,6 +57,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
       # -------------------- 3x (train+eval) --------------------
       for (( i=1; i<=NUM_RUNS; i++ )); do
+        export RUN_SEED=$(($i-1))
         echo
         echo "======================"
         echo " Run ${i}/${NUM_RUNS} | ${cell_type} | noise=${noise_level}"
@@ -108,7 +112,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         pushd src/scDiffusion >/dev/null
         output=$(
           python classifier_sample.py \
-            --num_samples 8 \
+            --num_samples "${N_SAMPLES}" \
             --train-data-path "../../${train_h5}" \
             --model_path "../../${diff_ckpt}" \
             --classifier_path "../../${cls_ckpt}" \

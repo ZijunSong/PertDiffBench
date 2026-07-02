@@ -11,7 +11,7 @@ from scdiff.data.base import SplitDataset
 
 
 class PBMC12KBase(ABC):
-    def __init__(self, datadir='./data', seed=10, normalize=True, n_genes=None, fname='PBMC12K_processed.h5ad', save_processed=True,
+    def __init__(self, datadir='./data', seed=0, normalize=True, n_genes=None, fname='PBMC12K_processed.h5ad', save_processed=True,
                  splits={'train':0.8, 'valid':0.1, 'test':0.1}, split_strategy='random', subsample_ratio=None, force_split=False,
                  post_cond_flag=False, return_raw=False, pretrained_gene_list=None, pretrained_gene_list_path=None):
         self.celltype_key = 'str_labels'
@@ -58,7 +58,7 @@ class PBMC12KBase(ABC):
             self.gene_list = [x for x in self.gene_list if x in self.pretrained_gene_list]
             self.adata = self.adata[:, self.gene_list]
 
-    def _prepare_split(self, splits={'train':0.8, 'valid':0.1, 'test':0.1}, split_strategy='random', seed=10, 
+    def _prepare_split(self, splits={'train':0.8, 'valid':0.1, 'test':0.1}, split_strategy='random', seed=0, 
                        fname='PBMC12K_processed.h5ad', subsample_ratio=None, force_split=False):
         if 'split' in self.adata.obs.columns and sorted(splits) == sorted(np.unique(self.adata.obs['split'])) and not force_split:
             pass

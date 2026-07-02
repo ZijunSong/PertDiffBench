@@ -19,16 +19,10 @@ CELL_TYPES=(
   'NK'
 )
 
-# n_samples per cell type
-declare -A SAMPLES_MAP=(
-  ['B']=110
-  ['CD4T']=278
-  ['CD8T']=53
-  ['CD14+Mono']=83
-  ['Dendritic']=55
-  ['FCGR3A+Mono']=132
-  ['NK']=54
-)
+# n_samples per cell type (max paired cells in valid set)
+source "scripts/lib/max_n_samples.sh"
+declare -A SAMPLES_MAP=()
+build_samples_map_from_valid_h5ad "${ROOT_DIR}" "${CELL_TYPES[@]}"
 
 NUM_GENES="1000"
 NUM_RUNS=3
@@ -64,6 +58,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
     # ----- Run 3x (Train + Eval) -----
     for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
+      export RUN_SEED=$(($run_idx-1))
       echo
       echo "======================"
       echo " Run ${run_idx}/${NUM_RUNS} for ${cell_type}"

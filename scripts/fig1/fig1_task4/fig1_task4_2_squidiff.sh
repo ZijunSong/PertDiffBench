@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -11,7 +13,6 @@ declare -A DATASETS=(
 )
 
 NUM_RUNS="${NUM_RUNS:-3}" # train+eval count
-N_SAMPLES="${N_SAMPLES:-100}" # each runeval countamount
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 
 echo "Changing directory to src/Squidiff..."
@@ -23,6 +24,7 @@ for prefix in "${!DATASETS[@]}"; do
 
   train_dataset="task4_${prefix}_control_to_ifn"
   eval_dataset="task4_${prefix}_control_to_coculture"
+  n_samples="$(max_n_samples_paired "data/fig1/task4/${eval_dataset}.h5ad")"
 
   LOG_ROOT="../../logs/fig1/task4_2/${eval_dataset}/squidiff_${gene_size}"
   OUT_ROOT="../../samples/fig1/task4_2/${prefix}/squidiff"
@@ -34,13 +36,14 @@ for prefix in "${!DATASETS[@]}"; do
   echo "######################################################################"
   echo "### Prefix: ${prefix}"
   echo "### Train on: ${train_dataset}"
-  echo "### Eval  on: ${eval_dataset}   (runs=${NUM_RUNS}, gene_size=${gene_size}, n_samples=${N_SAMPLES})"
+  echo "### Eval  on: ${eval_dataset}   (runs=${NUM_RUNS}, gene_size=${gene_size}, n_samples=${n_samples})"
   echo "######################################################################"
 
   ALL_OUTPUTS=""
 
   # -------- Run 1..NUM_RUNS (each run run train+eval) --------
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     run_dir="${OUT_ROOT}/${run_tag}"
     mkdir -p "$run_dir"
@@ -71,7 +74,7 @@ for prefix in "${!DATASETS[@]}"; do
         --gene_size  "$gene_size" \
         --output_dim "$gene_size" \
         --out_h5ad   "${run_dir}/${eval_dataset}_synthetic_ifn_${i}.h5ad" \
-        --n_samples  "${N_SAMPLES}" \
+        --n_samples  "${n_samples}" \
         --umap_plot  "${run_dir}/${eval_dataset}_umap_${i}.png" \
         --train_data_path "../../data/fig1/task4/${train_dataset}.h5ad" \
         --data_path  "../../data/fig1/task4/${eval_dataset}.h5ad" \

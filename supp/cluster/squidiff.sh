@@ -23,6 +23,7 @@ python src/Squidiff/train_squidiff.py \
 
 all_outputs=""
 for (( i=1; i<=NUM_RUNS; i++ )); do
+  export RUN_SEED=$(($i-1))
   echo "=== Inference ${i}/${NUM_RUNS} | ${GENE_ORDER} | ${METHOD_NAME} ==="
   sample_dir_run="${SAMPLE_DIR}/run${i}"
   mkdir -p "${sample_dir_run}"

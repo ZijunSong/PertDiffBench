@@ -42,12 +42,8 @@ def load_label_encoder(path):
 
 
 def main():
-    np.random.seed(0)
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(0)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", default="configs/baselines/scrna_ddpm_scrna.yaml")
@@ -55,7 +51,7 @@ def main():
     parser.add_argument("--label-encoder-path", required=True, help="Path to label_encoder.npz")
     parser.add_argument("--data-path", required=True, help="Test h5ad")
     parser.add_argument("--train-data-path", required=True)
-    parser.add_argument("--n_samples", "-n", type=int, default=100)
+    parser.add_argument("--n_samples", "-n", type=int, default=0)
     parser.add_argument("--out_h5ad", "-o", required=True)
     parser.add_argument("--gene-nums", type=int, default=None)
     parser.add_argument("--umap_plot", type=str, default="")
@@ -65,7 +61,11 @@ def main():
     parser.add_argument("--use-drug-structure", action="store_true",
                         help="Use SMILES+dose Morgan fingerprint conditioning (Squidiff-style)")
     parser.add_argument("--drug-dimension", type=int, default=1024)
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     cfg = OmegaConf.load(args.config)
     if args.gene_nums:
@@ -96,7 +96,8 @@ def main():
         print("No IFN cells in test. Exiting.")
         sys.exit(1)
 
-    n_samples = min(args.n_samples, len(ctrl_ids), len(pert_ids))
+    from utils.max_eval_samples import resolve_eval_n_samples
+    n_samples = resolve_eval_n_samples(args.data_path, args.n_samples)
     selected_ctrl = np.random.choice(ctrl_ids, n_samples, replace=False)
     selected_pert = np.random.choice(pert_ids, n_samples, replace=False)
 

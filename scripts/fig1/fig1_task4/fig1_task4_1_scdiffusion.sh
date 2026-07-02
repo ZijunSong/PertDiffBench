@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 IFS=$'\n\t'
 trap "echo ERROR && exit 1" ERR
 
@@ -12,12 +13,9 @@ declare -A DATASETS=(
   ["B2M_control_coculture"]="4599"
   ["B2M_control_ifn"]="4566"
 )
-declare -A SAMPLE_SIZES=(
-  ["ACTA2_control_coculture"]="82"
-  ["ACTA2_control_ifn"]="82"
-  ["B2M_control_coculture"]="74"
-  ["B2M_control_ifn"]="73"
-)
+declare -A SAMPLE_SIZES=()
+source "scripts/lib/max_n_samples.sh"
+# SAMPLE_SIZES filled per dataset from test h5ad in loop
 
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
@@ -47,15 +45,14 @@ for dataset in "${!DATASETS[@]}"; do
   mkdir -p "${LOG_ROOT}" "${CSV_ROOT}"
 
   gene_size=${DATASETS[$dataset]}
-  n_samples=${SAMPLE_SIZES[$dataset]}
+  train_h5ad="data/fig1/task4/task4_${dataset}_train.h5ad"
+  test_h5ad="data/fig1/task4/task4_${dataset}_test.h5ad"
+  n_samples="$(max_n_samples_paired "${test_h5ad}")"
 
   echo "######################################################################"
   echo "###   Starting full pipeline for dataset: ${dataset}"
   echo "###   Gene Size: ${gene_size}, N Samples: ${n_samples}"
   echo "######################################################################"
-
-  train_h5ad="data/fig1/task4/task4_${dataset}_train.h5ad"
-  test_h5ad="data/fig1/task4/task4_${dataset}_test.h5ad"
 
   # CSV: contain mean±std + each run run originalvalue
   METRICS_CSV="${CSV_ROOT}/metrics_${dataset}.csv"
@@ -64,6 +61,7 @@ for dataset in "${!DATASETS[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     echo -e "\n=== [${dataset}] ${run_tag}: Train(VAE+Diffusion+Classifier) + Sample/Eval ==="
 

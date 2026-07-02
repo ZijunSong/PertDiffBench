@@ -29,8 +29,9 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
+    from utils.seed import resolve_seed, set_seed
+    _seed = resolve_seed(args.seed)
+    set_seed(_seed)
 
     cfg = OmegaConf.load(args.config)
     cfg.model.ae.input_dim = args.gene_nums
@@ -59,6 +60,11 @@ def main():
     adata_2h = adata[mask_2h]
     adata_8h = adata[mask_8h]
     n_2h, n_8h = adata_2h.n_obs, adata_8h.n_obs
+    from utils.max_eval_samples import resolve_eval_n_samples
+    if args.n_samples is None or args.n_samples <= 0:
+        args.n_samples = resolve_eval_n_samples(args.test_h5ad, 0, mode="timepoint")
+        print(f"Using n_samples={args.n_samples}")
+
     n = min(args.n_samples, n_2h, n_8h)
     if n < 1:
         raise ValueError("Need at least one 2h and one 8h cell.")

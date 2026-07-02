@@ -71,6 +71,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
     # inside : (train+eval)
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       echo -e "\n======================"                 | tee -a "${DATASET_LOG}"
       echo -e " Run ${i}/${NUM_RUNS} : ${COMBO_TAG}"    | tee -a "${DATASET_LOG}"
       echo -e "======================"                 | tee -a "${DATASET_LOG}"

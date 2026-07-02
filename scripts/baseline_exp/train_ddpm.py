@@ -42,7 +42,11 @@ def main():
         default="configs/ddpm_default.yaml",
         help="Path to YAML config file"
     )
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     # 1) Load config
     cfg = OmegaConf.load(args.config)

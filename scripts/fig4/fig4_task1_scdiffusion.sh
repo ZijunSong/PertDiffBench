@@ -4,15 +4,20 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 LOGDIR=${LOGDIR:-logs}
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS=${NUM_RUNS:-3}
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
-N_SAMPLES="${N_SAMPLES:-500}"
+N_SAMPLES=""
 
 DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
 TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
+
+TEST_H5="${TRAIN_H5/fig4_train/fig4_test}"
+N_SAMPLES="$(max_n_samples_timepoint "${TEST_H5:-data/fig4_task1/fig4_test.h5ad}")"
 TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 # pretrain VAE (encoder.ckpt / decoder.ckpt / gene_order.tsv), and fig2 
 VAE_STATE_DICT="${VAE_STATE_DICT:-checkpoints/annotation_model_v1}"
@@ -35,6 +40,7 @@ LABEL_ENC="${CLS_DIR}/label_encoder.npz"
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo "====================== Run ${i}/${NUM_RUNS} ======================"
     vae_dir="${vae_base}/run${i}"
     diff_dir="${diff_base}/run${i}"

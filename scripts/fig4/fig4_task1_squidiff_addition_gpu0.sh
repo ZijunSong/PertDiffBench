@@ -2,6 +2,8 @@
 # Fig4 Squidiff - addition (Δz_sem + DDIM conditional decode)
 # single GPU 0 | H20 large batch speedup
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 export PYTHONUNBUFFERED=1
 trap 'echo "[ERROR] command failed at line ${LINENO}" >&2' ERR
 
@@ -19,7 +21,7 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 # ---------- H20 141GB recommendedargs ----------
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-1200}" # 2h/8h ~1.2k cell, amountusing 
+N_SAMPLES="" # 2h/8h ~1.2k cell, amountusing 
 BATCH_SIZE="${BATCH_SIZE:-4096}"        # train batch
 SAMPLE_BATCH="${SAMPLE_BATCH:-512}"       # DDIM decode batch
 LR_ANNEAL_STEPS="${LR_ANNEAL_STEPS:-100000}"
@@ -30,6 +32,9 @@ SQUIDIFF_METHOD="addition"
 LOGDIR="${LOGDIR:-logs}"
 DATA_FIG4="${DATA_FIG4:-/data/ppnm/data/PertDiffBench/data/fig4_task1}"
 TRAIN_H5="${TRAIN_H5:-${DATA_FIG4}/fig4_train.h5ad}"
+
+TEST_H5="${TRAIN_H5/fig4_train/fig4_test}"
+N_SAMPLES="$(max_n_samples_timepoint "${TEST_H5:-data/fig4_task1/fig4_test.h5ad}")"
 TEST_H5="${TEST_H5:-${DATA_FIG4}/fig4_test.h5ad}"
 
 CKPT_BASE="${CKPT_BASE:-checkpoints/fig4/squidiff_addition_${NUM_GENES}}"
@@ -46,6 +51,7 @@ mkdir -p "${CKPT_BASE}" "${SAMPLE_BASE}" "${LOGDIR}/fig4_task1"
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo "====================== Run ${i}/${NUM_RUNS} ======================"
     run_ckpt="${CKPT_BASE}/run${i}"
     run_sample="${SAMPLE_BASE}/run${i}"

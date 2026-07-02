@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # ChemCPA MOA Same-MOA: SMILES + dose_value conditioning (Squidiff-style pipeline)
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 export PYTHONUNBUFFERED=1
 IFS=$'\n\t'
 trap 'echo "[ERROR] command failed" >&2; exit 1' ERR
@@ -9,7 +11,6 @@ export LC_ALL=C LC_NUMERIC=C
 # =================== Config ===================
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-4}"
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-100}"
 METHOD_NAME="${METHOD_NAME:-ChemCPA}"
 BATCH_SIZE="${BATCH_SIZE:-4096}"
 NUM_EPOCHS="${NUM_EPOCHS:-80}"
@@ -108,6 +109,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
   : > "${ALL_OUTPUTS_FILE}"
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo
     echo "======================"
     echo " Run ${i}/${NUM_RUNS} for ${moa}"

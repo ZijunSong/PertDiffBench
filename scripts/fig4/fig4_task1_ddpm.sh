@@ -4,17 +4,22 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 LOGDIR=${LOGDIR:-logs}
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS=${NUM_RUNS:-3}
 METHOD_NAME="${METHOD_NAME:-DDPM}"
-N_SAMPLES="${N_SAMPLES:-500}"
+N_SAMPLES=""
 CONFIG_FILE="configs/baselines/scrna_ddpm_scrna.yaml"
 CKPT_NAME="scrna_ddpm_epoch1000.pt"
 
 DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
 TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
+
+TEST_H5="${TRAIN_H5/fig4_train/fig4_test}"
+N_SAMPLES="$(max_n_samples_timepoint "${TEST_H5:-data/fig4_task1/fig4_test.h5ad}")"
 TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 
 ckpt_base="checkpoints/ddpm/fig4_${NUM_GENES}"
@@ -31,6 +36,7 @@ mkdir -p "${ckpt_base}" "${sample_base}" "${LOGDIR}/fig4_task1"
   all_outputs=""
 
   for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
+    export RUN_SEED=$(($run_idx-1))
     echo "====================== Run ${run_idx}/${NUM_RUNS} ======================"
     save_dir_run="${ckpt_base}/run${run_idx}"
     sample_dir_run="${sample_base}/run${run_idx}"

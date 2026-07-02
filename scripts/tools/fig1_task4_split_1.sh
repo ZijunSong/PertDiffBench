@@ -1,3 +1,4 @@
+source "scripts/lib/max_n_samples.sh"
 # python scripts/tools/fig1_task4_split_1.py \
 #     data/fig1/task4/task4_B2M_control.h5ad \
 #     data/fig1/task4/task4_B2M_coculture.h5ad \

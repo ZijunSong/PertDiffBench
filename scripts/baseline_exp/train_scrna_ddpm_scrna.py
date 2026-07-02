@@ -65,7 +65,11 @@ def main():
                         help="scGen setting: only build pairs where obs[key]==value")
     parser.add_argument("--pair-only-obs-value", type=str, default=None,
                         help="scGen setting: e.g. 'train'")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     # ------------------------------------------------------------------------------
     # 2) Load configuration and set device

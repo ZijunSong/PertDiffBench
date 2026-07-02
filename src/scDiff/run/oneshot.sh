@@ -15,7 +15,7 @@ echo LOGDIR=$LOGDIR
 echo HOMEDIR=$HOMEDIR
 
 TOPK=${TOPK:-3}  # 2-8
-SEED=${SEED:-10}
+SEED=${SEED:-0}
 
 echo topk=${TOPK}, seed=${SEED}
 

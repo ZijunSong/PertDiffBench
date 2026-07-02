@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # scGen setting: traindata = train set (Control+IFN) + test set Control; onlyin train on for ( to ).
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR
 export LC_ALL=C LC_NUMERIC=C
@@ -8,7 +10,7 @@ export LC_ALL=C LC_NUMERIC=C
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 TARGET_CELL_TYPES=( "B" "NK" )
 NUM_GENES="${NUM_GENES:-6998}"
-N_SAMPLES="${N_SAMPLES:-54}"
+
 NUM_RUNS=3
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
 METHOD_NAME="${METHOD_NAME:-mlp_ddpm_mlp}"
@@ -50,6 +52,7 @@ if [[ ! -f "${GLOBAL_CSV}" ]]; then
 fi
 
 for (( run=1; run<=NUM_RUNS; run++ )); do
+  export RUN_SEED=$(($run-1))
   echo
   echo "======================"
   echo " Run ${run}/${NUM_RUNS}  (scGen: train on CD4T+test_control, pair-only train)"

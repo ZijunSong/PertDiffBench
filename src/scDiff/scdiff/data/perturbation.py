@@ -254,7 +254,7 @@ def download_data(datadir='./data', dataset='pbmc'):
 class PerturbationBase(ABC):
     def __init__(self, datadir='data/fig2/task3_cross_species', dataset='pbmc', fname='task1_train_B_exp.h5ad', test_cell_types=None,
                  save_processed=True, splits={'train':0.9, 'valid':0.1}, post_cond_flag=True, force_split=False,
-                 ignore_cond_flag=False, normalize=True, return_raw=False, highly_variable=False, seed=10,
+                 ignore_cond_flag=False, normalize=True, return_raw=False, highly_variable=False, seed=0,
                  pretrained_gene_list=None, pretrained_gene_list_path=None, subset_flag=False, celltype_key=None):
         self.celltype_key = celltype_key if celltype_key is not None else 'Cell.Type'
         self.batch_key = 'batch'
@@ -336,7 +336,7 @@ class PerturbationBase(ABC):
             if self.subset_flag:
                 self.adata = self.adata[:, self.gene_list]
 
-    def _prepare_split(self, splits={'train':0.9, 'valid':0.1}, force_split=False, seed=10, 
+    def _prepare_split(self, splits={'train':0.9, 'valid':0.1}, force_split=False, seed=0, 
                        fname='Perturbation_processed.h5ad'):
         if not (
             'train_valid_split' in self.adata.obs.columns 

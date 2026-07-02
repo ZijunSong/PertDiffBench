@@ -3,6 +3,8 @@
 # Exit on error; treat unset vars as error; fail on pipe errors
 set -euo pipefail
 
+source "scripts/lib/max_n_samples.sh"
+
 # ======================== Config ========================
 # Path prefix; convention: checkpoints under CKPT_ROOT/highly_variable_gene_gradient/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}, logs under logs/highly_variable_gene_gradient/<method>
 ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
@@ -32,6 +34,8 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
   train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/${CELL_TYPE}_train_HVG_${gene_num}.h5ad"
   valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/${CELL_TYPE}_valid_HVG_${gene_num}.h5ad"
 
+    N_SAMPLES="$(max_n_samples_paired "${valid_data_path}")"
+
   # checkpoints and samples (same convention as ddpm_hvg.sh)
   save_dir_base="${CKPT_ROOT}/highly_variable_gene_gradient/squidiff/CD4T_hvg_${gene_num}"
   sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/squidiff_${gene_num}"
@@ -48,6 +52,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     echo "--- 3 Runs: (Train + Eval) for Genes=${gene_num} ---"
 
     for (( run=1; run<=NUM_RUNS; run++ )); do
+      export RUN_SEED=$(($run-1))
       echo
       echo "====================== RUN ${run}/${NUM_RUNS} ======================"
 
@@ -78,7 +83,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
         --train_data_path "${train_data_path}" \
         --gene_size "${gene_num}" \
         --output_dim "${gene_num}" \
-        --n_samples 278 \
+        --n_samples "${N_SAMPLES}" \
         --data_path "${valid_data_path}" \
         --out_h5ad "${sample_dir_run}/synthetic_ifn_run${run}.h5ad" 2>&1) || true
 

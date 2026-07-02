@@ -1,3 +1,4 @@
+source "scripts/lib/max_n_samples.sh"
 # python scripts/tools/fig2_task3_merge_csv.py \
 #     data/fig2/task3_cross_species/mouse_control_meta.csv \
 #     data/fig2/task3_cross_species/mouse_control_exp.csv \

@@ -2,6 +2,8 @@
 # DDPM (scRNA): same scGen-style combined setup as fig2_task2_extend_ddpm (uses preprocessed scgen_combined_*.h5ad).
 # Trains and evaluates separately for each leave-one-out fold x control fraction.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR
 export LC_ALL=C LC_NUMERIC=C
@@ -10,7 +12,7 @@ export LC_ALL=C LC_NUMERIC=C
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1}"
 NUM_GENES="${NUM_GENES:-6998}"
 # Eval pairs = min(#Control, #pert) on test h5ad; global minimum in task2+ is 259 (NK @ p0.5). Keep <=259.
-N_SAMPLES="${N_SAMPLES:-256}"
+
 NUM_RUNS=3
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
 METHOD_NAME="${METHOD_NAME:-scrna_ddpm_scrna}"
@@ -69,6 +71,7 @@ for ht in "${HOLDOUT_TYPES[@]}"; do
     echo "######################################################################"
 
     for (( run=1; run<=NUM_RUNS; run++ )); do
+      export RUN_SEED=$(($run-1))
       echo
       echo "======================"
       echo " Run ${run}/${NUM_RUNS}  ${ds_tag}"

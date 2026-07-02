@@ -30,14 +30,8 @@ from utils.metrics import (
 from src.diffusion_baselines.models.mlp_ddpm_mlp_diffusion import MLPDDPMMLP
 
 def main():
-    # Set random seeds for reproducibility across all relevant libraries
-    np.random.seed(0)
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(0)
-        # The following two lines are for fully reproducible results on GPU
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     parser = argparse.ArgumentParser(
         description="Evaluate MLP-DDPM-MLP baseline on scRNA-seq: generate perturbed from control and compute metrics"
@@ -55,7 +49,7 @@ def main():
     parser.add_argument(
         "-n", "--n_samples",
         type=int,
-        default=100,
+        default=0,
         help="Number of control cells to generate and evaluate per perturbation"
     )
     parser.add_argument(
@@ -104,7 +98,11 @@ def main():
         default="treatment_time",
         help="obs column for time labels when --time-conditioned"
     )
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     # 1) Load config (needed for data path and for time-conditioned delegate)
     cfg = OmegaConf.load(args.config)
@@ -164,6 +162,12 @@ def main():
     perturbations = adata.obs["perturbation_status"].unique().tolist()
     perturbations = [p for p in perturbations if p != "Control"]
     print(f"Found {len(perturbations)} perturbations to evaluate in test set: {perturbations}")
+
+    from utils.max_eval_samples import resolve_eval_n_samples
+    eval_h5ad = args.data_path or cfg.data.path
+    if args.n_samples is None or args.n_samples <= 0:
+        args.n_samples = resolve_eval_n_samples(eval_h5ad, 0, mode="multi_pert")
+        print(f"Using n_samples={args.n_samples} (max available for this setting)")
 
     # 3) Pre-evaluation check for n_samples
     print("\n--- Checking sample counts ---")

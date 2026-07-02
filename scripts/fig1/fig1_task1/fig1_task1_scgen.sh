@@ -25,16 +25,10 @@ CELL_TYPES=(
   'NK'
 )
 
-# n_samples per cell type
-declare -A SAMPLES_MAP=(
-  ['B']=110
-  ['CD4T']=278
-  ['CD8T']=53
-  ['CD14+Mono']=83
-  ['Dendritic']=55
-  ['FCGR3A+Mono']=132
-  ['NK']=54
-)
+# n_samples per cell type (max paired cells in valid set)
+source "scripts/lib/max_n_samples.sh"
+declare -A SAMPLES_MAP=()
+build_samples_map_from_valid_h5ad "${ROOT_DIR}" "${CELL_TYPES[@]}"
 
 mkdir -p "${LOGDIR}"
 
@@ -64,6 +58,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
     # NUM_RUNS runs: each writes to run{i} subdir
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       echo
       echo "======================"
       echo " Run ${i}/${NUM_RUNS} for ${cell_type}"

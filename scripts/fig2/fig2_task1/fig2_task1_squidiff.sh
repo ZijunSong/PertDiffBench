@@ -1,5 +1,7 @@
 #!/bin/bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 export PYTHONUNBUFFERED=1
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
@@ -9,7 +11,6 @@ SEEDS=( "123" "345" "567" )
 NUM_RUNS="${NUM_RUNS:-3}"
 GENE_SIZE="${GENE_SIZE:-3000}"
 OUTPUT_DIM="${OUTPUT_DIM:-3000}"
-N_SAMPLES="${N_SAMPLES:-100}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 
 LOGROOT="${LOGROOT:-logs/squidiff}" # only Python inside , and 
@@ -27,10 +28,13 @@ for seed in "${SEEDS[@]}"; do
   TRAIN_DATA="data/fig2/task1_unseen_pert/${dataset_name}_control_train.h5ad"
   TEST_DATA="data/fig2/task1_unseen_pert/${dataset_name}_control_test.h5ad"
 
+  N_SAMPLES="$(max_n_samples_paired "${TEST_DATA}")"
+
   # for statsevaloutput
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     # ---- directory ( run)----
     RUN_CKPT_DIR="${CKPT_ROOT}/${dataset_name}/run${i}"
     RUN_OUT_DIR="${SAMPLES_ROOT}/${dataset_name}/squidiff/run${i}"

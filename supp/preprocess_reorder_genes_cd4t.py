@@ -149,7 +149,7 @@ def main() -> None:
     )
     parser.add_argument("--cell-type", default="CD4T")
     parser.add_argument("--n-genes", type=int, default=1000)
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
         "--mode",
         choices=["shuffle", "cluster", "both"],

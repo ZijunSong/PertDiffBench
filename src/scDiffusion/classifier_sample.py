@@ -71,6 +71,12 @@ def save_data(all_cells, traj, data_dir):
 
 def main(cell_type=None, multi=False, inter=True, weight=[10,10]):
     args = create_argparser(cell_type or [0, 1], weight).parse_args()
+    import sys as _sys
+    _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if _repo_root not in _sys.path:
+        _sys.path.insert(0, _repo_root)
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
     if getattr(args, 'cell_type', None) is not None:
         cell_type = args.cell_type
     else:
@@ -105,6 +111,11 @@ def main(cell_type=None, multi=False, inter=True, weight=[10,10]):
             logger.log(f"Fig4/time-conditioned: num_class={args.num_class} from label encoder")
     if cell_type is None:
         cell_type = [0, 1]
+
+    from utils.max_eval_samples import resolve_eval_n_samples
+    if getattr(args, "init_cell_path", None) and os.path.exists(args.init_cell_path):
+        args.num_samples = resolve_eval_n_samples(args.init_cell_path, args.num_samples)
+        logger.log(f"Using num_samples={args.num_samples} (max paired available in test set).")
 
     logger.log("creating model and diffusion...")
     model, diffusion = create_model_and_diffusion(
@@ -406,11 +417,6 @@ def main(cell_type=None, multi=False, inter=True, weight=[10,10]):
         if max_eval < 1:
             raise ValueError("Not enough cells for evaluation (control, stimulated, or predicted).")
         n_eval = min(args.num_samples, max_eval)
-        if n_eval < args.num_samples:
-            logger.log(
-                f"Warning: num_samples {args.num_samples} exceeds available ({max_eval}); "
-                f"using {n_eval} for evaluation."
-            )
         if pred_X.shape[0] > n_eval:
             pred_X = pred_X[:n_eval]
 
@@ -588,13 +594,14 @@ def create_argparser(celltype=[0], weight=[10,10]):
     parser.add_argument("--label_encoder_path", type=str, default="", help="Path to label_encoder.npz (from classifier train)")
     parser.add_argument("--drug_key", type=str, default="perturbation")
     parser.add_argument("--dose_key", type=str, default="dose_value")
-    parser.add_argument("--num_samples", type=int, default=6)
+    parser.add_argument("--num_samples", type=int, default=0, help="Cells to generate/evaluate (0 = max paired in test)")
     parser.add_argument("--out_h5ad", type=str, default="results/scdiffusion/synthetic_prediction.h5ad")
     parser.add_argument('--umap_plot', type=str, default="results/scdiffusion/umap_comparison.png")
     parser.add_argument("--label_key", type=str, default="perturbation_status", help="obs column for labels (e.g. treatment_time for fig4)")
     parser.add_argument("--cell_type", type=int, nargs=2, default=None, help="For interpolation: two class indices (e.g. 1 2 for 2h and 8h)")
     parser.add_argument("--weight", type=float, nargs=2, default=None, help="For interpolation: two weights (e.g. 5 5 for 4h)")
     parser.add_argument("--target_time_label", type=str, default="", help="When label_key=treatment_time: value for obs (e.g. 4h or 6h)")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     add_dict_to_argparser(parser, defaults)
     return parser
 

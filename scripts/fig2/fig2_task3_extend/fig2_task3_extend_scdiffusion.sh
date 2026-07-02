@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Leave-one-out: hold one species for test, merge the rest for training.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 trap 'echo "[ERROR] command failed — abort." >&2' ERR
 export LC_ALL=C LC_NUMERIC=C
@@ -77,6 +79,7 @@ for test_species in "${ALL_SPECIES[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo
     echo "======================"
     echo " Run ${i}/${NUM_RUNS} for leave1out_${test_species}"
@@ -121,7 +124,7 @@ for test_species in "${ALL_SPECIES[@]}"; do
     pushd src/scDiffusion >/dev/null
     run_out="$(
       python classifier_sample.py \
-        --num_samples 100 \
+        --num_samples "${N_SAMPLES}" \
         --train-data-path "${TRAIN_H5}" \
         --model_path "${diff_ckpt}" \
         --classifier_path "${cls_ckpt}" \

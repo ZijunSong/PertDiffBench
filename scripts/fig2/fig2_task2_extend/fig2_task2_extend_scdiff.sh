@@ -4,6 +4,8 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # -------------------- Configuration --------------------
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 LOGDIR="${LOGDIR:-logs}"
@@ -51,12 +53,13 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
   data_settings+=("data.params.train.params.fname=${TRAIN_FNAME}")
   data_settings+=("data.params.test.params.dataset=${dataset_base}")
   data_settings+=("data.params.test.params.fname=${test_fname}")
-  data_settings+=("model.params.generation_kwargs.n_samples=1000")
+  data_settings+=("model.params.generation_kwargs.n_samples=${N_SAMPLES}")
 
   {
     all_outputs=""
 
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       run_tag="run${i}"
       run_postfix="perturbation_${NAME}_${run_tag}"
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 IFS=$'\n\t'
 
 # ----------------- Config -----------------
@@ -10,12 +11,9 @@ DATASETS=(
   'B2M_control_ifn'
 )
 
-declare -A SAMPLE_SIZES=(
-  ["ACTA2_control_coculture"]="82"
-  ["ACTA2_control_ifn"]="82"
-  ["B2M_control_coculture"]="74"
-  ["B2M_control_ifn"]="73"
-)
+declare -A SAMPLE_SIZES=()
+source "scripts/lib/max_n_samples.sh"
+# SAMPLE_SIZES filled per dataset from test h5ad in loop
 
 NUM_RUNS="${NUM_RUNS:-3}" # and : canvia amount 
 CELLTYPE_TO_PREDICT="${CELLTYPE_TO_PREDICT:-melanocytes}"
@@ -31,8 +29,7 @@ for dataset in "${DATASETS[@]}"; do
 
   echo "CSV_ROOT absolute path: $(realpath "$CSV_ROOT")"
 
-  n_samples=${SAMPLE_SIZES[$dataset]}
-  CKPT_ROOT="checkpoints/scgen/task4/${dataset}"
+    CKPT_ROOT="checkpoints/scgen/task4/${dataset}"
   mkdir -p "${CKPT_ROOT}"
 
   echo "######################################################################"
@@ -41,6 +38,7 @@ for dataset in "${DATASETS[@]}"; do
 
   train="data/fig1/task4/task4_${dataset}_train.h5ad"
   test="data/fig1/task4/task4_${dataset}_test.h5ad"
+  n_samples="$(max_n_samples_paired "${test}")"
   model_dir="${CKPT_ROOT}/${dataset}"
   mkdir -p "${model_dir}"
 
@@ -51,6 +49,7 @@ for dataset in "${DATASETS[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running iteration ${i}/${NUM_RUNS} for ${dataset} ---"
 
     log_file="${LOG_ROOT}/${dataset}_run${i}.log"

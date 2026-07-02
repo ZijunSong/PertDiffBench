@@ -3,6 +3,8 @@
 set -e
 trap "echo ERROR && exit 1" ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # --------------------
 # Configuration
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
@@ -50,6 +52,7 @@ for dataset in "${DATASETS[@]}"; do
 
   # (train+eval)
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running iteration $i/$NUM_RUNS for $dataset ---"
 
     output=$(python src/scDiff/main.py \

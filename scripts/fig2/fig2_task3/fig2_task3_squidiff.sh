@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 # Python stdout/stderr ( )
@@ -9,7 +11,7 @@ export PYTHONUNBUFFERED=1
 TARGET_SPECIES=( "pig" "rabbit" "rat" )
 GENE_SIZE="${GENE_SIZE:-6619}"
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-100}"   # sample_squidiff.py  --n_samples
+   # sample_squidiff.py  --n_samples
 
 echo "Changing directory to src/Squidiff..."
 pushd src/Squidiff >/dev/null
@@ -48,6 +50,7 @@ for species in "${TARGET_SPECIES[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running sampling iteration ${i}/${NUM_RUNS} for ${species} ---"
 
     # eval : when to , output ininside amountfor after parse

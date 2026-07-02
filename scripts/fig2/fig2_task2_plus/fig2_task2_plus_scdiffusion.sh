@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # scDiffusion: for each leave-one-out x control fraction, train VAE / diffusion / classifier once, then NUM_RUNS sampling runs.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 # Default single-GPU: device 5 (override with CUDA_VISIBLE_DEVICES)
@@ -8,7 +10,7 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-3}"
 
 NUM_GENES="${NUM_GENES:-6998}"
 # Sampling/eval uses test controls; min usable pairs in task2+ test sets is 259 (NK @ p0.5). Keep <=259.
-NUM_SAMPLES="${NUM_SAMPLES:-256}"
+
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
 
@@ -93,6 +95,7 @@ for ht in "${HOLDOUT_TYPES[@]}"; do
 
     echo "### Step 4: Sampling (${NUM_RUNS} runs) | ${ds_tag}"
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       pushd src/scDiffusion >/dev/null
       run_out=""
       run_out=$(python classifier_sample.py \

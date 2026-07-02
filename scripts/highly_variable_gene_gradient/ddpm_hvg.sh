@@ -3,6 +3,8 @@
 # Exit immediately if a command fails
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # --- Configuration Area ---
 # Path prefix for data/samples (set for different servers, e.g. /data/ppnm/data/PertDiffBench/)
 # Path convention: data: ${ROOT_DIR}data/highly_variable_gene_gradient/; checkpoints: ${CKPT_ROOT}/highly_variable_gene_gradient/<method>/CD4T_hvg_${gene_num}; samples: ${ROOT_DIR}samples/highly_variable_gene_gradient/<method>_${gene_num}
@@ -33,6 +35,8 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
     valid_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
 
+    N_SAMPLES="$(max_n_samples_paired "${valid_data_path}")"
+
     save_dir_base="${CKPT_ROOT}/highly_variable_gene_gradient/ddpm/CD4T_hvg_${gene_num}"
     sample_dir_base="${ROOT_DIR}samples/highly_variable_gene_gradient/scrna_ddpm_scrna_${gene_num}"
     mkdir -p "$save_dir_base" "$sample_dir_base"
@@ -42,6 +46,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
 
     # --- Run (Train + Sample) cycles ---
     for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
+      export RUN_SEED=$(($run_idx-1))
         echo -e "\n======================"
         echo -e " Run ${run_idx}/${NUM_RUNS} for Gene Count ${gene_num}"
         echo -e "======================"
@@ -68,7 +73,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
             --data-path "$valid_data_path" \
             --ckpt "$checkpoint_file" \
             --out_h5ad "${sample_dir_run}/synthetic_ifn_run${run_idx}.h5ad" \
-            --n_samples 278 \
+            --n_samples "${N_SAMPLES}" \
             --gene-nums "$gene_num" 2>&1) || true
 
         echo "$output"

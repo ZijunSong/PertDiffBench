@@ -26,7 +26,11 @@ def main():
                         help="scGen-style: build pairs only where this obs column equals pair-only-obs-value")
     parser.add_argument("--pair-only-obs-value", type=str, default=None,
                         help="scGen-style: use with pair-only-obs-key (e.g. 'train')")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
     cfg = OmegaConf.load(args.config)
 
     if args.data_path:

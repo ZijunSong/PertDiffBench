@@ -111,7 +111,7 @@ def parse_arguments():
 
     # AE arguments                                             
     parser.add_argument("--local_rank", type=int, default=0)  
-    parser.add_argument("--split_seed", type=int, default=1234)
+    parser.add_argument("--split_seed", type=int, default=0)
     parser.add_argument("--num_genes", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--hparams", type=str, default="")
@@ -130,8 +130,14 @@ def parse_arguments():
 
 
 if __name__ == "__main__":
-    seed_everything(1234)
+    import sys
+    _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    if _repo_root not in sys.path:
+        sys.path.insert(0, _repo_root)
+    from utils.seed import resolve_seed, set_seed
+
     args = parse_arguments()
+    set_seed(resolve_seed(args["seed"]))
     print("Parsed arguments:", args)
 
     # Check if the final trained model already exists.

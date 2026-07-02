@@ -19,7 +19,7 @@ class NoiseTask(BaseTask):
         test_h5ad: str | Path,
         output_dir: str | Path = "runs/noise",
         gene_nums: int = 6998,
-        n_samples: int = 278,
+        n_samples: int = 0,
         num_runs: int = 3,
         noise_type: str = "gaussian",
         noise_level: Optional[str] = None,

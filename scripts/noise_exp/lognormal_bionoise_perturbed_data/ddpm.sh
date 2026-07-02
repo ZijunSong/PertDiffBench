@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -33,6 +35,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     # ---- Dynamic Paths (data) ----
     train_data_path="${BASE_DATA_DIR}/task1_train_${cell_type}_exp_lognorm_cv_${noise_level}.h5ad"
     valid_data_path="${BASE_DATA_DIR}/task1_valid_${cell_type}_exp_lognorm_cv_${noise_level}.h5ad"
+    N_SAMPLES="$(max_n_samples_paired "${valid_data_path}")"
 
     # group_suffix cell_type + noise 
     group_suffix="${cell_type}_noise_${noise_level}"
@@ -52,6 +55,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     pattern_re='Perturbation Discrimination Score \(PDS\)|Mean Absolute Error \(MAE\)|Differential Expression Score \(DES\)|^E-Distance:|Maximum Mean Discrepancy \(MMD\)|R-squared \(R2\)|Pearson \(all genes\)|Pearson Delta \(all genes\)|Pearson Delta \(top 20 DE genes\)|Pearson Delta \(top 50 DE genes\)|Pearson Delta \(top 100 DE genes\)'
 
     for (( run_id=1; run_id<=NUM_RUNS; run_id++ )); do
+      export RUN_SEED=$(($run_id-1))
       echo -e "\n================ Run ${run_id}/${NUM_RUNS} ================"
 
       # each run owndirectory, still in directoryunder 
@@ -86,7 +90,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           --out_h5ad "${run_samples_dir}/synthetic_ifn_run_${run_id}.h5ad" \
           --gene-nums "${NUM_GENES}" \
           --umap_plot "${run_samples_dir}/umap_comparison_run_${run_id}.png" \
-          --n_samples "${N_SAMPLES:-6}" \
+          --n_samples "${N_SAMPLES}" \
           2>&1
       )"
       status=$?

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 trap 'echo "ERROR: a command failed at line $LINENO (last: $BASH_COMMAND). Exiting." >&2' ERR
 export LC_ALL=C LC_NUMERIC=C
@@ -64,6 +66,8 @@ for train_path in "${TRAIN_FILES[@]}"; do
     test_fname="${dataset_base}_test__plus_control.h5ad"
     train_ds="${dataset_base}_train"
     test_ds="${dataset_base}_test"
+
+  N_SAMPLES="$(max_n_samples_paired "data/fig2/task1_unseen_pert/${test_ds}.h5ad")"
   else
     dataset_base="${train_fname%_control_train.h5ad}"
     test_fname="${dataset_base}_control_test.h5ad"
@@ -109,6 +113,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
 
     # -------- Run 1..NUM_RUNS --------
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       run_tag="run${i}"
       run_postfix="perturbation_${NAME}_${run_tag}"
 
@@ -149,7 +154,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
           data.params.test.params.allow_custom_dataset=true \
           data.params.test.params.celltype_key=celltype \
           data.params.test.params.highly_variable=false \
-          model.params.generation_kwargs.n_samples=1000 \
+          model.params.generation_kwargs.n_samples=${N_SAMPLES} \
           "${data_settings[@]}" 2>&1
       ) || true
 

@@ -2,11 +2,12 @@
 # Three (train+eval) runs per dataset; write logs and CSV metrics
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # ================= Configuration =================
 LOGDIR=${LOGDIR:-logs}
 NUM_RUNS=${NUM_RUNS:-3}
 METHOD_NAME=${METHOD_NAME:-scGen}   # CSV method column name
-N_SAMPLES=${N_SAMPLES:-6}
 
 # ================= Datasets ======================
 DATASETS=('random1' 'random2' 'random3')
@@ -24,6 +25,8 @@ for dataset in "${DATASETS[@]}"; do
   DATASET_LOG="${RUNLOG_ROOT}/${dataset}.log"
   MODEL_DIR="checkpoints/scgen/${dataset}"
   OUT_BASE="samples/fig1/task2/${dataset}/scgen/"
+  test_data_path="data/fig1/task2/task2_test_${dataset}_bulkRNAseq_exp.h5ad"
+  N_SAMPLES="$(max_n_samples_paired "${test_data_path}")"
   mkdir -p "${MODEL_DIR}" "${OUT_BASE}"
 
   echo -e "\n==== $(date '+%F %T') | Begin dataset=${dataset} ====\n" | tee -a "${DATASET_LOG}"
@@ -31,6 +34,7 @@ for dataset in "${DATASETS[@]}"; do
   all_outputs=""
 
   for ((i=1; i<=NUM_RUNS; i++)); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running iteration ${i}/${NUM_RUNS} for ${dataset} ---" | tee -a "${DATASET_LOG}"
 
     pred_h5ad="${OUT_BASE}/${dataset}_pred_${i}.h5ad"

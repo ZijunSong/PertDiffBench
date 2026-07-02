@@ -24,7 +24,7 @@ class MoaSameTask(BaseTask):
         data_root: str | Path,
         output_dir: str | Path = "runs/moa_same",
         gene_nums: int = 3000,
-        n_samples: int = 100,
+        n_samples: int = 0,
         num_runs: int = 3,
         use_drug_structure: bool = True,
         moa_name: str | None = None,

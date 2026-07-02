@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Leave-one-out: hold one species for test, merge the rest for training.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -10,7 +12,7 @@ ALL_SPECIES=( "mouse" "pig" "rabbit" "rat" )
 TARGET_SPECIES=( "rat" )   # e.g. TARGET_SPECIES=( "rat" ) for rat only
 
 NUM_GENES="${NUM_GENES:-6619}"
-N_SAMPLES="${N_SAMPLES:-1000}"
+
 NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
 METHOD_NAME="${METHOD_NAME:-scRNA-DDPM-scRNA}"
@@ -80,6 +82,7 @@ for test_species in "${RUN_SPECIES[@]}"; do
   echo "###   Step 2: Evaluating on target: ${test_species} (${NUM_RUNS} runs)"
   ALL_OUTPUTS=""
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo "[$(date '+%F %T')] >>> run${i}: EVAL (${test_species}_control_ifn)"
     EVAL_TMP="$(mktemp)"
     # Pass --umap_plot "" explicitly so Python skips UMAP; otherwise default path may trigger UMAP and OOM.

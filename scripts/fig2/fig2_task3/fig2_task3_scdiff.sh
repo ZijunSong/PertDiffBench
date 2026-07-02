@@ -2,13 +2,15 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # -------------------- Config --------------------
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 LOGDIR=${LOGDIR:-logs}
 NAME="${NAME:-v7.5}"
 OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-1000}"
+
 METHOD_NAME="${METHOD_NAME:-scDiff}"
 
 DATA_ROOT="data/fig2/task3_cross_species"
@@ -45,6 +47,7 @@ for species in "${TARGET_SPECIES[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Run ${i}/${NUM_RUNS} for mouse_to_${species} ---"
     if ! EVAL_OUTPUT=$(python src/scDiff/main.py \
           --custom_data_path "${DATA_ROOT}" \

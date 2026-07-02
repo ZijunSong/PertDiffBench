@@ -15,7 +15,7 @@ class TaskSpec:
     test_h5ad: Path
     output_dir: Path
     gene_nums: int = 1000
-    n_samples: int = 100
+    n_samples: int = 0
     num_runs: int = 3
     subtask_id: str = "default"
 

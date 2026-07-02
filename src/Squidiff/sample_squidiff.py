@@ -100,16 +100,6 @@ class sampler:
         return sample_interp
 
 def main():
-    # Set random seeds for reproducibility across all relevant libraries
-    np.random.seed(0)
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(0)
-        # The following two lines are for fully reproducible results on GPU
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-    # --- Argument Parsing ---
     parser = argparse.ArgumentParser(description="Run Squidiff perturbation prediction and evaluation.")
     parser.add_argument('--model_path', type=str, default='pertbench_squidiff/model.pt')
     parser.add_argument('--data_path', type=str, default='../../data/scrna_data/scrna_positive.h5ad')
@@ -117,11 +107,18 @@ def main():
     parser.add_argument('--gene_size', type=int, default=2000)
     parser.add_argument('--output_dim', type=int, default=2000)
     parser.add_argument('--use_drug_structure', action='store_true')
-    parser.add_argument('--n_samples', type=int, default=100)
+    parser.add_argument('--n_samples', type=int, default=0, help='Eval cells (0 = use all available paired cells)')
     parser.add_argument('--out_h5ad', type=str, default="samples/squidiff/synthetic_all_perts.h5ad")
     parser.add_argument('--umap_plot', type=str, default="samples/squidiff/umap_comparison.png")
     parser.add_argument('--control_data_path', type=str, default=None, help="Path to unified control h5ad (optional, for compatibility with fig2 scripts).")
+    parser.add_argument('--seed', type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
+    if torch.cuda.is_available():
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     # --- Model Initialization ---
     device = dist_util.dev()
@@ -133,6 +130,15 @@ def main():
     adata = sc.read_h5ad(args.data_path)
     if hasattr(adata.X, 'toarray'):
         adata.X = adata.X.toarray()
+
+    import sys as _sys
+    _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if _repo_root not in _sys.path:
+        _sys.path.insert(0, _repo_root)
+    from utils.max_eval_samples import resolve_eval_n_samples
+    args.n_samples = resolve_eval_n_samples(args.data_path, args.n_samples, mode="multi_pert")
+    print(f"Using n_samples={args.n_samples} for evaluation.")
+
     ctrl_mask = adata.obs['perturbation_status'] == 'Control'
     ctrl_ids = adata.obs_names[ctrl_mask].tolist()
 

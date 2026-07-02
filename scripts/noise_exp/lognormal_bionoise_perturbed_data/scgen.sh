@@ -3,6 +3,8 @@
 # Exit immediately if any command fails.
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # -------------------- Config --------------------
 CELL_TYPES=(
   'CD4T'
@@ -48,6 +50,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     all_outputs=""
 
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       echo -e "\n--- Running $cell_type (noise: $noise_level) run $i/$NUM_RUNS ---"
 
       # standaloneoutput/ directory, in directoryunder 
@@ -62,7 +65,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           --model_save_path "$model_save_dir" \
           --out_h5ad "${samples_dir}/pred_${i}.h5ad" \
           --umap_plot "${samples_dir}/umap_comparison_${i}.png" \
-          --n_samples 6 \
+          --n_samples "${N_SAMPLES}" \
           --celltype_to_predict "$cell_type" 2>&1) || true
 
       echo "$output"

@@ -27,10 +27,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+from utils.seed import resolve_seed, set_seed
+
 def main():
     args = create_argparser().parse_args()
-
-    setup_seed(1234)
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     dist_util.setup_dist()
     logger.configure()
@@ -275,6 +276,7 @@ def create_argparser():
     parser.add_argument("--drug_key", type=str, default="perturbation", help="obs column for drug name")
     parser.add_argument("--dose_key", type=str, default="dose_value", help="obs column for dose")
     parser.add_argument("--label_key", type=str, default="perturbation_status", help="obs column for classifier labels (e.g. treatment_time for fig4)")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     return parser
 
 def setup_seed(seed):

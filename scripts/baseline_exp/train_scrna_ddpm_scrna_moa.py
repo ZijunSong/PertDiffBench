@@ -28,7 +28,11 @@ def main():
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=None)
     parser.add_argument("--ckpt-save-interval", type=int, default=None)
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     cfg = OmegaConf.load(args.config)
     cfg.data.path = args.data_path

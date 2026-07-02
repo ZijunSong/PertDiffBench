@@ -15,6 +15,7 @@ mkdir -p "${SAVE_BASE}" "${SAMPLE_DIR}"
 
 all_outputs=""
 for (( i=1; i<=NUM_RUNS; i++ )); do
+  export RUN_SEED=$(($i-1))
   echo "=== Run ${i}/${NUM_RUNS} | ${GENE_ORDER} | ${METHOD_NAME} ==="
   save_dir_run="${SAVE_BASE}/run${i}"
   sample_dir_run="${SAMPLE_DIR}/run${i}"

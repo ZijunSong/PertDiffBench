@@ -4,11 +4,12 @@
 set -e
 trap "echo ERROR && exit 1" ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # ---------- ----------
 NUM_GENES=1000
 NUM_RUNS=3
 METHOD_NAME="scGen" # CSV firstcols name
-N_SAMPLES=100 # and callstay consistent
 
 DATASETS=(
   'mix2'
@@ -40,6 +41,7 @@ for dataset in "${DATASETS[@]}"; do
 
   # ---------- ----------
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Running iteration ${i}/${NUM_RUNS} for ${dataset} ---" | tee -a "${LOG_FILE}"
 
     # Ensureoutputand directoryexist

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 CELL_TYPE="CD4T"
 NUM_RUNS=3
 METHOD_NAME="scimilarity_ddpm"
@@ -33,6 +35,7 @@ echo "######################################################################"
 ALL_OUTPUTS=""
 
 for (( run=1; run<=NUM_RUNS; run++ )); do
+  export RUN_SEED=$(($run-1))
   echo
   echo "======================================================================"
   echo ">>> Run ${run}/${NUM_RUNS} for ${CELL_TYPE}"

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Leave-one-out: hold one species for test, merge the rest for training (cross-species generalization).
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -8,7 +10,7 @@ export LC_ALL=C LC_NUMERIC=C
 ALL_SPECIES=( "mouse" "pig" "rabbit" "rat" )
 
 NUM_GENES="${NUM_GENES:-6619}"
-N_SAMPLES="${N_SAMPLES:-1000}"
+
 NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
 METHOD_NAME="${METHOD_NAME:-MLP-DDPM-MLP}"
@@ -67,6 +69,7 @@ for test_species in "${ALL_SPECIES[@]}"; do
   echo "###   Step 2: Evaluating on target: ${test_species} (${NUM_RUNS} runs)"
   ALL_OUTPUTS=""
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     echo "[$(date '+%F %T')] >>> ${run_tag}: EVAL (${test_species}_control_ifn)"
     if ! EVAL_OUTPUT=$(python scripts/baseline_exp/eval_mlp_ddpm_mlp.py \

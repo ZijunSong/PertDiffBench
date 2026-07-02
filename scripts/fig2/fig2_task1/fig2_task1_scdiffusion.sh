@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR
 export LC_ALL=C LC_NUMERIC=C
@@ -47,6 +49,7 @@ for seed in "${SEEDS[@]}"; do
   dataset_base="seed${seed}"
   train_h5="data/fig2/task1_unseen_pert/${dataset_base}_control_train.h5ad"
   valid_h5="data/fig2/task1_unseen_pert/${dataset_base}_control_test.h5ad"
+  N_SAMPLES="$(max_n_samples_paired "${valid_h5}")"
 
   echo "######################################################################"
   echo "###   Full pipeline for ${dataset_base} (${NUM_RUNS} runs, ${NUM_GENES} HVG)"
@@ -63,6 +66,7 @@ for seed in "${SEEDS[@]}"; do
 
   # ============ (train+eval) ============
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo
     echo "======================"
     echo " Run ${i}/${NUM_RUNS} for ${dataset_base}"
@@ -113,7 +117,7 @@ for seed in "${SEEDS[@]}"; do
     pushd src/scDiffusion >/dev/null
     run_out="$(
       python classifier_sample.py \
-        --num_samples 100 \
+        --num_samples "${N_SAMPLES}" \
         --train-data-path "../../${train_h5}" \
         --model_path "../../${diff_ckpt}" \
         --classifier_path "../../${cls_ckpt}" \

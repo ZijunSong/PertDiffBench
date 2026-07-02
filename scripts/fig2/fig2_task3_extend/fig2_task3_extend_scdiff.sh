@@ -3,13 +3,15 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 DATA_ROOT="${DATA_ROOT:-/data/ppnm/data/PertDiffBench/data/fig2_task3_cross_species}"
 CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 LOGDIR="${LOGDIR:-${CHECKPOINT_ROOT}/fig2/task3_cross_species}"
 NAME="${NAME:-v7.5}"
 OFFLINE_SETTINGS="${OFFLINE_SETTINGS:---wandb_offline t}"
 NUM_RUNS="${NUM_RUNS:-3}"
-N_SAMPLES="${N_SAMPLES:-1000}"
+
 # and fig2_task1_scdiff_moa_diff.sh stay consistent, evalwhen OOM (E-Distance/MMD in utils/metrics.py )
 BATCH_SIZE="${BATCH_SIZE:-3072}"
 NUM_WORKERS="${NUM_WORKERS:-0}"
@@ -79,6 +81,7 @@ for test_species in ${TARGET_SPECIES}; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Run ${i}/${NUM_RUNS} for leave1out_${test_species} ---"
     if ! EVAL_OUTPUT=$(python src/scDiff/main.py \
           --custom_data_path "${DATA_ROOT}" \

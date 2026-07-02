@@ -3,6 +3,8 @@
 # Exit immediately if a command fails.
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # --- Configuration ---
 # Path prefix; convention: checkpoints under CKPT_ROOT/highly_variable_gene_gradient/<method>/CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
 ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
@@ -20,6 +22,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
 
     train_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_train_HVG_${gene_num}.h5ad"
     test_data_path="${ROOT_DIR}data/highly_variable_gene_gradient/CD4T_valid_HVG_${gene_num}.h5ad"
+    N_SAMPLES="$(max_n_samples_paired "${test_data_path}")"
     cell_type='CD4T'
 
     # checkpoints and samples (same convention as ddpm_hvg.sh)
@@ -32,16 +35,20 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     # --- (Train + Eval) x NUM_RUNS ---
     echo -e "\n--- Running Training and Evaluation (Gene Count: $gene_num, Total Runs: $NUM_RUNS) ---"
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
         echo -e "\n--- Now running iteration $i/$NUM_RUNS ---"
 
         model_save_path="${save_dir_base}/run${i}"
-        mkdir -p "${model_save_path}"
+        sample_dir_run="${sample_dir_base}/run${i}"
+        mkdir -p "${model_save_path}" "${sample_dir_run}"
 
         output=$(python scripts/scGen_eval.py \
             --train_data_path "$train_data_path" \
             --test_data_path "$test_data_path" \
             --model_save_path "$model_save_path" \
-            --n_samples 278 \
+            --out_h5ad "${sample_dir_run}/synthetic_ifn.h5ad" \
+            --umap_plot "${sample_dir_run}/umap_comparison.png" \
+            --n_samples "${N_SAMPLES}" \
             --celltype_to_predict 'CD4T' 2>&1) || true
 
         echo "$output"

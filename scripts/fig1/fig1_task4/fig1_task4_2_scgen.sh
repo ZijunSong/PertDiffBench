@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
 # ------------------------- Config -------------------------
 PREFIXES=( "ACTA2" "B2M" )
 
-declare -A SAMPLE_SIZES=(
-  ["ACTA2"]="408"
-  ["B2M"]="367"
-)
+declare -A SAMPLE_SIZES=()
+source "scripts/lib/max_n_samples.sh"
+# SAMPLE_SIZES filled per dataset from test h5ad in loop
 
 NUM_RUNS="${NUM_RUNS:-3}" # train+eval count
 METHOD_NAME="${METHOD_NAME:-scGen}" # CSV name
@@ -17,11 +17,11 @@ GENE_NUMS="${GENE_NUMS:-}" # scGen mustgenecountcan , else empty
 
 # ------------------------- Main ---------------------------
 for prefix in "${PREFIXES[@]}"; do
-  n_samples="${SAMPLE_SIZES[$prefix]}"
-
+  
   # for: trainusing control->ifn; evalin control->coculture
   train_dataset="task4_${prefix}_control_to_ifn"
   eval_dataset="task4_${prefix}_control_to_coculture"
+  n_samples="$(max_n_samples_paired "data/fig1/task4/${eval_dataset}.h5ad")"
 
   # directory 
   LOG_ROOT="logs/fig1/task4_2/${eval_dataset}/scgen"
@@ -40,6 +40,7 @@ for prefix in "${PREFIXES[@]}"; do
   # -------------------- Run 1..NUM_RUNS (each run train+eval) --------------------
   ALL_OUTPUTS=""
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     run_dir="${OUT_ROOT}/${run_tag}"
     mkdir -p "$run_dir"

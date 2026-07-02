@@ -419,9 +419,9 @@ def compute_r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
         y_pred = y_pred[slices]
 
         warnings.warn(
- f"Input shape mismatch: y_true {y_true.shape}, y_pred {y_pred.shape}."
- f"Cropped both to common shape {common_shape}."
-            UserWarning
+            f"Input shape mismatch: y_true {y_true.shape}, y_pred {y_pred.shape}. "
+            f"Cropped both to common shape {common_shape}.",
+            UserWarning,
         )
     if y_true.size == 0:
         warnings.warn("Input arrays are empty. Returning nan.", UserWarning)

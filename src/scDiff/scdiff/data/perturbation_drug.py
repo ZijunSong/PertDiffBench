@@ -64,7 +64,7 @@ class PerturbationDrugBase(PerturbationBase):
     def __init__(self, datadir='./data', dataset='pbmc', fname='pbmc_processed.h5ad',
                  test_cell_types=None, save_processed=True, splits={'train': 0.9, 'valid': 0.1},
                  post_cond_flag=True, force_split=False, ignore_cond_flag=False, normalize=True,
-                 return_raw=False, highly_variable=True, seed=10, pretrained_gene_list=None,
+                 return_raw=False, highly_variable=True, seed=0, pretrained_gene_list=None,
                  pretrained_gene_list_path=None, subset_flag=False,
                  use_drug_cond=False, drug_key='perturbation', dose_key='dose_value',
                  dose_n_bins=5, ctrl_drug_value='control', ctrl_dose_value=0.0,

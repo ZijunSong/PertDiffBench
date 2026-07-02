@@ -15,7 +15,7 @@ class KnownConditionTask(BaseTask):
         test_h5ad: str | Path,
         output_dir: str | Path = "runs/known_condition",
         gene_nums: int = 1000,
-        n_samples: int = 100,
+        n_samples: int = 0,
         num_runs: int = 3,
         squidiff_train_once: bool = True,
         **_,

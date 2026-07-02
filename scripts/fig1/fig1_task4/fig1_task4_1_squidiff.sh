@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 IFS=$'\n\t'
 
 # ====================== Config ======================
@@ -12,12 +13,9 @@ declare -A DATASETS=(
 )
 
 # data -> eval rowscount
-declare -A SAMPLE_SIZES=(
-  ["ACTA2_control_coculture"]="82"
-  ["ACTA2_control_ifn"]="82"
-  ["B2M_control_coculture"]="74"
-  ["B2M_control_ifn"]="73"
-)
+declare -A SAMPLE_SIZES=()
+source "scripts/lib/max_n_samples.sh"
+# SAMPLE_SIZES filled per dataset from test h5ad in loop
 
 NUM_RUNS="${NUM_RUNS:-3}" # eval count (canusing amount )
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
@@ -28,8 +26,7 @@ METHOD_NAME="${METHOD_NAME:-Squidiff}" # and : CSV name
 
 for dataset in "${!DATASETS[@]}"; do
   gene_size="${DATASETS[$dataset]}"
-  n_samples="${SAMPLE_SIZES[$dataset]}"
-
+  
   # directory ( fig1/task4_1 level)
   LOG_ROOT="logs/fig1/task4_1/${dataset}/squidiff"
   CSV_ROOT="samples/fig1/task4_1/${dataset}/squidiff"
@@ -39,6 +36,7 @@ for dataset in "${!DATASETS[@]}"; do
   CKPT_DIR="checkpoints/squidiff/task4/${dataset}"
   TRAIN_H5="data/fig1/task4/task4_${dataset}_train.h5ad"
   TEST_H5="data/fig1/task4/task4_${dataset}_test.h5ad"
+  n_samples="$(max_n_samples_paired "${TEST_H5}")"
   MODEL_PT="${CKPT_DIR}/model.pt"
 
   mkdir -p "${LOG_ROOT}" "${CSV_ROOT}" "${SAMPLES_DIR}" "${CKPT_DIR}"
@@ -64,6 +62,7 @@ for dataset in "${!DATASETS[@]}"; do
   ALL_OUTPUTS="" # ✅ alleval output, AWK parse
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Eval ${i}/${NUM_RUNS} for ${dataset} ---"
     log_file="${LOG_ROOT}/${dataset}_run${i}.log"
     out_h5ad="${SAMPLES_DIR}/${dataset}_pred_${i}.h5ad"

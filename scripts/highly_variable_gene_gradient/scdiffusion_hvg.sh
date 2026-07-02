@@ -3,6 +3,8 @@
 # Exit immediately if a command fails
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # ===== Configuration =====
 # Path prefix; convention: checkpoints under CKPT_ROOT/highly_variable_gene_gradient/scdiffusion/.../CD4T_hvg_${gene_num}, samples under samples/highly_variable_gene_gradient/<method>_${gene_num}
 ROOT_DIR="${ROOT_DIR:-/data/ppnm/data/PertDiffBench/}"
@@ -11,7 +13,7 @@ CKPT_ROOT="${CKPT_ROOT:-/data/ppnm/checkpoints/PertDiffBench/checkpoints}"
 ANNOTATION_MODEL_DIR="${ANNOTATION_MODEL_DIR:-/data/ppnm/checkpoints/PertDiffBench/checkpoints/annotation_model_v1}"
 
 # List of gene numbers
-GENE_NUMS_LIST=(3000 2000 1000)
+GENE_NUMS_LIST=(6998 6000 5000 4000 3000 2000 1000)
 # Number of (train+eval) repetitions
 NUM_RUNS=3
 # Method name (first column in CSV)
@@ -45,6 +47,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     cd src/scDiffusion/VAE
 
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
         echo -e "\n======================"
         echo -e " Run $i/$NUM_RUNS (gene count $gene_num)"
         echo -e "======================"

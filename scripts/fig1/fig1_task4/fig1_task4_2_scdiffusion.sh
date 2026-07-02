@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 IFS=$'\n\t'
 trap "echo ERROR && exit 1" ERR
 
 # ------------------------- Config -------------------------
 PREFIXES=( "ACTA2" "B2M" )
 
-declare -A SAMPLE_SIZES=(
-  ["ACTA2"]="408"
-  ["B2M"]="367"
-)
+declare -A SAMPLE_SIZES=()
+source "scripts/lib/max_n_samples.sh"
+# SAMPLE_SIZES filled per dataset from test h5ad in loop
 
 NUM_GENES="${NUM_GENES:-5737}"
 NUM_RUNS="${NUM_RUNS:-3}"
@@ -36,21 +36,20 @@ echo "Current working directory: $(pwd)"
 # ------------------------- Main -------------------------
 for prefix in "${PREFIXES[@]}"; do
   dataset="${prefix}"
-  n_samples="${SAMPLE_SIZES[$prefix]}"
-
+  
   LOG_ROOT="logs/fig1/task4_2/${dataset}/scDiffusion"
   CSV_ROOT="samples/fig1/task4_2/${dataset}/scDiffusion"
   mkdir -p "${LOG_ROOT}" "${CSV_ROOT}"
 
   gene_size="${NUM_GENES}"
+  train_h5ad="data/fig1/task4/task4_${prefix}_control_to_ifn.h5ad"
+  test_h5ad="data/fig1/task4/task4_${prefix}_control_to_coculture.h5ad"
+  n_samples="$(max_n_samples_paired "${test_h5ad}")"
 
   echo "######################################################################"
   echo "###   Starting full pipeline for dataset: ${dataset}"
   echo "###   Gene Size: ${gene_size}, N Samples: ${n_samples}"
   echo "######################################################################"
-
-  train_h5ad="data/fig1/task4/task4_${prefix}_control_to_ifn.h5ad"
-  test_h5ad="data/fig1/task4/task4_${prefix}_control_to_coculture.h5ad"
 
   [[ -f "${train_h5ad}" ]] || { echo "[ERR] Not found: ${train_h5ad}" >&2; exit 1; }
   [[ -f "${test_h5ad}"  ]] || { echo "[ERR] Not found: ${test_h5ad}"  >&2; exit 1; }
@@ -62,6 +61,7 @@ for prefix in "${PREFIXES[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     echo -e "\n=== [${dataset}] ${run_tag}: Train(VAE+Diffusion+Classifier) + Sample/Eval ==="
 

@@ -40,7 +40,7 @@ class EncoderTask(BaseTask):
         output_dir: str | Path = "runs/encoder",
         encoder_name: str = "scgpt",
         gene_nums: int = 6998,
-        n_samples: int = 200,
+        n_samples: int = 0,
         num_runs: int = 3,
         encoder_ckpt_dir: str | Path | None = None,
         **_,

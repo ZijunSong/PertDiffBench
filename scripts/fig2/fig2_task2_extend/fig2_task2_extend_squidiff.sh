@@ -1,6 +1,8 @@
 #!/bin/bash
 # scGen setting: train on combined (train Control+IFN + test Control); eval on test; write metrics CSV.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -50,6 +52,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
   echo "######################################################################"
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_ckpt_dir="../../${ckpt_base}/run${i}"
     run_sample_dir="../../${sample_base}/${cell_type}/run${i}"
     mkdir -p "${run_ckpt_dir}" "${run_sample_dir}"

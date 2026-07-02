@@ -82,6 +82,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
     # 3x runs: train + eval
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       echo
       echo "======================"
       echo " Run ${i}/${NUM_RUNS} for ${cell_type}"

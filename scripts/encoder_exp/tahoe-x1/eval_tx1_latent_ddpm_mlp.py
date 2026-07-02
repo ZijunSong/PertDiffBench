@@ -54,7 +54,7 @@ def main():
     parser.add_argument(
         "-n", "--n_samples",
         type=int,
-        default=100,
+        default=0,
         help="Number of control cells to generate and evaluate per perturbation.",
     )
     parser.add_argument(
@@ -73,7 +73,11 @@ def main():
         default=None,
         help="Optional: output synthetic AnnData path.",
     )
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     # 1) Load model
     cfg = OmegaConf.load(args.config)

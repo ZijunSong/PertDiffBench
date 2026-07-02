@@ -85,8 +85,13 @@ parser.add_argument('--model_save_path', type=str, default='checkpoints/scgen/mo
 parser.add_argument('--celltype_to_predict', type=str, default='B', help='Cell type to predict')
 parser.add_argument('--out_h5ad', type=str, default='results/scgen/synthetic_prediction.h5ad', help='Path to save the final synthetic .h5ad results')
 parser.add_argument('--umap_plot', type=str, default="results/scgen/umap_comparison.png")
-parser.add_argument('--n_samples', type=int, default=100, help='Number of cells to sample for evaluation')
+parser.add_argument('--n_samples', type=int, default=0, help='Eval cells to sample (0 = use all available paired cells)')
+parser.add_argument('--seed', type=int, default=0, help='Random seed (overridden by RUN_SEED env per run)')
 args = parser.parse_args()
+
+from utils.seed import resolve_seed, set_seed
+_run_seed = resolve_seed(args.seed)
+set_seed(_run_seed)
 
 os.makedirs(os.path.dirname(args.out_h5ad), exist_ok=True)
 
@@ -108,6 +113,11 @@ if args.test_data_path and os.path.exists(args.test_data_path):
 else:
     print("Test set not provided, will use the training set as the test set.")
     test_adata = train_adata.copy()
+
+from utils.max_eval_samples import resolve_eval_n_samples
+_eval_path = args.test_data_path if args.test_data_path and os.path.exists(args.test_data_path) else args.train_data_path
+args.n_samples = resolve_eval_n_samples(_eval_path, args.n_samples)
+print(f"Using n_samples={args.n_samples} for evaluation (max paired available).")
 
 # 3. Initialize the model (must use the training set)
 scgen.SCGEN.setup_anndata(
@@ -174,17 +184,17 @@ max_eval = min(ctrl_adata_true.n_obs, stim_adata_true.n_obs, pred_adata.n_obs)
 if max_eval < 1:
     print("Error: No cells available for evaluation (control, stimulated, or predicted).", file=sys.stderr)
     sys.exit(1)
-n_eval = min(args.n_samples, max_eval)
-if n_eval < args.n_samples:
+n_eval = max_eval if args.n_samples <= 0 else min(args.n_samples, max_eval)
+if args.n_samples > 0 and n_eval < args.n_samples:
     print(
         f"Warning: --n_samples ({args.n_samples}) exceeds available cells ({max_eval}); "
         f"using {n_eval} for evaluation."
     )
 
 # Sample cells for fair comparison
-sc.pp.subsample(ctrl_adata_true, n_obs=n_eval, random_state=0)
-sc.pp.subsample(stim_adata_true, n_obs=n_eval, random_state=0)
-sc.pp.subsample(pred_adata, n_obs=n_eval, random_state=0)
+sc.pp.subsample(ctrl_adata_true, n_obs=n_eval, random_state=_run_seed)
+sc.pp.subsample(stim_adata_true, n_obs=n_eval, random_state=_run_seed)
+sc.pp.subsample(pred_adata, n_obs=n_eval, random_state=_run_seed)
 
 # Get expression matrices
 ctrl_X = ctrl_adata_true.X.toarray() if hasattr(ctrl_adata_true.X, 'toarray') else ctrl_adata_true.X

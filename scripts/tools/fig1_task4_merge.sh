@@ -1,3 +1,4 @@
+source "scripts/lib/max_n_samples.sh"
 python scripts/tools/fig1_task4_merge.py \
     data/fig1/task4/task4_ACTA2_control_meta.csv \
     data/fig1/task4/task4_ACTA2_hvg3000_lognorm_control_exp.csv \

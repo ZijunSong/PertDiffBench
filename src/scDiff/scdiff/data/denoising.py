@@ -16,7 +16,7 @@ from scdiff.utils.data import mask_data_offline
 
 
 class DenoisingBase(ABC):
-    def __init__(self, datadir='./data', seed=10, normalize=True, n_genes=None, dataset='Jurkat', fname='Jurkat_processed.h5ad', 
+    def __init__(self, datadir='./data', seed=0, normalize=True, n_genes=None, dataset='Jurkat', fname='Jurkat_processed.h5ad', 
                  save_processed=True, splits={'train':0.8, 'valid':0.1, 'test': 0.1}, subsample_ratio=None, mask_type='mar',
                  force_split=False, post_cond_flag=False, return_raw=False, mask_strategy='none_zero', mask_offline=True, 
                  pretrained_gene_list=None, pretrained_gene_list_path=None):
@@ -66,7 +66,7 @@ class DenoisingBase(ABC):
             self.adata = self.adata[:, self.gene_list]
 
     def _prepare_split(self, splits={'train':0.8, 'valid':0.1, 'test': 0.1}, mask_strategy='random', mask_type='mar',
-                       seed=10, fname='Denoising_processed.h5ad', subsample_ratio=None, force_split=False):
+                       seed=0, fname='Denoising_processed.h5ad', subsample_ratio=None, force_split=False):
         # if 'split' in self.adata.obs.columns and sorted(splits) == sorted(np.unique(self.adata.obs['split'])) and not force_split:
         if (
             force_split

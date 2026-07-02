@@ -3,11 +3,12 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # -------------------- Configuration --------------------
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 LOGDIR=${LOGDIR:-logs}
 NUM_GENES=${NUM_GENES:-2969}
-N_SAMPLES=${N_SAMPLES:-6}
 NUM_RUNS=${NUM_RUNS:-3}
 CONFIG_FILE=${CONFIG_FILE:-"configs/baselines/mlp_ddpm_mlp.yaml"}
 METHOD_NAME=${METHOD_NAME:-"MLP+DDPM+MLP"}     # CSV method column name
@@ -31,6 +32,8 @@ for dataset in "${DATASETS[@]}"; do
   train_data_path="data/fig1/task2/task2_train_${dataset}_bulkRNAseq_exp.h5ad"
   eval_data_path="data/fig1/task2/task2_test_${dataset}_bulkRNAseq_exp.h5ad"
 
+  N_SAMPLES="$(max_n_samples_paired "${eval_data_path}")"
+
   ckpt_base="checkpoints/ddpm_mlp/${dataset}"
   samples_base="samples/fig1/task2/${dataset}/mlp_ddpm_mlp"
   mkdir -p "${ckpt_base}" "${samples_base}"
@@ -45,6 +48,7 @@ for dataset in "${DATASETS[@]}"; do
 
     # -------- 3x runs: Train + Eval --------
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       echo
       echo "======================"
       echo " Run ${i}/${NUM_RUNS} for ${dataset}"

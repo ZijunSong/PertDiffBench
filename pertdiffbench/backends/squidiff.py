@@ -8,6 +8,7 @@ from pertdiffbench.backends.base import (
     TEMPORAL_TASKS,
     PerturbationBackend,
     ensure_success,
+    run_env_for_index,
     run_python,
 )
 from pertdiffbench.evaluate import parse_metrics_from_output
@@ -124,16 +125,20 @@ class SquidiffBackend(PerturbationBackend):
             results = []
             for run_index in range(1, spec.num_runs + 1):
                 run_dir = self.run_dir(spec, run_index)
-                self.train(spec, run_dir, repo_root, env, run_index)
+                run_env = run_env_for_index(env, run_index)
+                self.train(spec, run_dir, repo_root, run_env, run_index)
                 ckpt = self.ckpt_path(spec, run_dir, run_index)
-                results.append(self.evaluate(spec, run_dir, ckpt, repo_root, env, run_index))
+                results.append(self.evaluate(spec, run_dir, ckpt, repo_root, run_env, run_index))
             return results
 
         ckpt_root = spec.ckpt_dir / self.name
-        self.train(spec, ckpt_root, repo_root, env, 1)
+        self.train(spec, ckpt_root, repo_root, run_env_for_index(env, 1), 1)
         results = []
         for run_index in range(1, spec.num_runs + 1):
             results.append(
-                self.evaluate(spec, ckpt_root, ckpt_path, repo_root, env, run_index)
+                self.evaluate(
+                    spec, ckpt_root, ckpt_path, repo_root,
+                    run_env_for_index(env, run_index), run_index,
+                )
             )
         return results

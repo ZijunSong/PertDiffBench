@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -25,6 +27,7 @@ for species in "${TARGET_SPECIES[@]}"; do
 
   ALL_OUTPUTS=""
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n--- Run ${i}/${NUM_RUNS} for ${descriptive_name} ---"
     if ! EVAL_OUTPUT=$(python scripts/scGen_eval.py \
           --train_data_path "data/fig2/task3_cross_species/mouse_control_ifn.h5ad" \
@@ -32,7 +35,7 @@ for species in "${TARGET_SPECIES[@]}"; do
           --model_save_path "${MODEL_SAVE_ROOT}" \
           --out_h5ad "${OUT_ROOT}/${descriptive_name}_pred_${i}.h5ad" \
           --umap_plot "${OUT_ROOT}/${descriptive_name}_umap_comparison_${i}.png" \
-          --n_samples 1000 \
+          --n_samples "${N_SAMPLES}" \
           --celltype_to_predict 'species' \
           2>&1); then
       echo "[ERROR] evaluation failed for ${descriptive_name} run=${i}" >&2

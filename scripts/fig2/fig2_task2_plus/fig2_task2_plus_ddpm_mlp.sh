@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # MLP+DDPM: same workflow as fig2_task2_extend_ddpm_mlp, iterating over LOO folds x control fractions.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR
 export LC_ALL=C LC_NUMERIC=C
@@ -9,7 +11,7 @@ export LC_ALL=C LC_NUMERIC=C
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 NUM_GENES="${NUM_GENES:-6998}"
 # Eval pairs = min(#Control, #pert) on test h5ad; global minimum in task2+ is 259 (NK @ p0.5). Keep <=259.
-N_SAMPLES="${N_SAMPLES:-256}"
+
 NUM_RUNS=3
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
 METHOD_NAME="${METHOD_NAME:-mlp_ddpm_mlp}"
@@ -68,6 +70,7 @@ for ht in "${HOLDOUT_TYPES[@]}"; do
     echo "######################################################################"
 
     for (( run=1; run<=NUM_RUNS; run++ )); do
+      export RUN_SEED=$(($run-1))
       RUN_CKPT_DIR="${CKPT_ROOT}/${ht}/${slug}/run${run}"
       RUN_OUT_DIR="${OUT_ROOT}/${ht}/${slug}/run${run}"
       mkdir -p "${RUN_CKPT_DIR}" "${RUN_OUT_DIR}"

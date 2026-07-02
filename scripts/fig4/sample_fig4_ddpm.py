@@ -22,10 +22,15 @@ def main():
     parser.add_argument("--ckpt", required=True)
     parser.add_argument("--train-h5ad", required=True)
     parser.add_argument("--out-h5ad", required=True)
-    parser.add_argument("--n-samples", type=int, default=500)
+    parser.add_argument("--n-samples", type=int, default=0, help="Cells to sample from 0h control (0 = use all available)")
     parser.add_argument("--gene-nums", type=int, default=3000)
     parser.add_argument("--time-key", default="treatment_time")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    run_seed = resolve_seed(getattr(args, "seed", 0))
+    set_seed(run_seed)
 
     cfg = OmegaConf.load(args.config)
     cfg.model.input_dim = args.gene_nums
@@ -45,8 +50,9 @@ def main():
     if not mask_0h.any():
         raise ValueError("No 0h cells in train for control conditioning.")
     ctrl = adata[mask_0h]
-    n = min(args.n_samples, ctrl.n_obs)
-    np.random.seed(0)
+    n = ctrl.n_obs if args.n_samples <= 0 else min(args.n_samples, ctrl.n_obs)
+    print(f"Using n_samples={n} for generation.")
+    np.random.seed(run_seed)
     idx = np.random.choice(ctrl.n_obs, n, replace=(n > ctrl.n_obs))
     ctrl = ctrl[idx]
     X = ctrl.X.toarray() if hasattr(ctrl.X, "toarray") else np.asarray(ctrl.X)

@@ -6,6 +6,8 @@
 trap 'echo ERROR && exit 1' ERR
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # ---------- Config ----------
 DATASETS=('random1' 'random2' 'random3')
 NUM_GENES="2969"
@@ -34,7 +36,6 @@ DIFF_FILE="my_diffusion/model010000.pt"
 CLF_FILE="model009999.pt"
 
 # countamount
-N_SAMPLES=6
 
 # ---------- Main Loop ----------
 for dataset in "${DATASETS[@]}"; do
@@ -44,6 +45,7 @@ for dataset in "${DATASETS[@]}"; do
 
   TRAIN_H5="${DATA_ROOT}/task2_train_${dataset}_bulkRNAseq_exp.h5ad"
   TEST_H5="${DATA_ROOT}/task2_test_${dataset}_bulkRNAseq_exp.h5ad"
+  N_SAMPLES="$(max_n_samples_paired "${TEST_H5}")"
 
   DATASET_LOG="${LOG_ROOT}/${dataset}.log"
   echo -e "\n==== $(date '+%F %T') | Begin dataset=${dataset} ====\n" | tee -a "${DATASET_LOG}"
@@ -53,6 +55,7 @@ for dataset in "${DATASETS[@]}"; do
 
   # ===== 3 runs: each run + eval =====
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n======================="              | tee -a "${DATASET_LOG}"
     echo -e " Run ${i}/${NUM_RUNS} : ${dataset}"    | tee -a "${DATASET_LOG}"
     echo -e "======================="              | tee -a "${DATASET_LOG}"

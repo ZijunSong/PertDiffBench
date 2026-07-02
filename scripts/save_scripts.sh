@@ -25,7 +25,7 @@ python scripts/baseline/eval_mlp_ddpm_mlp.py \
     --ckpt checkpoints/fig1/task2/random1/mlp_ddpm_mlp/scrna_ddpm_epoch1000.pt \
     --out_h5ad samples/fig1/task2/random1/mlp_ddpm_mlp/synthetic_ifn.h5ad \
     --gene-nums 2969 \
-    --n_samples 100
+    --n_samples 0
 
 python scripts/baseline/eval_mlp_ddpm_mlp.py \
     --config configs/baselines/mlp_ddpm_mlp.yaml \
@@ -33,7 +33,7 @@ python scripts/baseline/eval_mlp_ddpm_mlp.py \
     --ckpt checkpoints/fig1/task2/random2/mlp_ddpm_mlp/scrna_ddpm_epoch1000.pt \
     --out_h5ad samples/fig1/task2/random2/mlp_ddpm_mlp/synthetic_ifn.h5ad \
     --gene-nums 2969 \
-    --n_samples 100
+    --n_samples 0
 
 python scripts/baseline/eval_mlp_ddpm_mlp.py \
     --config configs/baselines/mlp_ddpm_mlp.yaml \
@@ -41,4 +41,4 @@ python scripts/baseline/eval_mlp_ddpm_mlp.py \
     --ckpt checkpoints/fig1/task2/random3/mlp_ddpm_mlp/scrna_ddpm_epoch1000.pt \
     --out_h5ad samples/fig1/task2/random3/mlp_ddpm_mlp/synthetic_ifn.h5ad \
     --gene-nums 2969 \
-    --n_samples 100
+    --n_samples 0

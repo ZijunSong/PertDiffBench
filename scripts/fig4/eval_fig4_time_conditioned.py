@@ -39,11 +39,16 @@ def main():
     parser.add_argument("--generated-h5ad", required=True, help="Generated h5ad with same var and obs.treatment_time")
     parser.add_argument("--train-h5ad", default=None, help="Train h5ad for control (0h) for delta metrics; optional")
     parser.add_argument("--time-key", default="treatment_time", help="obs column for time labels")
-    parser.add_argument("--n-samples", type=int, default=None, help="Subsample to this many cells per time (default: use all)")
+    parser.add_argument("--n-samples", type=int, default=0, help="Subsample per time point (0 = max available)")
     parser.add_argument("--csv", type=str, default=None, help="Append row(s) of metrics to this CSV")
     parser.add_argument("--method-name", type=str, default="", help="Method name for CSV row")
     parser.add_argument("--per-time", action="store_true", help="If set with --csv, write one row per treatment_time (4h, 6h) instead of one averaged row")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
+    run_seed = resolve_seed(getattr(args, "seed", 0))
 
     adata_test = sc.read_h5ad(args.test_h5ad)
     adata_gen = sc.read_h5ad(args.generated_h5ad)
@@ -57,6 +62,11 @@ def main():
     times = sorted(set(times_test) & set(times_gen))
     if not times:
         raise ValueError("No common treatment_time values between test and generated.")
+
+    from utils.max_eval_samples import resolve_eval_n_samples
+    if args.n_samples is None or args.n_samples <= 0:
+        args.n_samples = resolve_eval_n_samples(args.test_h5ad, 0, mode="timepoint", time_col=args.time_key)
+    print(f"Using n_samples={args.n_samples} per time point for evaluation.")
 
     # Control from train (0h) for delta metrics
     ctrl_pb = None
@@ -80,10 +90,10 @@ def main():
             continue
         if n_samples:
             if real.n_obs >= n_samples:
-                np.random.seed(0)
+                np.random.seed(run_seed)
                 real = real[np.random.choice(real.n_obs, n_samples, replace=False)]
             if gen.n_obs >= n_samples:
-                np.random.seed(0)
+                np.random.seed(run_seed)
                 gen = gen[np.random.choice(gen.n_obs, n_samples, replace=False)]
         real_X = _toarray(real.X).astype(np.float64)
         gen_X = _toarray(gen.X).astype(np.float64)

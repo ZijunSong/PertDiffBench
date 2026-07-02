@@ -2,6 +2,8 @@
 # Exit on first error
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # Consistent numeric locale for awk
 export LC_ALL=C LC_NUMERIC=C
 
@@ -36,6 +38,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     # --- Dynamic paths ---
     train_data_path="${BASE_DATA_DIR}/task1_train_${cell_type}_exp_noise_std_${noise_level}.h5ad"
     valid_data_path="${BASE_DATA_DIR}/task1_valid_${cell_type}_exp_noise_std_${noise_level}.h5ad"
+    N_SAMPLES="$(max_n_samples_paired "${valid_data_path}")"
 
     output_suffix="${cell_type}_noise_${noise_level}"
     save_weight_dir="checkpoints/gaussian_noise/${output_suffix}/scrna_ddpm_scrna"
@@ -57,6 +60,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
     all_outputs=""
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       echo -e "\n--- Eval iteration $i/$NUM_RUNS ($cell_type, Noise: $noise_level) ---"
       # capture stdout+stderr; do not stop whole pipeline on python failure
       output=$(python scripts/baseline/eval_scrna_ddpm_scrna.py \
@@ -67,7 +71,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
         --out_h5ad "${samples_dir}/synthetic_ifn_${i}.h5ad" \
         --gene-nums "$NUM_GENES" \
         --umap_plot "${samples_dir}/umap_comparison_${i}.png" \
-        --n_samples 6 2>&1) || true
+        --n_samples "${N_SAMPLES}" 2>&1) || true
 
       echo "$output"
       # preserve real newlines

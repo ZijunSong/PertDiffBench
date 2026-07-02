@@ -9,6 +9,8 @@ import torch as th
 import torch.distributed as dist
 import random
 
+from utils.seed import resolve_seed, set_seed
+
 from guided_diffusion import dist_util, logger
 from guided_diffusion.script_util import (   
     NUM_CLASSES,
@@ -25,8 +27,8 @@ def save_data(all_cells, traj, data_dir):
     return
 
 def main():
-    setup_seed(1234)
     args = create_argparser().parse_args()
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     dist_util.setup_dist()
     logger.configure(dir='../../checkpoints/scdiffusion/sample_logs')
@@ -80,6 +82,7 @@ def create_argparser():
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
     add_dict_to_argparser(parser, defaults)
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     return parser
 
 def setup_seed(seed):

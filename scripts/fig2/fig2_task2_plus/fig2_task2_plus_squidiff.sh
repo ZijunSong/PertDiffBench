@@ -7,6 +7,8 @@
 # Optional: FIG2_TASK2_PLUS_HOLDOUT_TYPES="CD14+Mono Dendritic" → only these holdouts (space-separated;
 # names must match default list: B, CD4T, CD8T, CD14+Mono, Dendritic, FCGR3A+Mono, NK).
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 # Default single-GPU (override with CUDA_VISIBLE_DEVICES). Split scripts default to GPU 6 / 7.
@@ -16,7 +18,7 @@ GENE_SIZE="${GENE_SIZE:-6998}"
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 # Eval pairs = min(#Control, #pert) on test h5ad; global minimum in task2+ is 259 (NK @ p0.5). Keep <=259.
-N_SAMPLES="${N_SAMPLES:-256}"
+
 
 HOMEDIR="$(cd "$(dirname "$(realpath "$0")")/../../.." && pwd)"
 cd "$HOMEDIR"
@@ -92,6 +94,7 @@ for ht in "${HOLDOUT_TYPES[@]}"; do
     echo "######################################################################"
 
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       run_ckpt_dir="../../${ckpt_base}/${ht}/${slug}/run${i}"
       run_sample_dir="../../${sample_base}/${ht}/${slug}/run${i}"
       mkdir -p "${run_ckpt_dir}" "${run_sample_dir}"

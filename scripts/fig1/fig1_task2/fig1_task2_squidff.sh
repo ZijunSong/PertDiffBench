@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # =================== Config ===================
 RANDOM_TYPES=('random1' 'random2' 'random3')
 NUM_RUNS=${NUM_RUNS:-3}
 GENE_SIZE=${GENE_SIZE:-2969}
 OUTPUT_DIM=${OUTPUT_DIM:-2969}
-N_SAMPLES=${N_SAMPLES:-6}
 METHOD_NAME=${METHOD_NAME:-Squidiff}
 
 LOGROOT=${LOGROOT:-logs/squidiff}
@@ -23,11 +24,13 @@ for random_type in "${RANDOM_TYPES[@]}"; do
   DATASET_LOG="${LOGROOT}/${random_type}.log"
   TRAIN_DATA="data/fig1/task2/task2_train_${random_type}_bulkRNAseq_exp.h5ad"
   TEST_DATA="data/fig1/task2/task2_test_${random_type}_bulkRNAseq_exp.h5ad"
+  N_SAMPLES="$(max_n_samples_paired "${TEST_DATA}")"
 
   # statsrequired evaloutput
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n======================="           | tee -a "${DATASET_LOG}"
     echo -e " Run ${i}/${NUM_RUNS} : ${random_type}" | tee -a "${DATASET_LOG}"
     echo -e "======================="           | tee -a "${DATASET_LOG}"

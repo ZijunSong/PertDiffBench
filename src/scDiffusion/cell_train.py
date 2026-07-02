@@ -20,9 +20,11 @@ import numpy as np
 import random
 import os
 
+from utils.seed import resolve_seed, set_seed
+
 def main():
-    setup_seed(1234)
     args = create_argparser().parse_args()
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     dist_util.setup_dist()
     logger.configure(dir='../../output/logs/scdiffusion'+args.model_name)  # log file
@@ -97,6 +99,7 @@ def create_argparser():
     parser.add_argument("--data_dir", type=str, default="../../data/scrna_data/scrna_positive.h5ad", help="Path to the data directory")
     parser.add_argument("--vae_path", type=str, default="../../checkpoints/scdiffusion/vae_checkpoint/VAE/model_seed=0_step=199999.pt", help="Path to the VAE checkpoint file")
     parser.add_argument("--save_dir", type=str, default="../../checkpoints/scdiffusion/diffusion_checkpoint", help="Directory to save checkpoints")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     return parser
 
 

@@ -27,6 +27,7 @@ base_data_settings+=("model.params.generation_kwargs.n_samples=${N_SAMPLES}")
 
 all_outputs=""
 for (( i=1; i<=NUM_RUNS; i++ )); do
+  export RUN_SEED=$(($i-1))
   echo "=== Run ${i}/${NUM_RUNS} | ${GENE_ORDER} | ${METHOD_NAME} ==="
   run_postfix="perturbation_${NAME}_run${i}"
   model_save_path="${CKPT_BASE}/scdiff/${CELL_TYPE}_hvg_${NUM_GENES}/run${i}"

@@ -108,8 +108,9 @@ def main():
     )
     args = parser.parse_args()
 
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
+    from utils.seed import resolve_seed, set_seed
+    _seed = resolve_seed(args.seed)
+    set_seed(_seed)
 
     sampler_cls = _load_sampler_class()
     my_sampler = sampler_cls(
@@ -135,6 +136,11 @@ def main():
 
     adata_start = adata[mask_start]
     adata_end = adata[mask_end]
+    from utils.max_eval_samples import resolve_eval_n_samples
+    if args.n_samples is None or args.n_samples <= 0:
+        args.n_samples = resolve_eval_n_samples(args.test_h5ad, 0, mode="timepoint")
+        print(f"Using n_samples={args.n_samples}")
+
     n = min(args.n_samples, adata_start.n_obs, adata_end.n_obs)
     if n < 1:
         raise ValueError("Need at least one cell at each anchor time.")

@@ -42,6 +42,9 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
+
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 

@@ -30,12 +30,16 @@ def main():
                         help="Path to trained model checkpoint")
     parser.add_argument("-n", "--n_samples",
                         type=int,
-                        default=100,
+                        default=0,
                         help="Number of cells to generate/evaluate")
     parser.add_argument("-o", "--out_h5ad",
                         default="samples/scvi_ddpm_mlp.h5ad",
                         help="Output path for synthetic AnnData")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     # 1) Load config and model
     cfg = OmegaConf.load(args.config)
@@ -48,7 +52,9 @@ def main():
 
     # 2) Read real data and select Control / IFN cells
     adata = sc.read_h5ad(cfg.data.path)
-    n = args.n_samples or cfg.sample.batch_size
+    from utils.max_eval_samples import resolve_eval_n_samples
+    n = resolve_eval_n_samples(cfg.data.path, args.n_samples)
+    print(f"Using n_samples={n} for evaluation.")
 
     # perturbation_status, per Control / IFN 
     if "perturbation_status" in adata.obs.columns:

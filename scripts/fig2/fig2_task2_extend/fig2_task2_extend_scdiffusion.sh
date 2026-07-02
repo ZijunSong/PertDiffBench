@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # scGen setting for task2_unseen_celltype: train VAE/Diffusion/Classifier on combined (train+test_control); sample on test B/NK; write metrics CSV.
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
 NUM_GENES="${NUM_GENES:-6998}"
-NUM_SAMPLES="${NUM_SAMPLES:-54}"
+
 NUM_RUNS="${NUM_RUNS:-3}"
 TARGET_CELL_TYPES=( "B" "NK" )
 METHOD_NAME="${METHOD_NAME:-scDiffusion}"
@@ -69,6 +71,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
   mkdir -p "${OUT_DIR}"
   ALL_OUTPUTS=""
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo "--- Run ${i}/${NUM_RUNS} for ${cell_type} ---"
     run_out=""
     pushd src/scDiffusion >/dev/null

@@ -4,11 +4,12 @@
 set -e
 trap "echo ERROR && exit 1" ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # -------------------- Config --------------------
 NUM_GENES="1000"
 NUM_RUNS=3
 METHOD_NAME="scDiffusion" # CSV firstcols name
-N_SAMPLES=100 # each run countamount (and )
 
 DATASETS=(
   'mix2'
@@ -45,6 +46,7 @@ for dataset in "${DATASETS[@]}"; do
 
   # -------- 3 (train+eval) --------
   for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
+    export RUN_SEED=$(($run_idx-1))
     echo -e "\n======================"       | tee -a "${LOG_FILE}"
     echo -e " Run ${run_idx}/${NUM_RUNS} " | tee -a "${LOG_FILE}"
     echo -e "======================"       | tee -a "${LOG_FILE}"

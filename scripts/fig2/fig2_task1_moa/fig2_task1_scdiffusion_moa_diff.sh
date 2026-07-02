@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # scDiffusion MOA Diff-MOA split: train & evaluate per MOA with drug+dose conditioning
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR
 export LC_ALL=C LC_NUMERIC=C
@@ -9,7 +11,7 @@ export LC_ALL=C LC_NUMERIC=C
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS="${NUM_RUNS:-3}"
-NUM_SAMPLES="${NUM_SAMPLES:-100}"
+
 
 export WANDB_DISABLED=true
 export WANDB_MODE=disabled
@@ -67,6 +69,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo
     echo "======================"
     echo " Run ${i}/${NUM_RUNS} for ${moa}"

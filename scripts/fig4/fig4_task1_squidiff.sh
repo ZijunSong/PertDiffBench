@@ -4,6 +4,8 @@
 set -e
 trap 'echo "ERROR: a command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # cd to repo root for python paths (cwd may differ under nohup)
 HOMEDIR="$(cd "$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")" && pwd)"
 cd "$HOMEDIR"
@@ -13,10 +15,13 @@ LOGDIR=${LOGDIR:-logs}
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS=${NUM_RUNS:-3}
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
-N_SAMPLES="${N_SAMPLES:-500}"
+N_SAMPLES=""
 
 DATA_FIG4="/data/ppnm/data/PertDiffBench/data/fig4_task1"
 TRAIN_H5="${DATA_FIG4}/fig4_train.h5ad"
+
+TEST_H5="${TRAIN_H5/fig4_train/fig4_test}"
+N_SAMPLES="$(max_n_samples_timepoint "${TEST_H5:-data/fig4_task1/fig4_test.h5ad}")"
 TEST_H5="${DATA_FIG4}/fig4_test.h5ad"
 
 ckpt_base="checkpoints/fig4/squidiff_${NUM_GENES}"
@@ -30,6 +35,7 @@ mkdir -p "${ckpt_base}" "${sample_base}" "${LOGDIR}/fig4_task1"
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo "====================== Run ${i}/${NUM_RUNS} ======================"
     run_ckpt="${ckpt_base}/run${i}"
     run_sample="${sample_base}/run${i}"

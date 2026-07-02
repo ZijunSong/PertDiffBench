@@ -18,6 +18,7 @@ mkdir -p "${VAE_BASE}" "${DIFF_BASE}" "${CLS_BASE}" "${SAMPLE_DIR}"
 
 all_outputs=""
 for (( i=1; i<=NUM_RUNS; i++ )); do
+  export RUN_SEED=$(($i-1))
   echo "=== Run ${i}/${NUM_RUNS} | ${GENE_ORDER} | ${METHOD_NAME} ==="
   vae_dir="${VAE_BASE}/run${i}"
   diff_dir="${DIFF_BASE}/run${i}"

@@ -4,6 +4,8 @@
 set -e
 trap "echo ERROR && exit 1" ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # --------------------
 # Configuration
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
@@ -58,6 +60,7 @@ for dataset in "${DATASETS[@]}"; do
 
   # 3 (train+eval) 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo -e "\n======================" | tee -a "${LOG_FILE}"
     echo -e " Run ${i}/${NUM_RUNS} for ${dataset}" | tee -a "${LOG_FILE}"
     echo -e "======================" | tee -a "${LOG_FILE}"

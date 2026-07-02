@@ -10,10 +10,12 @@ NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-Squidiff}"
 
 # n_samples ( and currenteval can )
-declare -A SAMPLES_MAP=(
-  ["B"]=110
-  ["NK"]=54
-)
+source "scripts/lib/max_n_samples.sh"
+declare -A SAMPLES_MAP=()
+for _ct in "${TARGET_CELL_TYPES[@]}"; do
+  _test="../../data/fig2/task2/task2_test_${_ct}_exp.h5ad"
+  SAMPLES_MAP["${_ct}"]="$(max_n_samples_paired "${_test}")"
+done
 
 echo "Changing directory to src/Squidiff..."
 cd src/Squidiff
@@ -36,6 +38,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
 
   # -------- 3x runs: Train + Inference --------
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo
     echo "======================"
     echo " Run ${i}/${NUM_RUNS} for ${cell_type}"

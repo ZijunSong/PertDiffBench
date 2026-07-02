@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
 SEEDS=( "123" "345" "567" )
 
 NUM_GENES="${NUM_GENES:-3000}"
-N_SAMPLES="${N_SAMPLES:-1000}"
 NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
 METHOD_NAME="${METHOD_NAME:-scRNA-DDPM-scRNA}"
@@ -15,6 +16,8 @@ for seed in "${SEEDS[@]}"; do
   dataset_name="seed${seed}"
   train_dataset_name="${dataset_name}_control_train"
   eval_dataset_name="${dataset_name}_control_test"
+
+  N_SAMPLES="$(max_n_samples_paired "data/fig2/task1_unseen_pert/${eval_dataset_name}.h5ad")"
 
   OUT_ROOT="samples/fig2/task1/${dataset_name}/ddpm"
   CKPT_ROOT="checkpoints/fig2/task1_unseen_pert/${train_dataset_name}/scrna_ddpm_scrna"
@@ -27,6 +30,7 @@ for seed in "${SEEDS[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     run_dir="${OUT_ROOT}/${run_tag}"
     run_ckpt_dir="${CKPT_ROOT}/${run_tag}"

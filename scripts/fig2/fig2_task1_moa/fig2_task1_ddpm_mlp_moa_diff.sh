@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # DDPM+MLP MOA Diff-MOA: SMILES + dose conditioning (Squidiff-style, default)
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 export PYTHONUNBUFFERED=1
 IFS=$'\n\t'
 trap 'echo ERROR && exit 1' ERR
@@ -9,7 +11,7 @@ export LC_ALL=C LC_NUMERIC=C
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 NUM_GENES="${NUM_GENES:-3000}"
 NUM_RUNS="${NUM_RUNS:-3}"
-NUM_SAMPLES="${NUM_SAMPLES:-100}"
+
 BATCH_SIZE="${BATCH_SIZE:-2048}"
 NUM_WORKERS="${NUM_WORKERS:-32}"
 CKPT_SAVE_INTERVAL="${CKPT_SAVE_INTERVAL:-1000}"
@@ -60,6 +62,7 @@ for train_path in "${TRAIN_FILES[@]}"; do
   ALL_OUTPUTS=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     echo "--- Run ${i}/${NUM_RUNS} for ${moa} ---"
     run_ckpt="${ckpt_base}/run${i}"
     run_sample="${sample_base}/run${i}"

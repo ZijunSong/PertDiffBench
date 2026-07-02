@@ -1,3 +1,4 @@
+source "scripts/lib/max_n_samples.sh"
 #!/bin/bash
 
 # Exit immediately if a command fails, printing an error message.
@@ -46,6 +47,7 @@ for gene_num in "${GENE_NUMS_LIST[@]}"; do
     # ----- (Train + Eval) × NUM_RUNS -----
     echo -e "\n--- Step 1: Running Training and Evaluation (Gene Count: $gene_num, Total Runs: $NUM_RUNS) ---"
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
         echo -e "\n--- Now running iteration $i/$NUM_RUNS ---"
 
         # Unique postfix per run to avoid log conflicts; checkpoint under CKPT_ROOT/highly_variable_gene_gradient/scdiff/CD4T_hvg_${gene_num}/run{i}

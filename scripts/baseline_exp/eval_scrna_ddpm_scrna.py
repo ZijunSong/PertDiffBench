@@ -40,15 +40,6 @@ def main():
     Parses arguments, loads model checkpoint, generates synthetic data for all
     perturbations, computes evaluation metrics, plots a UMAP, and writes out results.
     """
-    # Set random seeds for reproducibility across all relevant libraries
-    np.random.seed(0)
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(0)
-        # The following two lines are for fully reproducible results on GPU
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
     # 1) Argument parsing
     parser = argparse.ArgumentParser(
         description="Evaluate scRNA DDPM for all perturbations and compute metrics"
@@ -68,8 +59,8 @@ def main():
     parser.add_argument(
         "--n_samples", "-n",
         type=int,
-        default=100,
-        help="Number of control cells to generate perturbed cells for"
+        default=0,
+        help="Number of control cells to generate perturbed cells for (0 = use all available)"
     )
     parser.add_argument(
         "--out_h5ad", "-o",
@@ -118,7 +109,14 @@ def main():
         default="treatment_time",
         help="obs column for time labels when --time-conditioned"
     )
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
+    if torch.cuda.is_available():
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     # 2) Load configuration and model
     cfg = OmegaConf.load(args.config)
@@ -177,32 +175,13 @@ def main():
     perturbations = [p for p in perturbations if p != "Control"]
     print(f"Found {len(perturbations)} perturbations to evaluate: {perturbations}")
 
-    # Pre-evaluation check for n_samples
-    print("\n--- Checking sample counts ---")
-    ctrl_count = len(ctrl_ids)
-    pert_counts = {p: np.sum(adata.obs["perturbation_status"] == p) for p in perturbations}
-    
-    if not pert_counts:
-        print("Warning: No perturbation groups found in the data. Exiting.")
-        return
+    from utils.max_eval_samples import resolve_eval_n_samples
+    args.n_samples = resolve_eval_n_samples(cfg.data.path, args.n_samples, mode="multi_pert")
+    print(f"Using n_samples={args.n_samples} for evaluation (max paired available per perturbation).")
 
-    min_pert_count = min(pert_counts.values())
-    max_possible_samples = min(ctrl_count, min_pert_count)
-
-    print(f"Control cells available in test set: {ctrl_count}")
-    print(f"Minimum cells in a perturbation group in test set: {min_pert_count}")
-    print(f"Maximum possible --n_samples: {max_possible_samples}")
-
-    if max_possible_samples < 1:
+    if args.n_samples < 1:
         print("Error: Not enough control or perturbation cells in the test set for evaluation.", file=sys.stderr)
         sys.exit(1)
-
-    if args.n_samples > max_possible_samples:
-        print(
-            f"\nWarning: --n_samples ({args.n_samples}) exceeds the maximum ({max_possible_samples}); "
-            "clamping to that value (limited by control count and smallest perturbation group in the test set)."
-        )
-        args.n_samples = max_possible_samples
 
     all_pred_pb = []
     all_true_pb = []

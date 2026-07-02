@@ -99,6 +99,13 @@ class PerturbationBackend(ABC):
         return spec.squidiff_train_once and spec.task_name == "known_condition"
 
 
+def run_env_for_index(env: dict, run_index: int) -> dict:
+    """Copy env and set RUN_SEED to 0-based run index (0, 1, 2 for NUM_RUNS=3)."""
+    out = env.copy()
+    out["RUN_SEED"] = str(max(0, run_index - 1))
+    return out
+
+
 def run_python(
     repo_root: Path,
     script: str,

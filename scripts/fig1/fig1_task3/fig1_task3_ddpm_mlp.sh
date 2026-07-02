@@ -3,11 +3,12 @@
 
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # ================= Configuration =================
 DATASETS=('mix2' 'mix3' 'mix4' 'mix5' 'mix6' 'mix7')
 
 NUM_GENES="${NUM_GENES:-1000}"
-N_SAMPLES="${N_SAMPLES:-100}"
 NUM_RUNS="${NUM_RUNS:-3}"
 CONFIG_FILE="${CONFIG_FILE:-configs/baselines/mlp_ddpm_mlp.yaml}"
 METHOD_NAME="${METHOD_NAME:-DDPM-MLP}" # CSVmethod column name, can define
@@ -31,6 +32,7 @@ for dataset in "${DATASETS[@]}"; do
   all_outputs=""
 
   for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
+    export RUN_SEED=$(($run_idx-1))
     echo -e "\n======================"            | tee -a "${DATASET_LOG}"
     echo -e " Run ${run_idx}/${NUM_RUNS} : ${dataset}" | tee -a "${DATASET_LOG}"
     echo -e "======================"            | tee -a "${DATASET_LOG}"

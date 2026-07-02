@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -23,6 +25,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     # ---- Dynamic Paths ----
     train_data_path="${BASE_DATA_DIR}/task1_train_${cell_type}_exp_noise_std_${noise_level}.h5ad"
     valid_data_path="${BASE_DATA_DIR}/task1_valid_${cell_type}_exp_noise_std_${noise_level}.h5ad"
+    N_SAMPLES="$(max_n_samples_paired "${valid_data_path}")"
 
     output_suffix="${cell_type}_noise_${noise_level}"
     save_weight_dir="checkpoints/gaussian_noise/${output_suffix}/scrna_ddpm_scrna"
@@ -50,6 +53,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
     ALL_OUTPUTS=""
 
     for (( i=1; i<=NUM_RUNS; i++ )); do
+      export RUN_SEED=$(($i-1))
       echo -e "\n--- Eval run ${i}/${NUM_RUNS} ---"
       # capture full output; on failure print Traceback and exit
       EVAL_OUTPUT="$(
@@ -61,7 +65,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           --out_h5ad "${samples_dir}/synthetic_ifn_${i}.h5ad" \
           --gene-nums "$NUM_GENES" \
           --umap_plot "${samples_dir}/umap_comparison_${i}.png" \
-          --n_samples "${N_SAMPLES:-6}" \
+          --n_samples "${N_SAMPLES}" \
           2>&1
       )"
       status=$?

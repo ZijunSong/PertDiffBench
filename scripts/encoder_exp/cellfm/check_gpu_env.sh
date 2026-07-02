@@ -1,3 +1,4 @@
+source "scripts/lib/max_n_samples.sh"
 #!/bin/bash
 # checkcurrent whether MindSpore using GPU (no need sudo)
 # using : conda activate cellfm after bash scripts/encoder_exp/cellfm/check_gpu_env.sh

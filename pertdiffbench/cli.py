@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--output", default="runs/exp", help="Output directory")
     run.add_argument("--gene-nums", type=int, default=1000)
-    run.add_argument("--n-samples", type=int, default=100)
+    run.add_argument("--n-samples", type=int, default=0, help="Eval cells (0 = max paired in test set)")
     run.add_argument("--num-runs", type=int, default=3)
     run.add_argument("--repo-root", default=None)
     run.add_argument("--skip-train", action="store_true")

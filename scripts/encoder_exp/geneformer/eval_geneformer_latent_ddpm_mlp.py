@@ -50,13 +50,8 @@ def resolve_ckpt(path_or_dir: str) -> str:
 
 
 def main():
-    # reproducibility
-    np.random.seed(0)
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(0)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     parser = argparse.ArgumentParser(
         description="Evaluate Geneformer-latent DDPM-MLP baseline (metrics in Geneformer latent space)."
@@ -83,7 +78,7 @@ def main():
     parser.add_argument(
         "-n", "--n_samples",
         type=int,
-        default=100,
+        default=0,
         help="Number of control cells per perturbation to evaluate.",
     )
     parser.add_argument(
@@ -96,7 +91,11 @@ def main():
         default="X_geneformer",
         help="obsm key for Geneformer latent.",
     )
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     # 1) Load config + model
     cfg = OmegaConf.load(args.config)
@@ -158,6 +157,11 @@ def main():
     pert_counts = {p: int(np.sum(pert_status == p)) for p in perturbations}
     min_pert_count = min(pert_counts.values())
     max_possible_samples = min(ctrl_count, min_pert_count)
+
+    from utils.max_eval_samples import resolve_eval_n_samples
+    if args.n_samples is None or args.n_samples <= 0:
+        args.n_samples = max_possible_samples
+        print(f"[eval] Using n_samples = {args.n_samples} (max available)")
 
     if args.n_samples > max_possible_samples:
         print(

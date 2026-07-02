@@ -2,6 +2,8 @@
 # scGen pipeline for task2 unseen cell type (scGen setting): train on CD4T, test on B and NK.
 # data path as task2_unseen_celltype, logicand fig2_task1_scgen.sh .
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -9,7 +11,7 @@ export LC_ALL=C LC_NUMERIC=C
 TARGET_CELL_TYPES=( "B" "NK" )
 NUM_RUNS="${NUM_RUNS:-3}"
 METHOD_NAME="${METHOD_NAME:-scGen}"
-N_SAMPLES="${N_SAMPLES:-500}"
+
 
 # repo root
 HOMEDIR="$(cd "$(dirname "$(realpath "$0")")/../../.." && pwd)"
@@ -55,6 +57,7 @@ for cell_type in "${TARGET_CELL_TYPES[@]}"; do
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     run_dir="${cell_out}/${run_tag}"
     run_ckpt="${cell_ckpt}/${run_tag}"

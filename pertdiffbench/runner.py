@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
-from pertdiffbench.backends.base import PerturbationBackend
+from pertdiffbench.backends.base import PerturbationBackend, run_env_for_index
 from pertdiffbench.backends.encoder import EncoderBackend
 from pertdiffbench.backends.scdiffusion import ScDiffusionBackend
 from pertdiffbench.backends.squidiff import SquidiffBackend
@@ -64,6 +64,23 @@ class BenchmarkRunner:
         merged.setdefault("output_dir", self.output_dir)
         specs = self._task_impl.build_specs(**merged)
         for spec in specs:
+            if spec.n_samples is None or spec.n_samples <= 0:
+                from utils.max_eval_samples import resolve_eval_n_samples
+
+                mode_by_task = {
+                    "moa_same": "multi_pert",
+                    "moa_diff": "multi_pert",
+                    "cross_celltype": "multi_pert",
+                    "cross_celltype_extend": "multi_pert",
+                    "cross_celltype_plus": "multi_pert",
+                    "cross_species": "timepoint",
+                    "cross_species_loo": "timepoint",
+                    "temporal": "timepoint",
+                    "encoder": "multi_pert",
+                    "noise": "paired_ifn",
+                }
+                mode = mode_by_task.get(spec.task_name, "paired_ifn")
+                spec.n_samples = resolve_eval_n_samples(spec.test_h5ad, 0, mode=mode)
             self._task_impl.validate(spec)
         self._specs = specs
         return specs
@@ -98,7 +115,7 @@ class BenchmarkRunner:
                     metrics.append(
                         backend.evaluate(
                             spec, spec.ckpt_dir / backend.name, ckpt,
-                            self.repo_root, env, run_index,
+                            self.repo_root, run_env_for_index(env, run_index), run_index,
                         )
                     )
                 return metrics
@@ -108,11 +125,14 @@ class BenchmarkRunner:
             run_dir = backend.run_dir(spec, 1)
             ckpt = backend.ckpt_path(spec, run_dir, 1)
             if not skip_train or not ckpt.exists():
-                backend.train(spec, run_dir, self.repo_root, env, 1)
+                backend.train(spec, run_dir, self.repo_root, run_env_for_index(env, 1), 1)
             metrics = []
             for run_index in range(1, spec.num_runs + 1):
                 metrics.append(
-                    backend.evaluate(spec, run_dir, ckpt, self.repo_root, env, run_index)
+                    backend.evaluate(
+                        spec, run_dir, ckpt, self.repo_root,
+                        run_env_for_index(env, run_index), run_index,
+                    )
                 )
             return metrics
 
@@ -121,12 +141,15 @@ class BenchmarkRunner:
             ckpt = backend.ckpt_path(spec, run_dir, 1)
             if not skip_train or not ckpt.exists():
                 print(f"  [{backend.display_name}] Training once for {spec.subtask_id}")
-                backend.train(spec, run_dir, self.repo_root, env, 1)
+                backend.train(spec, run_dir, self.repo_root, run_env_for_index(env, 1), 1)
             metrics = []
             for run_index in range(1, spec.num_runs + 1):
                 print(f"  [{backend.display_name}] Evaluating run {run_index}/{spec.num_runs}")
                 metrics.append(
-                    backend.evaluate(spec, run_dir, ckpt, self.repo_root, env, run_index)
+                    backend.evaluate(
+                        spec, run_dir, ckpt, self.repo_root,
+                        run_env_for_index(env, run_index), run_index,
+                    )
                 )
             return metrics
 
@@ -134,14 +157,15 @@ class BenchmarkRunner:
         for run_index in range(1, spec.num_runs + 1):
             run_dir = backend.run_dir(spec, run_index)
             ckpt = backend.ckpt_path(spec, run_dir, run_index)
+            run_env = run_env_for_index(env, run_index)
             if not skip_train or not ckpt.exists():
                 print(f"  [{backend.display_name}] Training run {run_index}/{spec.num_runs}")
-                backend.train(spec, run_dir, self.repo_root, env, run_index)
+                backend.train(spec, run_dir, self.repo_root, run_env, run_index)
             else:
                 print(f"  [{backend.display_name}] Skipping training run {run_index}")
             print(f"  [{backend.display_name}] Evaluating run {run_index}/{spec.num_runs}")
             metrics.append(
-                backend.evaluate(spec, run_dir, ckpt, self.repo_root, env, run_index)
+                backend.evaluate(spec, run_dir, ckpt, self.repo_root, run_env, run_index)
             )
         return metrics
 

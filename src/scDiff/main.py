@@ -48,6 +48,7 @@ import torch
 from omegaconf import OmegaConf
 from packaging import version
 from pytorch_lightning import seed_everything
+from utils.seed import resolve_seed
 from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 from pytorch_lightning.utilities import rank_zero_info
 from torch.nn.utils import clip_grad_norm_
@@ -89,7 +90,7 @@ def get_parser(**parser_kwargs):
     parser.add_argument("-p", "--project", help="name of new or path to existing project")
     parser.add_argument("-d", "--debug", type=str2bool, nargs="?", const=True, default=False,
                         help="enable post-mortem debugging")
-    parser.add_argument("-s", "--seed", type=int, default=10, help="seed for seed_everything")
+    parser.add_argument("-s", "--seed", type=int, default=0, help="seed for seed_everything")
     parser.add_argument("-f", "--postfix", type=str, default="", help="post-postfix for default name")
     parser.add_argument("-l", "--logdir", type=str, default="logs", help="directory for logging dat shit")
     parser.add_argument("--scale_lr", type=str2bool, nargs="?", const=True, default=False,
@@ -493,7 +494,7 @@ if __name__ == "__main__":
     ckptdir = os.path.join(logdir, "checkpoints")
     cfgdir = os.path.join(logdir, "configs")
     # prfdir = os.path.join(logdir, "profile")
-    seed_everything(opt.seed)
+    seed_everything(resolve_seed(opt.seed))
 
     trainer = None  # set after instantiation; may stay None if setup fails
     try:

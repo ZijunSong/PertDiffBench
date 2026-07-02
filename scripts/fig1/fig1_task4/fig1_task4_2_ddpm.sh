@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
 # ------------------------- Config -------------------------
 PREFIXES=( "ACTA2" "B2M" )
 
-declare -A SAMPLE_SIZES=(
-  ["ACTA2"]="408"
-  ["B2M"]="367"
-)
+declare -A SAMPLE_SIZES=()
+source "scripts/lib/max_n_samples.sh"
+# SAMPLE_SIZES filled per dataset from test h5ad in loop
 
 NUM_GENES="${NUM_GENES:-5737}"
 NUM_RUNS="${NUM_RUNS:-3}"
@@ -17,10 +17,10 @@ CONFIG_FILE="${CONFIG_FILE:-configs/baselines/scrna_ddpm_scrna.yaml}"
 METHOD_NAME="${METHOD_NAME:-scRNA-DDPM-scRNA}"
 
 for prefix in "${PREFIXES[@]}"; do
-  n_samples=${SAMPLE_SIZES[$prefix]}
-
+  
   train_dataset="task4_${prefix}_control_to_ifn"
   eval_dataset="task4_${prefix}_control_to_coculture"
+  n_samples="$(max_n_samples_paired "data/fig1/task4/${eval_dataset}.h5ad")"
 
   LOG_ROOT="logs/fig1/task4_2/${eval_dataset}/scrna_ddpm_scrna"
   CSV_ROOT="samples/fig1/task4_2/${eval_dataset}/scrna_ddpm_scrna"
@@ -64,6 +64,7 @@ for prefix in "${PREFIXES[@]}"; do
   fi
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     run_dir="${CSV_ROOT}/${run_tag}"
     mkdir -p "$run_dir"

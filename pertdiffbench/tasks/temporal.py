@@ -17,7 +17,7 @@ class TemporalTask(BaseTask):
         test_h5ad: str | Path,
         output_dir: str | Path = "runs/temporal",
         gene_nums: int = 3000,
-        n_samples: int = 500,
+        n_samples: int = 0,
         num_runs: int = 3,
         **_,
     ) -> List[TaskSpec]:

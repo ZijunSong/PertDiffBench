@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+source "scripts/lib/max_n_samples.sh"
 IFS=$'\n\t'
 export LC_ALL=C LC_NUMERIC=C
 
@@ -18,6 +20,8 @@ for seed in "${SEEDS[@]}"; do
   train_ds="seed${seed}_control_train"
   test_ds="seed${seed}_control_test"
 
+  N_SAMPLES="$(max_n_samples_paired "data/fig2/task1_unseen_pert/${test_ds}.h5ad")"
+
   LOG_ROOT="logs/fig2/task1/scgen/seed${seed}"
   OUT_ROOT="samples/fig2/task1/scgen/seed${seed}"
   CKPT_ROOT="checkpoints/fig2/task1/scgen/seed${seed}/${train_ds}"
@@ -34,6 +38,7 @@ for seed in "${SEEDS[@]}"; do
   all_outputs=""
 
   for (( i=1; i<=NUM_RUNS; i++ )); do
+    export RUN_SEED=$(($i-1))
     run_tag="run${i}"
     run_dir="${OUT_ROOT}/${run_tag}"
     run_ckpt="${CKPT_ROOT}/${run_tag}"
@@ -53,7 +58,7 @@ for seed in "${SEEDS[@]}"; do
         --model_save_path "${run_ckpt}" \
         --out_h5ad       "${run_dir}/${test_ds}_pred_${i}.h5ad" \
         --umap_plot      "${run_dir}/${test_ds}_umap_${i}.png" \
-        --n_samples      "${SAMPLES_MAP:-1000}" \
+        --n_samples      ""${N_SAMPLES}"" \
         --celltype_to_predict "mammary epithelial cells" \
         2>&1
     ) || true

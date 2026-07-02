@@ -82,10 +82,6 @@ def _dominant_drug_dose(test_path: str, drug_key: str, dose_key: str) -> tuple[s
 
 
 def main() -> None:
-    np.random.seed(0)
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(0)
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -96,12 +92,16 @@ def main() -> None:
     parser.add_argument("--data-path", required=True, help="ChemCPA combined h5ad used for training")
     parser.add_argument("--test-data-path", required=True, help="Original test h5ad for metrics")
     parser.add_argument("--train-data-path", required=True, help="Original train h5ad for UMAP")
-    parser.add_argument("-n", "--n_samples", type=int, default=100)
+    parser.add_argument("-n", "--n_samples", type=int, default=0)
     parser.add_argument("-o", "--out_h5ad", required=True)
     parser.add_argument("--umap_plot", default="")
     parser.add_argument("--drug-key", default="perturbation")
     parser.add_argument("--dose-key", default="dose_value")
+    parser.add_argument("--seed", type=int, default=0, help="Random seed (overridden by RUN_SEED env per run)")
     args = parser.parse_args()
+
+    from utils.seed import resolve_seed, set_seed
+    set_seed(resolve_seed(getattr(args, "seed", 0)))
 
     _setup_chemcpa_path()
     _disable_broken_mpi4py()
@@ -160,7 +160,8 @@ def main() -> None:
         print("No IFN cells. Exiting.")
         sys.exit(1)
 
-    n_samples = min(args.n_samples, len(ctrl_ids), len(pert_ids))
+    from utils.max_eval_samples import resolve_eval_n_samples
+    n_samples = resolve_eval_n_samples(args.test_data_path, args.n_samples)
     selected_ctrl = np.random.choice(ctrl_ids, n_samples, replace=False)
     selected_pert = np.random.choice(pert_ids, n_samples, replace=False)
 

@@ -297,7 +297,8 @@ def main():
 
     args = p.parse_args()
 
-    seed_everything(args.seed)
+    from utils.seed import resolve_seed
+    seed_everything(resolve_seed(args.seed))
 
     if os.path.exists(args.out_h5ad) and (not args.force):
         try:

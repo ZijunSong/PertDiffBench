@@ -3,6 +3,8 @@
 # Exit immediately if any command fails.
 set -e
 
+source "scripts/lib/max_n_samples.sh"
+
 # -------------------- Config --------------------
 CELL_TYPES=(
     # 'B'
@@ -66,6 +68,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
 
     # ---------- 1&2 : train + forshould ----------
     for (( run_id=1; run_id<=NUM_RUNS; run_id++ )); do
+      export RUN_SEED=$(($run_id-1))
       echo -e "\n================ Run ${run_id}/${NUM_RUNS} | ${cell_type} noise=${noise_level} ================"
 
       # each run standalone checkpoint / samples subdir
@@ -98,7 +101,7 @@ for cell_type in "${CELL_TYPES[@]}"; do
           --output_dim "${GENE_SIZE}" \
           --out_h5ad "${samples_dir}/synthetic_ifn_run_${run_id}.h5ad" \
           --train_data_path "${train_data_file}" \
-          --n_samples 6 \
+          --n_samples "${N_SAMPLES}" \
           --umap_plot "${samples_dir}/umap_comparison_${run_id}.png" \
           --data_path "${valid_data_file}" 2>&1
       ) || true

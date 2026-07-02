@@ -4,13 +4,14 @@
 set -e
 trap 'echo "ERROR: A command failed. Exiting." >&2' ERR
 
+source "scripts/lib/max_n_samples.sh"
+
 # -------- --------
 DATASETS=('mix2' 'mix3' 'mix4' 'mix5' 'mix6' 'mix7')
 NUM_GENES="1000"
 NUM_RUNS=3
 CONFIG_FILE="configs/baselines/scrna_ddpm_scrna.yaml"
 METHOD_NAME="DDPM"
-N_SAMPLES=100 # and eval stay consistent
 
 # directory (can need )
 SAVE_ROOT="checkpoints/ddpm"
@@ -37,6 +38,7 @@ for dataset in "${DATASETS[@]}"; do
 
   # -------- 3 (train+eval) --------
   for (( run_idx=1; run_idx<=NUM_RUNS; run_idx++ )); do
+    export RUN_SEED=$(($run_idx-1))
     echo -e "\n======================"
     echo -e " Run ${run_idx}/${NUM_RUNS} for ${dataset} (Gene=${NUM_GENES})"
     echo -e "======================" | tee -a "${LOG_FILE}"
